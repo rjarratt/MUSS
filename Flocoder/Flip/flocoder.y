@@ -36,6 +36,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_END
 %token T_NL
 %token T_PERIOD
+%token T_HYPHEN
 %token T_HASH
 %token <nameval> T_NAME
 %token <unsignedval> T_INTEGER
@@ -67,14 +68,19 @@ statement:
 | T_HASH T_NAME T_NL { process_cross_ref($2); }
 | T_NL
 
+/* TODO: structure sequence of directives */
+
 directive:
   T_X T_OTHERDATA
 | T_TITLE T_NAME T_OTHERDATA { start_chart($2); }
+| T_TITLE T_NAME { start_chart($2); }
 | T_BOX T_INTEGER T_PERIOD T_INTEGER {start_box($2, $4); }
 | T_ROW T_OTHERDATA { end_box(); }
-| T_COL T_OTHERDATA { end_box(); }
+| T_COL column_box_refs { end_box(); }
 | T_FLOW T_OTHERDATA { end_box(); }
 | T_END { end_box(); }
 
+column_box_refs: column_box_ref | column_box_refs T_HYPHEN column_box_ref
+column_box_ref: T_INTEGER T_NAME { process_column_box_ref($1, $2); }
 %%
 

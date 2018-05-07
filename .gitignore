@@ -246,3 +246,4 @@ ModelManifest.xml
 /Flocoder/Flip/*.musl
 /Flocoder/Flip/*.exe
 /Flocoder/Flip/data
+/Flocoder/Flip/*.flow

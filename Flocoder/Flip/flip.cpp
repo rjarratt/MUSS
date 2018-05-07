@@ -54,6 +54,18 @@ typedef enum
     CrossReference
 } LINE_TYPE;
 
+typedef enum
+{
+    Unknown,
+    Annotation,
+    Circle,
+    Finish,
+    Null,
+    Rectangle,
+    Start,
+    Test
+} BOX_TYPE;
+
 typedef struct
 {
     LINE_TYPE line_type;
@@ -68,6 +80,7 @@ typedef struct
 typedef struct
 {
     int used;
+    BOX_TYPE type;
     TABLE lines;
 } BOX;
 
@@ -86,6 +99,7 @@ static TABLE *current_line_table;
 
 static TABLE chart_table;
 
+static int check_box_number(int number);
 static void output_chart(char *name, void *value);
 static void output_box(char *name, void *value);
 static void output_code(void);
@@ -137,11 +151,7 @@ void start_box(int number, int level)
     in_selected_box = level == 1;
     if (in_selected_box)
     {
-        if (number >= MAX_BOX)
-        {
-            yyerror("Too many boxes in chart %s\n", current_chart_name);
-        }
-        else
+        if (check_box_number(number))
         {
             current_chart_table_entry->boxes[number].used = 1;
             current_line_table = &current_chart_table_entry->boxes[number].lines;
@@ -179,18 +189,78 @@ void process_cross_ref(char *title)
     }
 }
 
+void process_column_box_ref(int box_number, char *box_type_name)
+{
+    BOX_TYPE box_type = Unknown;
+
+    if (strcmp(box_type_name, "A") == 0)
+    {
+        box_type = Annotation;
+    }
+    else if (strcmp(box_type_name, "C") == 0)
+    {
+        box_type = Circle;
+    }
+    else if (strcmp(box_type_name, "F") == 0)
+    {
+        box_type = Finish;
+    }
+    else if (strcmp(box_type_name, "N") == 0)
+    {
+        box_type = Null;
+    }
+    else if (strcmp(box_type_name, "R") == 0)
+    {
+        box_type = Rectangle;
+    }
+    else if (strcmp(box_type_name, "S") == 0)
+    {
+        box_type = Start;
+    }
+    else if (strcmp(box_type_name, "T") == 0)
+    {
+        box_type = Test;
+    }
+    else
+    {
+        yyerror("Unknown box type %s\n", box_type);
+    }
+
+    yacc_trace("col %d %s(%d)\n", box_number, box_type_name, box_type);
+    if (check_box_number(box_number))
+    {
+        current_chart_table_entry->boxes[box_number].type = box_type;
+    }
+}
+
+static int check_box_number(int number)
+{
+    int result = number < MAX_BOX;
+    if (!result)
+    {
+        yyerror("Box number %d greater than maximum allowed (%d) on chart %s\n", number, MAX_BOX, current_chart_name);
+    }
+
+    return result;
+}
+
 static void output_chart(char *name, void *value)
 {
     int i;
     CHART_TABLE_ENTRY *chart_table_entry = (CHART_TABLE_ENTRY *)value;
-    fprintf(output, ":::::::::::::::::: CHART %s\n", name);
+    //fprintf(output, ":::::::::::::::::: CHART %s\n", name);
     for (i = 0; i < MAX_BOX; i++)
     {
         BOX *box = &chart_table_entry->boxes[i];
         if (box->used)
         {
-            fprintf(output, ":::::::::::::::::: BOX %d\n", i);
+            //fprintf(output, ":::::::::::::::::: BOX %d\n", i);
             process_table_entries(&box->lines, output_box);
+            if (box->type == Test)
+            {
+                fprintf(output, " THEN");
+            }
+            fprintf(output, "\n");
         }
     }
 }
@@ -203,7 +273,7 @@ static void output_box(char *name, void *value)
     }
     else
     {
-        fprintf(output, "%s\n", entry->line);
+        fprintf(output, "%s", entry->line);
     }
 }
 

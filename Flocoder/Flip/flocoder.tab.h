@@ -58,9 +58,10 @@ extern int yydebug;
      T_END = 267,
      T_NL = 268,
      T_PERIOD = 269,
-     T_HASH = 270,
-     T_NAME = 271,
-     T_INTEGER = 272
+     T_HYPHEN = 270,
+     T_HASH = 271,
+     T_NAME = 272,
+     T_INTEGER = 273
    };
 #endif
 
@@ -69,7 +70,7 @@ extern int yydebug;
 typedef union YYSTYPE
 {
 /* Line 2058 of yacc.c  */
-#line 55 "flocoder.y"
+#line 56 "flocoder.y"
 
     char *nameval;
     char *lineval;
@@ -77,7 +78,7 @@ typedef union YYSTYPE
 
 
 /* Line 2058 of yacc.c  */
-#line 81 "flocoder.tab.h"
+#line 82 "flocoder.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
