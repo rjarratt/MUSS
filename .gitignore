@@ -243,3 +243,6 @@ ModelManifest.xml
 
 # FAKE - F# Make
 .fake/
+/Flocoder/Flip/*.musl
+/Flocoder/Flip/*.exe
+/Flocoder/Flip/data
