@@ -63,7 +63,7 @@ extern int yylineno;
 
 file: statement | file statement
 statement:
-  T_START_DIRECTIVE directive T_NL
+  directive T_NL
 | T_LINE T_NL { process_line($1); }
 | T_HASH T_NAME T_NL { process_cross_ref($2); }
 | T_NL
@@ -71,14 +71,29 @@ statement:
 /* TODO: structure sequence of directives */
 
 directive:
-  T_X T_OTHERDATA
-| T_TITLE T_NAME T_OTHERDATA { start_chart($2); }
-| T_TITLE T_NAME { start_chart($2); }
-| T_BOX T_INTEGER T_PERIOD T_INTEGER {start_box($2, $4); }
-| T_ROW T_OTHERDATA { end_box(); }
-| T_COL column_box_refs { end_box(); }
-| T_FLOW T_OTHERDATA { end_box(); }
-| T_END { end_box(); }
+  x_directive
+| title_directive
+| column_directive
+| row_directive
+| flow_directive
+| box_directive
+| end_directive
+
+x_directive: T_X T_OTHERDATA
+
+title_directive: 
+  T_START_DIRECTIVE T_TITLE T_NAME T_OTHERDATA { start_chart($3); }
+| T_START_DIRECTIVE T_TITLE T_NAME { start_chart($3); }
+
+column_directive: T_START_DIRECTIVE T_COL column_box_refs
+
+row_directive: T_START_DIRECTIVE T_ROW T_OTHERDATA
+
+flow_directive: T_START_DIRECTIVE T_FLOW T_OTHERDATA
+
+box_directive: T_START_DIRECTIVE T_BOX T_INTEGER T_PERIOD T_INTEGER {start_box($3, $5); }
+
+end_directive: T_START_DIRECTIVE T_END { end_box(); }
 
 column_box_refs: column_box_ref | column_box_refs T_HYPHEN column_box_ref
 column_box_ref: T_INTEGER T_NAME { process_column_box_ref($1, $2); }
