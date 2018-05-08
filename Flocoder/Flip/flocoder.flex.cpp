@@ -972,13 +972,13 @@ case 18:
 /* rule 18 can match eol */
 YY_RULE_SETUP
 #line 64 "flocoder.l"
-{ BEGIN INITIAL; yylineno++; return T_NL;}
+{ BEGIN INITIAL; yylineno++; }
 	YY_BREAK
 case 19:
 /* rule 19 can match eol */
 YY_RULE_SETUP
 #line 65 "flocoder.l"
-{ BEGIN INITIAL; yylineno++; return T_NL;}
+{ BEGIN INITIAL; yylineno++; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP

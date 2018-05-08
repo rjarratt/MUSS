@@ -61,7 +61,7 @@ INTEGER          [0-9]+
 <DIRECTIVE_IGNORE>[^\n]*                 { BEGIN INITIAL; lex_trace(" value %s\n", yytext); return T_OTHERDATA;}
 ^[^@\f\n\#][^\n]*                        { BEGIN INITIAL; yylval.lineval = _strdup(yytext); lex_trace("%d: %s\n", yylineno, yytext); return T_LINE;}
 ^\#                                      { BEGIN DIRECTIVE_CROSS_REF; return T_HASH;}
-^\n                                      { BEGIN INITIAL; yylineno++; return T_NL;}
-\n                                       { BEGIN INITIAL; yylineno++; return T_NL;}
+^\n                                      { BEGIN INITIAL; yylineno++; }
+\n                                       { BEGIN INITIAL; yylineno++; }
 
 %%

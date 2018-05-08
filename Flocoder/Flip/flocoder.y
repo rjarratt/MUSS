@@ -33,7 +33,6 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_COL
 %token T_FLOW
 %token T_END
-%token T_NL
 %token T_PERIOD
 %token T_HYPHEN
 %token T_HASH
@@ -63,7 +62,6 @@ extern int yylineno;
 
 %%
 
- /* TODO: Ignore blank lines */
  /* TODO: Make sure invalid directives cause an error */
 
 file: documentation chart_list | chart_list;
@@ -88,27 +86,27 @@ box: box_directive box_lines;
 
 box_lines: box_lines box_line | ;
 
-simple_line: T_LINE T_NL { $$ = $1; }
-cross_ref_line: T_HASH T_NAME T_NL { $$ = $2; }
+simple_line: T_LINE { $$ = $1; }
+cross_ref_line: T_HASH T_NAME { $$ = $2; }
 box_line:
   simple_line { process_line($1); }
 | cross_ref_line { process_cross_ref($1); }
 
-x_directive: T_X T_OTHERDATA T_NL
+x_directive: T_X T_OTHERDATA
 
 title_directive: 
-  T_TITLE T_NAME T_OTHERDATA T_NL { start_chart($2); }
-| T_TITLE T_NAME T_NL { start_chart($2); }
+  T_TITLE T_NAME T_OTHERDATA { start_chart($2); }
+| T_TITLE T_NAME { start_chart($2); }
 
-column_directive: T_COL column_box_refs T_NL
+column_directive: T_COL column_box_refs
 
-row_directive: T_ROW T_OTHERDATA T_NL
+row_directive: T_ROW T_OTHERDATA
 
-flow_directive: T_FLOW T_OTHERDATA T_NL
+flow_directive: T_FLOW T_OTHERDATA
 
-box_directive: T_BOX T_INTEGER T_PERIOD T_INTEGER T_NL {start_box($2, $4); }
+box_directive: T_BOX T_INTEGER T_PERIOD T_INTEGER {start_box($2, $4); }
 
-end_directive: T_END T_NL { end_box(); }
+end_directive: T_END { end_box(); }
 
 column_box_refs: column_box_ref | column_box_refs T_HYPHEN column_box_ref
 column_box_ref: T_INTEGER T_NAME { process_column_box_ref($1, $2); }
