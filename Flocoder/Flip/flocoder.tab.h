@@ -46,22 +46,21 @@ extern int yydebug;
    /* Put the tokens into the symbol table, so that GDB and other debuggers
       know about them.  */
    enum yytokentype {
-     T_START_DIRECTIVE = 258,
-     T_LINE = 259,
-     T_OTHERDATA = 260,
-     T_X = 261,
-     T_BOX = 262,
-     T_TITLE = 263,
-     T_ROW = 264,
-     T_COL = 265,
-     T_FLOW = 266,
-     T_END = 267,
-     T_NL = 268,
-     T_PERIOD = 269,
-     T_HYPHEN = 270,
-     T_HASH = 271,
-     T_NAME = 272,
-     T_INTEGER = 273
+     T_LINE = 258,
+     T_OTHERDATA = 259,
+     T_X = 260,
+     T_BOX = 261,
+     T_TITLE = 262,
+     T_ROW = 263,
+     T_COL = 264,
+     T_FLOW = 265,
+     T_END = 266,
+     T_NL = 267,
+     T_PERIOD = 268,
+     T_HYPHEN = 269,
+     T_HASH = 270,
+     T_NAME = 271,
+     T_INTEGER = 272
    };
 #endif
 
@@ -70,7 +69,7 @@ extern int yydebug;
 typedef union YYSTYPE
 {
 /* Line 2058 of yacc.c  */
-#line 56 "flocoder.y"
+#line 55 "flocoder.y"
 
     char *nameval;
     char *lineval;
@@ -78,7 +77,7 @@ typedef union YYSTYPE
 
 
 /* Line 2058 of yacc.c  */
-#line 82 "flocoder.tab.h"
+#line 81 "flocoder.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

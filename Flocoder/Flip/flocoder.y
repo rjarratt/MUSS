@@ -24,7 +24,6 @@ used in advertising or otherwise to promote the sale, use or other dealings
 in this Software without prior written authorization from Robert Jarratt.
 */
 
-%token T_START_DIRECTIVE
 %token <lineval> T_LINE
 %token T_OTHERDATA
 %token T_X
@@ -59,41 +58,57 @@ extern int yylineno;
     int unsignedval;
 }
 
+%type <lineval> simple_line
+%type <nameval> cross_ref_line
+
 %%
 
-file: statement | file statement
-statement:
-  directive T_NL
-| T_LINE T_NL { process_line($1); }
-| T_HASH T_NAME T_NL { process_cross_ref($2); }
-| T_NL
+ /* TODO: Ignore blank lines */
+ /* TODO: Make sure invalid directives cause an error */
 
-/* TODO: structure sequence of directives */
+file: documentation chart_list | chart_list;
 
-directive:
-  x_directive
-| title_directive
-| column_directive
-| row_directive
-| flow_directive
-| box_directive
-| end_directive
+documentation: x_directive documentation_lines;
 
-x_directive: T_X T_OTHERDATA
+documentation_lines: documentation_lines simple_line | simple_line;
+
+chart_list: chart_list chart | chart;
+
+chart: title_directive column_directive_list row_directive_list flow_directive_list box_list end_directive;
+
+column_directive_list: column_directive_list column_directive | column_directive;
+
+row_directive_list: row_directive_list row_directive | ;
+
+flow_directive_list: flow_directive_list flow_directive | ;
+
+box_list: box_list box | box;
+
+box: box_directive box_lines;
+
+box_lines: box_lines box_line | ;
+
+simple_line: T_LINE T_NL { $$ = $1; }
+cross_ref_line: T_HASH T_NAME T_NL { $$ = $2; }
+box_line:
+  simple_line { process_line($1); }
+| cross_ref_line { process_cross_ref($1); }
+
+x_directive: T_X T_OTHERDATA T_NL
 
 title_directive: 
-  T_START_DIRECTIVE T_TITLE T_NAME T_OTHERDATA { start_chart($3); }
-| T_START_DIRECTIVE T_TITLE T_NAME { start_chart($3); }
+  T_TITLE T_NAME T_OTHERDATA T_NL { start_chart($2); }
+| T_TITLE T_NAME T_NL { start_chart($2); }
 
-column_directive: T_START_DIRECTIVE T_COL column_box_refs
+column_directive: T_COL column_box_refs T_NL
 
-row_directive: T_START_DIRECTIVE T_ROW T_OTHERDATA
+row_directive: T_ROW T_OTHERDATA T_NL
 
-flow_directive: T_START_DIRECTIVE T_FLOW T_OTHERDATA
+flow_directive: T_FLOW T_OTHERDATA T_NL
 
-box_directive: T_START_DIRECTIVE T_BOX T_INTEGER T_PERIOD T_INTEGER {start_box($3, $5); }
+box_directive: T_BOX T_INTEGER T_PERIOD T_INTEGER T_NL {start_box($2, $4); }
 
-end_directive: T_START_DIRECTIVE T_END { end_box(); }
+end_directive: T_END T_NL { end_box(); }
 
 column_box_refs: column_box_ref | column_box_refs T_HYPHEN column_box_ref
 column_box_ref: T_INTEGER T_NAME { process_column_box_ref($1, $2); }
