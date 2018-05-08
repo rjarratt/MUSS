@@ -469,10 +469,10 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    67,    67,    67,    69,    71,    71,    73,    73,    75,
-      77,    77,    79,    79,    81,    81,    83,    83,    85,    87,
-      87,    89,    90,    92,    93,    95,    98,    99,   101,   103,
-     105,   107,   109,   111,   111,   112
+       0,    65,    65,    65,    67,    69,    69,    71,    71,    73,
+      75,    75,    77,    77,    79,    79,    81,    81,    83,    85,
+      85,    87,    88,    90,    91,    93,    96,    97,    99,   101,
+     103,   105,   107,   109,   109,   110
 };
 #endif
 
@@ -1401,55 +1401,55 @@ yyreduce:
     {
         case 21:
 /* Line 1792 of yacc.c  */
-#line 89 "flocoder.y"
+#line 87 "flocoder.y"
     { (yyval.lineval) = (yyvsp[(1) - (1)].lineval); }
     break;
 
   case 22:
 /* Line 1792 of yacc.c  */
-#line 90 "flocoder.y"
+#line 88 "flocoder.y"
     { (yyval.nameval) = (yyvsp[(2) - (2)].nameval); }
     break;
 
   case 23:
 /* Line 1792 of yacc.c  */
-#line 92 "flocoder.y"
+#line 90 "flocoder.y"
     { process_line((yyvsp[(1) - (1)].lineval)); }
     break;
 
   case 24:
 /* Line 1792 of yacc.c  */
-#line 93 "flocoder.y"
+#line 91 "flocoder.y"
     { process_cross_ref((yyvsp[(1) - (1)].nameval)); }
     break;
 
   case 26:
 /* Line 1792 of yacc.c  */
-#line 98 "flocoder.y"
+#line 96 "flocoder.y"
     { start_chart((yyvsp[(2) - (3)].nameval)); }
     break;
 
   case 27:
 /* Line 1792 of yacc.c  */
-#line 99 "flocoder.y"
+#line 97 "flocoder.y"
     { start_chart((yyvsp[(2) - (2)].nameval)); }
     break;
 
   case 31:
 /* Line 1792 of yacc.c  */
-#line 107 "flocoder.y"
+#line 105 "flocoder.y"
     {start_box((yyvsp[(2) - (4)].unsignedval), (yyvsp[(4) - (4)].unsignedval)); }
     break;
 
   case 32:
 /* Line 1792 of yacc.c  */
-#line 109 "flocoder.y"
+#line 107 "flocoder.y"
     { end_box(); }
     break;
 
   case 35:
 /* Line 1792 of yacc.c  */
-#line 112 "flocoder.y"
+#line 110 "flocoder.y"
     { process_column_box_ref((yyvsp[(1) - (2)].unsignedval), (yyvsp[(2) - (2)].nameval)); }
     break;
 
@@ -1687,6 +1687,6 @@ yyreturn:
 
 
 /* Line 2055 of yacc.c  */
-#line 113 "flocoder.y"
+#line 111 "flocoder.y"
 
 

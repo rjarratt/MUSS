@@ -62,8 +62,6 @@ extern int yylineno;
 
 %%
 
- /* TODO: Make sure invalid directives cause an error */
-
 file: documentation chart_list | chart_list;
 
 documentation: x_directive documentation_lines;
