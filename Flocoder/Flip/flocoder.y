@@ -37,6 +37,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_HYPHEN
 %token T_HASH
 %token <nameval> T_NAME
+%token <nameval> T_LABEL
 %token <unsignedval> T_INTEGER
 
 %{
@@ -100,13 +101,17 @@ column_directive: T_COL column_box_refs
 
 row_directive: T_ROW T_OTHERDATA
 
-flow_directive: T_FLOW T_OTHERDATA
+flow_directive: T_FLOW flow_box_refs
 
 box_directive: T_BOX T_INTEGER T_PERIOD T_INTEGER {start_box($2, $4); }
 
 end_directive: T_END { end_box(); }
 
 column_box_refs: column_box_ref | column_box_refs T_HYPHEN column_box_ref
-column_box_ref: T_INTEGER T_NAME { process_column_box_ref($1, $2); }
+column_box_ref: T_INTEGER T_LABEL { process_column_box_ref($1, $2); }
+
+flow_box_refs: flow_box_ref | flow_box_refs T_HYPHEN flow_box_ref
+flow_box_ref: T_INTEGER T_LABEL
+flow_box_ref: T_INTEGER
 %%
 
