@@ -79,18 +79,20 @@ typedef struct
 
 typedef struct
 {
-    int used;
     BOX_TYPE type;
+    int next_box_number;
+    int true_branch_box_number; /* for the THEN part of a Test box */
     TABLE lines;
 } BOX;
 
 typedef struct
 {
-    BOX boxes[MAX_BOX];
+    int start_box_number;
+    BOX boxes[MAX_BOX + 1]; /* box numbers are 1-based */
 } CHART_TABLE_ENTRY;
 
 static int enable_lex_trace = 0;
-static int enable_yacc_trace = 1;
+static int enable_yacc_trace = 0;
 
 static int in_selected_box = 0;
 static CHART_TABLE_ENTRY *current_chart_table_entry;
@@ -99,9 +101,16 @@ static TABLE *current_line_table;
 
 static TABLE chart_table;
 
+static int last_flow_box_number = -1;
+
 static int check_box_number(int number);
+static BOX *get_box(CHART_TABLE_ENTRY *chart_table_entry, int number);
+static int get_box_number(CHART_TABLE_ENTRY *chart_table_entry, BOX *box);
+static int box_is_reachable(CHART_TABLE_ENTRY *chart_table_entry, BOX *from, BOX *to);
 static void output_chart(char *name, void *value);
-static void output_box(char *name, void *value);
+static void output_box_line(char *name, void *value);
+static BOX *output_box(CHART_TABLE_ENTRY *chart_table_entry, BOX * box);
+static BOX *output_box_sequence(CHART_TABLE_ENTRY *chart_table_entry, BOX *start_box, BOX *root_box);
 static void output_code(void);
 
 void yyerror(const char *msg, ...)
@@ -153,7 +162,6 @@ void start_box(int number, int level)
     {
         if (check_box_number(number))
         {
-            current_chart_table_entry->boxes[number].used = 1;
             current_line_table = &current_chart_table_entry->boxes[number].lines;
         }
     }
@@ -216,6 +224,7 @@ void process_column_box_ref(int box_number, char *box_type_name)
     else if (strcmp(box_type_name, "S") == 0)
     {
         box_type = Start;
+        current_chart_table_entry->start_box_number = box_number;
     }
     else if (strcmp(box_type_name, "T") == 0)
     {
@@ -233,6 +242,39 @@ void process_column_box_ref(int box_number, char *box_type_name)
     }
 }
 
+void start_flow_sequence(void)
+{
+    last_flow_box_number = -1;
+}
+
+void process_flow_box_ref(int box_number)
+{
+    if (check_box_number(box_number))
+    {
+        if (last_flow_box_number > 0)
+        {
+            BOX *box = &current_chart_table_entry->boxes[last_flow_box_number];
+            if (box->type == Test)
+            {
+                if (box->next_box_number <= 0)
+                {
+                    box->next_box_number = box_number;
+                }
+                else
+                {
+                    box->true_branch_box_number = box_number;
+                }
+            }
+            else
+            {
+                box->next_box_number = box_number;
+            }
+        }
+
+        last_flow_box_number = box_number;
+    }
+}
+
 static int check_box_number(int number)
 {
     int result = number < MAX_BOX;
@@ -244,27 +286,103 @@ static int check_box_number(int number)
     return result;
 }
 
-static void output_chart(char *name, void *value)
+static BOX *get_box(CHART_TABLE_ENTRY *chart_table_entry, int number)
 {
-    int i;
-    CHART_TABLE_ENTRY *chart_table_entry = (CHART_TABLE_ENTRY *)value;
-    //fprintf(output, ":::::::::::::::::: CHART %s\n", name);
-    for (i = 0; i < MAX_BOX; i++)
+    BOX *result = NULL;
+    if (number > 0)
     {
-        BOX *box = &chart_table_entry->boxes[i];
-        if (box->used)
+        result = &chart_table_entry->boxes[number];
+    }
+
+    return result;
+}
+
+static int get_box_number(CHART_TABLE_ENTRY *chart_table_entry, BOX *box)
+{
+    int result;
+    if (box == NULL)
+    {
+        result = 0;
+    }
+    else
+    {
+        result = box - chart_table_entry->boxes;
+    }
+
+    return result;
+}
+
+static int box_is_reachable(CHART_TABLE_ENTRY *chart_table_entry, BOX *from, BOX *to)
+{
+    int reachable = 0;
+    BOX *next = from;
+    while (next != NULL && !reachable)
+    {
+        if (next == to)
         {
-            //fprintf(output, ":::::::::::::::::: BOX %d\n", i);
-            process_table_entries(&box->lines, output_box);
-            if (box->type == Test)
-            {
-                fprintf(output, " THEN");
-            }
-            fprintf(output, "\n");
+            reachable = 1;
+        }
+        else
+        {
+            next = get_box(chart_table_entry, next->next_box_number);
         }
     }
+
+    //if (reachable)
+    //{
+    //    printf("Can reach %d from %d\n", get_box_number(chart_table_entry, to), get_box_number(chart_table_entry, from));
+    //}
+    //else
+    //{
+    //    printf("Cannot reach %d from %d\n", get_box_number(chart_table_entry, to), get_box_number(chart_table_entry, from));
+    //}
+    return reachable;
 }
-static void output_box(char *name, void *value)
+
+static BOX *output_box(CHART_TABLE_ENTRY *chart_table_entry, BOX * box)
+{
+    BOX *next = NULL;
+    process_table_entries(&box->lines, output_box_line);
+    if (box->type == Test)
+    {
+        //printf("Generating box %d. Type: Test\n", get_box_number(chart_table_entry, box));
+        fprintf(output, " THEN\n");
+        next = output_box_sequence(chart_table_entry, get_box(chart_table_entry, box->true_branch_box_number), box);
+        fprintf(output, " ELSE\n");
+        next = output_box_sequence(chart_table_entry, get_box(chart_table_entry, box->next_box_number), next);
+        fprintf(output, " FI\n");
+    }
+    else
+    {
+        //printf("Generating box %d. Type: Other\n", get_box_number(chart_table_entry, box));
+        fprintf(output, "\n");
+        next = get_box(chart_table_entry, box->next_box_number);
+    }
+
+    return next;
+}
+
+/* stop if box is reachable from root box*/
+static BOX *output_box_sequence(CHART_TABLE_ENTRY *chart_table_entry, BOX *start_box, BOX *root_box)
+{
+    BOX *box = start_box;
+    while (box != NULL && !box_is_reachable(chart_table_entry, root_box, box))
+    {
+        box = output_box(chart_table_entry, box);
+    }
+
+    return box;
+}
+
+static void output_chart(char *name, void *value)
+{
+    CHART_TABLE_ENTRY *chart_table_entry = (CHART_TABLE_ENTRY *)value;
+    //fprintf(output, ":::::::::::::::::: CHART %s\n", name);
+    BOX *box = get_box(chart_table_entry, chart_table_entry->start_box_number);
+    output_box_sequence(chart_table_entry, box, NULL);
+}
+
+static void output_box_line(char *name, void *value)
 {
     LINE_TABLE_ENTRY *entry = (LINE_TABLE_ENTRY *)value;
     if (entry->line_type == CrossReference)
