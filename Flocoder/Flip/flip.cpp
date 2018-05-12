@@ -29,6 +29,8 @@ from the original MUSL code.
 
 */
 
+// TODO:Check task 3, do includes
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -80,6 +82,8 @@ typedef struct
 typedef struct
 {
     BOX_TYPE type;
+    int label_number;
+    int generated;
     int next_box_number;
     int true_branch_box_number; /* for the THEN part of a Test box */
     TABLE lines;
@@ -88,11 +92,14 @@ typedef struct
 typedef struct
 {
     int start_box_number;
+    int finish_box_number;
     BOX boxes[MAX_BOX + 1]; /* box numbers are 1-based */
 } CHART_TABLE_ENTRY;
 
 static int enable_lex_trace = 0;
 static int enable_yacc_trace = 0;
+static char *label_format;
+static char *goto_format;
 
 static int in_selected_box = 0;
 static CHART_TABLE_ENTRY *current_chart_table_entry;
@@ -102,6 +109,7 @@ static TABLE *current_line_table;
 static TABLE chart_table;
 
 static int last_flow_box_number = -1;
+static int last_label_number = -1;
 
 static int check_box_number(int number);
 static BOX *get_box(CHART_TABLE_ENTRY *chart_table_entry, int number);
@@ -162,7 +170,9 @@ void start_box(int number, int level)
     {
         if (check_box_number(number))
         {
-            current_line_table = &current_chart_table_entry->boxes[number].lines;
+            BOX *box = get_box(current_chart_table_entry, number);
+            current_line_table = &box->lines;
+            box->label_number = ++last_label_number;
         }
     }
 }
@@ -212,6 +222,7 @@ void process_column_box_ref(int box_number, char *box_type_name)
     else if (strcmp(box_type_name, "F") == 0)
     {
         box_type = Finish;
+        current_chart_table_entry->finish_box_number = box_number;
     }
     else if (strcmp(box_type_name, "N") == 0)
     {
@@ -253,7 +264,7 @@ void process_flow_box_ref(int box_number)
     {
         if (last_flow_box_number > 0)
         {
-            BOX *box = &current_chart_table_entry->boxes[last_flow_box_number];
+            BOX *box = get_box(current_chart_table_entry, last_flow_box_number);
             if (box->type == Test)
             {
                 if (box->next_box_number <= 0)
@@ -316,6 +327,7 @@ static int box_is_reachable(CHART_TABLE_ENTRY *chart_table_entry, BOX *from, BOX
 {
     int reachable = 0;
     BOX *next = from;
+    printf("Can reach %d from %d:", get_box_number(chart_table_entry, to), get_box_number(chart_table_entry, from));
     while (next != NULL && !reachable)
     {
         if (next == to)
@@ -328,36 +340,51 @@ static int box_is_reachable(CHART_TABLE_ENTRY *chart_table_entry, BOX *from, BOX
         }
     }
 
-    //if (reachable)
-    //{
-    //    printf("Can reach %d from %d\n", get_box_number(chart_table_entry, to), get_box_number(chart_table_entry, from));
-    //}
-    //else
-    //{
-    //    printf("Cannot reach %d from %d\n", get_box_number(chart_table_entry, to), get_box_number(chart_table_entry, from));
-    //}
+    if (reachable)
+    {
+        printf("Yes\n", get_box_number(chart_table_entry, to), get_box_number(chart_table_entry, from));
+    }
+    else
+    {
+        printf("No\n", get_box_number(chart_table_entry, to), get_box_number(chart_table_entry, from));
+    }
     return reachable;
 }
 
 static BOX *output_box(CHART_TABLE_ENTRY *chart_table_entry, BOX * box)
 {
     BOX *next = NULL;
+    if (box->type != Start)
+    {
+        fprintf(output, label_format, box->label_number);
+    }
+
     process_table_entries(&box->lines, output_box_line);
     if (box->type == Test)
     {
-        //printf("Generating box %d. Type: Test\n", get_box_number(chart_table_entry, box));
-        fprintf(output, " THEN\n");
-        next = output_box_sequence(chart_table_entry, get_box(chart_table_entry, box->true_branch_box_number), box);
-        fprintf(output, " ELSE\n");
-        next = output_box_sequence(chart_table_entry, get_box(chart_table_entry, box->next_box_number), next);
-        fprintf(output, " FI\n");
+        printf("Generating box %d. Type: Other\n", get_box_number(chart_table_entry, box));
+        fprintf(output, " ");
+        fprintf(output, goto_format, get_box(chart_table_entry, box->true_branch_box_number)->label_number);
+        //next = output_box_sequence(chart_table_entry, get_box(chart_table_entry, box->true_branch_box_number), box);
+        //fprintf(output, " ELSE\n");
+        //next = output_box_sequence(chart_table_entry, get_box(chart_table_entry, box->next_box_number), next);
+        //fprintf(output, " FI\n");
     }
     else
     {
-        //printf("Generating box %d. Type: Other\n", get_box_number(chart_table_entry, box));
-        fprintf(output, "\n");
-        next = get_box(chart_table_entry, box->next_box_number);
+        printf("Generating box %d. Type: Other\n", get_box_number(chart_table_entry, box));
+        //fprintf(output, "\n");
+        //next = get_box(chart_table_entry, box->next_box_number);
     }
+
+    if (box->type != Finish)
+    {
+        fprintf(output, "\n");
+        fprintf(output, goto_format, get_box(chart_table_entry, box->next_box_number)->label_number);
+        fprintf(output, "\n");
+    }
+
+    box->generated = 1;
 
     return next;
 }
@@ -376,10 +403,25 @@ static BOX *output_box_sequence(CHART_TABLE_ENTRY *chart_table_entry, BOX *start
 
 static void output_chart(char *name, void *value)
 {
+    int i;
     CHART_TABLE_ENTRY *chart_table_entry = (CHART_TABLE_ENTRY *)value;
+    printf("Generating chart %s\n", name);
     //fprintf(output, ":::::::::::::::::: CHART %s\n", name);
-    BOX *box = get_box(chart_table_entry, chart_table_entry->start_box_number);
-    output_box_sequence(chart_table_entry, box, NULL);
+    BOX *start_box = get_box(chart_table_entry, chart_table_entry->start_box_number);
+    BOX *finish_box = get_box(chart_table_entry, chart_table_entry->finish_box_number);
+
+    output_box(chart_table_entry, start_box);
+    for ( i = 0; i < MAX_BOX; i++)
+    {
+        BOX *box = get_box(chart_table_entry, i + 1);
+        if (!box->generated && box->type != Finish && box->type != Unknown)
+        {
+            output_box(chart_table_entry, box);
+        }
+    }
+    output_box(chart_table_entry, finish_box);
+
+    //output_box_sequence(chart_table_entry, start_box, NULL);
 }
 
 static void output_box_line(char *name, void *value)
@@ -397,7 +439,8 @@ static void output_box_line(char *name, void *value)
 
 static void output_code(void)
 {
-    process_table_entries(&chart_table, output_chart);
+    output_chart(chart_table.head->name, chart_table.head->value);
+    //process_table_entries(&chart_table, output_chart);
 }
 
 int main(int argc, char *argv[])
@@ -408,6 +451,8 @@ int main(int argc, char *argv[])
     }
     else
     {
+        label_format = "LB%05d:\n";
+        goto_format = "-> LB%05d";
         yyin = fopen(argv[1], "r");
         if (yyin == NULL)
         {
