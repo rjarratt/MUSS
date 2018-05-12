@@ -354,15 +354,17 @@ static int box_is_reachable(CHART_TABLE_ENTRY *chart_table_entry, BOX *from, BOX
 static BOX *output_box(CHART_TABLE_ENTRY *chart_table_entry, BOX * box)
 {
     BOX *next = NULL;
+    //int box_number = get_box_number(chart_table_entry, box);
     if (box->type != Start)
     {
         fprintf(output, label_format, box->label_number);
     }
 
+    //fprintf(output, "\n::::::::::::::::::BOX %d\n", box_number);
     process_table_entries(&box->lines, output_box_line);
     if (box->type == Test)
     {
-        printf("Generating box %d. Type: Other\n", get_box_number(chart_table_entry, box));
+        //printf("Generating box %d. Type: Other\n", box_number);
         fprintf(output, " ");
         fprintf(output, goto_format, get_box(chart_table_entry, box->true_branch_box_number)->label_number);
         //next = output_box_sequence(chart_table_entry, get_box(chart_table_entry, box->true_branch_box_number), box);
@@ -372,7 +374,7 @@ static BOX *output_box(CHART_TABLE_ENTRY *chart_table_entry, BOX * box)
     }
     else
     {
-        printf("Generating box %d. Type: Other\n", get_box_number(chart_table_entry, box));
+        //printf("Generating box %d. Type: Other\n", box_number);
         //fprintf(output, "\n");
         //next = get_box(chart_table_entry, box->next_box_number);
     }
@@ -406,7 +408,7 @@ static void output_chart(char *name, void *value)
     int i;
     CHART_TABLE_ENTRY *chart_table_entry = (CHART_TABLE_ENTRY *)value;
     printf("Generating chart %s\n", name);
-    //fprintf(output, ":::::::::::::::::: CHART %s\n", name);
+    //fprintf(output, "\n:::::::::::::::::: CHART %s\n", name);
     BOX *start_box = get_box(chart_table_entry, chart_table_entry->start_box_number);
     BOX *finish_box = get_box(chart_table_entry, chart_table_entry->finish_box_number);
 
@@ -414,7 +416,7 @@ static void output_chart(char *name, void *value)
     for ( i = 0; i < MAX_BOX; i++)
     {
         BOX *box = get_box(chart_table_entry, i + 1);
-        if (!box->generated && box->type != Finish && box->type != Unknown)
+        if (!box->generated && box->type != Null && box->type != Finish && box->type != Unknown)
         {
             output_box(chart_table_entry, box);
         }
@@ -429,11 +431,13 @@ static void output_box_line(char *name, void *value)
     LINE_TABLE_ENTRY *entry = (LINE_TABLE_ENTRY *)value;
     if (entry->line_type == CrossReference)
     {
-        fprintf(output, "XREF %s\n", entry->line);
+        CHART_TABLE_ENTRY *chart_entry = (CHART_TABLE_ENTRY *)find_table_entry(&chart_table, entry->line);
+        output_chart(entry->line, chart_entry);
+        //fprintf(output, "\nXREF %s", entry->line);
     }
     else
     {
-        fprintf(output, "%s", entry->line);
+        fprintf(output, "\n%s", entry->line);
     }
 }
 
