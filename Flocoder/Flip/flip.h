@@ -1,6 +1,6 @@
 /* flip.h: Form Linear Program
 
-Copyright (c) 2016-2018, Robert Jarratt
+Copyright (c) 2018, Robert Jarratt
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
