@@ -46,9 +46,25 @@ extern int yydebug;
    /* Put the tokens into the symbol table, so that GDB and other debuggers
       know about them.  */
    enum yytokentype {
-     T_MODULE = 258,
-     T_NAME = 259,
-     T_END = 260
+     T_ADDR = 258,
+     T_END = 259,
+     T_IMPORT = 260,
+     T_INTEGER = 261,
+     T_LABEL = 262,
+     T_LOGICAL = 263,
+     T_LSPEC = 264,
+     T_MODULE = 265,
+     T_PSPEC = 266,
+     T_REAL = 267,
+     T_EQUALS = 268,
+     T_L_BRACK = 269,
+     T_R_BRACK = 270,
+     T_L_PAREN = 271,
+     T_R_PAREN = 272,
+     T_SLASH = 273,
+     T_SEP = 274,
+     T_NAME = 275,
+     T_NUMBER = 276
    };
 #endif
 
@@ -57,14 +73,14 @@ extern int yydebug;
 typedef union YYSTYPE
 {
 /* Line 2058 of yacc.c  */
-#line 43 "musl.y"
+#line 61 "musl.y"
 
     char *nameval;
-    int signedval;
+    unsigned int unsignedval;
 
 
 /* Line 2058 of yacc.c  */
-#line 68 "musl.tab.h"
+#line 84 "musl.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

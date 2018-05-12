@@ -24,9 +24,27 @@ used in advertising or otherwise to promote the sale, use or other dealings
 in this Software without prior written authorization from Robert Jarratt.
 */
 
-%token T_MODULE
-%token <nameval> T_NAME
+%token T_ADDR
 %token T_END
+%token T_IMPORT
+%token T_INTEGER
+%token T_LABEL
+%token T_LOGICAL
+%token T_LSPEC
+%token T_MODULE
+%token T_PSPEC
+%token T_REAL
+
+%token T_EQUALS
+%token T_L_BRACK
+%token T_R_BRACK
+%token T_L_PAREN
+%token T_R_PAREN
+%token T_SLASH
+%token T_SEP
+
+%token <nameval> T_NAME
+%token <unsignedval> T_NUMBER
 
 %{
 #include <stdio.h>
@@ -42,13 +60,61 @@ extern int yylineno;
 %union
 {
     char *nameval;
-    int signedval;
+    unsigned int unsignedval;
 }
 
 %%
 
-module: start_module T_END;
+module: imports start_module T_END;
 start_module: T_MODULE | T_MODULE T_NAME;
+
+imports: imports import | ;
+import: proc_dec T_SEP; /* | var_dec | import_dec | type_dec;*/
+
+proc_dec:
+    proc_dec_spec T_NAME
+    |
+    proc_dec_spec T_NAME pspec
+    |
+    proc_dec_spec T_NAME T_EQUALS T_NAME;
+proc_dec_spec:
+    T_LSPEC
+    |
+    T_PSPEC;
+pspec:
+    T_L_BRACK t_list T_R_BRACK
+    |
+    T_L_BRACK t_list T_R_BRACK T_SLASH scalar_type;
+
+t_list: t_list scalar_type | ;
+
+scalar_type:
+    numeric_type
+    |
+    T_NAME
+    |
+    T_ADDR numeric_type
+    |
+    T_ADDR T_NAME
+    |
+    T_ADDR T_L_PAREN numeric_type T_R_PAREN
+    |
+    T_ADDR T_L_PAREN T_NAME T_R_PAREN
+    |
+    T_ADDR T_L_PAREN T_ADDR T_R_PAREN
+    |
+    T_ADDR
+    |
+    T_ADDR T_ADDR;
+
+numeric_type:
+    T_INTEGER size
+    |
+    T_REAL size
+    |
+    T_LOGICAL size;
+
+size: T_NUMBER |;
 
 
 %%
