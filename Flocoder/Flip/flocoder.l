@@ -53,10 +53,13 @@ INTEGER          [0-9]+
 {START_DIRECTIVE}FLOW                    { BEGIN DIRECTIVE_BOX_REFS; lex_trace("flow"); return T_FLOW; }
 {START_DIRECTIVE}END                     { BEGIN INITIAL; lex_trace("end\n"); return T_END; }
 {START_DIRECTIVE}[^ \t\n]*               { yyerror("Unexpected directive \'%s\'\n", yytext); }
-<DIRECTIVE_TITLE>{NAME}                  { BEGIN INITIAL; yylval.nameval = _strdup(yytext); lex_trace(" name \"%s\"", yytext); return T_NAME;}
+<DIRECTIVE_TITLE>{NAME}                  { BEGIN DIRECTIVE_IGNORE; yylval.nameval = _strdup(yytext); lex_trace(" name \"%s\"", yytext); return T_NAME;}
+<DIRECTIVE_TITLE>[ ]*                    { ; }
 <DIRECTIVE_CROSS_REF>{NAME}              { BEGIN INITIAL; yylval.nameval = _strdup(yytext); lex_trace(" name \"%s\"", yytext); return T_NAME;}
 <DIRECTIVE_BOX>{INTEGER}                 { yylval.unsignedval = atoi(yytext); lex_trace(" %s(%d)", yytext, yylval.unsignedval); return T_INTEGER;}
+<DIRECTIVE_BOX>[ ]*                      { ; }
 <DIRECTIVE_BOX>\.                        { lex_trace(" ."); return T_PERIOD;}
+<DIRECTIVE_BOX_REFS>[ ]                  { ; }
 <DIRECTIVE_BOX_REFS>{INTEGER}            { yylval.unsignedval = atoi(yytext); lex_trace(" %s", yytext); return T_INTEGER;}
 <DIRECTIVE_BOX_REFS>\-                   { lex_trace(" ."); return T_HYPHEN;}
 <DIRECTIVE_BOX_REFS>{LABEL}              { yylval.nameval = _strdup(yytext); lex_trace(" label %s", yytext); return T_LABEL;}
@@ -65,5 +68,6 @@ INTEGER          [0-9]+
 ^\#                                      { BEGIN DIRECTIVE_CROSS_REF; return T_HASH;}
 ^\n                                      { BEGIN INITIAL; yylineno++; }
 \n                                       { BEGIN INITIAL; yylineno++; }
+\f                                       { BEGIN INITIAL; }
 
 %%
