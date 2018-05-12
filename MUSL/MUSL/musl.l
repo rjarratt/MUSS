@@ -62,6 +62,7 @@ REAL                         { return T_REAL; }
 {NAME}                       { yylval.nameval = _strdup(yytext); return T_NAME;}
 {INTEGER}                    { yylval.unsignedval = atoi(yytext); return T_NUMBER;}
 
+::.*\n                       { yylineno++; }
 \n                           { yylineno++; }
 . ;
 
