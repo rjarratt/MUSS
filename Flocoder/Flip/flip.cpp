@@ -29,8 +29,6 @@ from the original MUSL code.
 
 */
 
-// TODO:Check task 3, do includes
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
