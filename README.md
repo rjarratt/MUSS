@@ -9,4 +9,6 @@ The code cannot be published yet (waiting for permission from Manchester Univers
 The long term aim of this project is to get MUSS running once more. Since the recovered source code is from the post-MU5 era, the most
 likely target is the PDP-11 or VAX.
 
-The initial effort is build an implementation of FLIP to translate the Flocoder files into compilable MUSL source code.
+The initial effort is build an implementation of FLIP to translate the Flocoder files into compilable MUSL source code, and a MUSL to C
+compiler that can be used to compile MUSL generated from Flocoder to C. Then the MUSL to C compiler can be used to compile
+the original Flocoder MUSL code to get an original Flocoder into C code that runs.
