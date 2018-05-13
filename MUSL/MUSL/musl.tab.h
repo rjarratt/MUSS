@@ -48,40 +48,59 @@ extern int yydebug;
    enum yytokentype {
      T_ADDR = 258,
      T_DATAVEC = 259,
-     T_MODULEEND = 260,
-     T_END = 261,
-     T_IMPORT = 262,
-     T_INTEGER = 263,
-     T_IS = 264,
-     T_LABEL = 265,
-     T_LITERAL = 266,
-     T_LOGICAL = 267,
-     T_LSPEC = 268,
-     T_MODULE = 269,
-     T_OR = 270,
-     T_PROC = 271,
-     T_PSPEC = 272,
-     T_REAL = 273,
-     T_TYPE = 274,
-     T_VSTORE = 275,
-     T_WITHIN = 276,
-     T_EQUALS = 277,
-     T_COMMA = 278,
-     T_COLON = 279,
-     T_L_BRACK = 280,
-     T_R_BRACK = 281,
-     T_L_PAREN = 282,
-     T_R_PAREN = 283,
-     T_PLUS = 284,
-     T_MINUS = 285,
-     T_AMPERSAND = 286,
-     T_STAR = 287,
-     token = 288,
-     T_SLASH = 289,
-     T_GOTO = 290,
-     T_NAME = 291,
-     T_CHAR_CONST = 292,
-     T_NUMBER = 293
+     T_DO = 260,
+     T_MODULEEND = 261,
+     T_END = 262,
+     T_FOR = 263,
+     T_IMPORT = 264,
+     T_INTEGER = 265,
+     T_IS = 266,
+     T_LABEL = 267,
+     T_LITERAL = 268,
+     T_LOGICAL = 269,
+     T_LSPEC = 270,
+     T_MODULE = 271,
+     T_OD = 272,
+     T_OR = 273,
+     T_PROC = 274,
+     T_PSPEC = 275,
+     T_REAL = 276,
+     T_TYPE = 277,
+     T_VSTORE = 278,
+     T_WITHIN = 279,
+     T_EQUALS = 280,
+     T_LT = 281,
+     T_COMMA = 282,
+     T_COLON = 283,
+     T_L_BRACK = 284,
+     T_R_BRACK = 285,
+     T_L_PAREN = 286,
+     T_R_PAREN = 287,
+     T_PLUS = 288,
+     T_MINUS = 289,
+     T_STAR = 290,
+     token = 291,
+     T_SLASH = 292,
+     T_AMPERSAND = 293,
+     T_EXCLAMATION = 294,
+     T_XOR = 295,
+     T_RSUB = 296,
+     T_RDIV = 297,
+     T_ADDSTORE = 298,
+     T_MULSTORE = 299,
+     T_DIVSTORE = 300,
+     T_ANDSTORE = 301,
+     T_ORSTORE = 302,
+     T_XORSTORE = 303,
+     T_ASSIGN = 304,
+     T_RSUBSTORE = 305,
+     T_RDIVSTORE = 306,
+     T_LLSHIFT = 307,
+     T_RLSHIFT = 308,
+     T_GOTO = 309,
+     T_NAME = 310,
+     T_CHAR_CONST = 311,
+     T_NUMBER = 312
    };
 #endif
 
@@ -90,7 +109,7 @@ extern int yydebug;
 typedef union YYSTYPE
 {
 /* Line 2058 of yacc.c  */
-#line 77 "musl.y"
+#line 96 "musl.y"
 
     char charval;
     char *nameval;
@@ -98,7 +117,7 @@ typedef union YYSTYPE
 
 
 /* Line 2058 of yacc.c  */
-#line 102 "musl.tab.h"
+#line 121 "musl.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

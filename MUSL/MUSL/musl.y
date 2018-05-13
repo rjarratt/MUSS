@@ -26,8 +26,10 @@ in this Software without prior written authorization from Robert Jarratt.
 
 %token T_ADDR
 %token T_DATAVEC
+%token T_DO
 %token T_MODULEEND
 %token T_END
+%token T_FOR
 %token T_IMPORT
 %token T_INTEGER
 %token T_IS
@@ -36,6 +38,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_LOGICAL
 %token T_LSPEC
 %token T_MODULE
+%token T_OD
 %token T_OR
 %token T_PROC
 %token T_PSPEC
@@ -45,6 +48,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_WITHIN
 
 %token T_EQUALS
+%token T_LT
 %token T_COMMA
 %token T_COLON
 %token T_L_BRACK
@@ -53,9 +57,24 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_R_PAREN
 %token T_PLUS
 %token T_MINUS
-%token T_AMPERSAND
 %token T_STAR
 token T_SLASH
+%token T_AMPERSAND
+%token T_EXCLAMATION
+%token T_XOR
+%token T_RSUB
+%token T_RDIV
+%token T_ADDSTORE
+%token T_MULSTORE
+%token T_DIVSTORE
+%token T_ANDSTORE
+%token T_ORSTORE
+%token T_XORSTORE
+%token T_ASSIGN
+%token T_RSUBSTORE
+%token T_RDIVSTORE
+%token T_LLSHIFT
+%token T_RLSHIFT
 %token T_GOTO
 
 %token <nameval> T_NAME
@@ -202,15 +221,35 @@ statement: declarative_statement | imperative_statement | proc_defn;
 
 declarative_statement: label_dec | var_dec | proc_dec | lit_dec | data_vec | type_dec | import_dec;
 
-imperative_statement: control_st;
+imperative_statement: comp_st | control_st;
 
 proc_defn: proc_heading statements T_END;
 proc_heading: T_PROC T_NAME | T_PROC T_NAME T_L_BRACK T_R_BRACK | T_PROC T_NAME T_L_BRACK name_list T_R_BRACK
 
 label_dec: T_NAME T_COLON;
 
+comp_st: for_st;
+
 control_st: go_st;
 
+computation: opr_opd_seq;
+opr_opd_seq: operand | operand operator opr_opd_seq;
+
+operator: T_PLUS | T_MINUS | T_STAR | T_SLASH | T_AMPERSAND | T_EXCLAMATION | T_XOR | T_RSUB | T_RDIV | T_ADDSTORE | T_MULSTORE | T_DIVSTORE | T_ANDSTORE | T_ORSTORE | T_XORSTORE | T_ASSIGN | T_RSUBSTORE | T_RDIVSTORE | T_LLSHIFT | T_RLSHIFT;
+operand: /* simplified */
+    variable
+    |
+    const
+    |
+    T_L_BRACK computation T_R_BRACK
+    |
+    built_in_function;
+
+built_in_function: T_NAME T_L_BRACK name_list T_R_BRACK;
+
+variable: T_NAME; /* simplified */
+
+for_st: T_FOR computation T_DO statements T_OD | T_FOR T_NAME T_LT computation T_DO statements T_OD 
 go_st: T_GOTO T_NAME;
 %%
 

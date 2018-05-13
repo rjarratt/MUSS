@@ -40,8 +40,10 @@ INTEGER          [0-9]+
 ADDR                         { return T_ADDR; }
 \$AD                         { return T_ADDR; }
 DATAVEC                      { return T_DATAVEC; }
+DO                           { return T_DO; }
 \*END                        { return T_MODULEEND; }
 END                          { return T_END; }
+FOR                          { return T_FOR; }
 IMPORT                       { return T_IMPORT; }
 \$IM                         { return T_IMPORT; }
 INTEGER                      { return T_INTEGER; }
@@ -56,6 +58,7 @@ LSPEC                        { return T_LSPEC; }
 \$LS                         { return T_LSPEC; }
 MODULE                       { return T_MODULE; }
 OR                           { return T_OR; }
+OD                           { return T_OD; }
 PROC                         { return T_PROC; }
 PSPEC                        { return T_PSPEC; }
 \$PS                         { return T_PSPEC; }
@@ -64,6 +67,7 @@ TYPE                         { return T_TYPE; }
 WITHIN                       { return T_WITHIN; }
 
 =                            { return T_EQUALS; }
+\<                           { return T_LT; }
 \,                           { return T_COMMA; }
 \:                           { return T_COLON; }
 \(                           { return T_L_BRACK; }
@@ -72,9 +76,24 @@ WITHIN                       { return T_WITHIN; }
 \]                           { return T_R_PAREN; }
 \+                           { return T_PLUS; }
 \-                           { return T_MINUS; }
-\&                           { return T_AMPERSAND; }
 \*                           { return T_STAR; }
 \/                           { return T_SLASH; }
+\&                           { return T_AMPERSAND; }
+\!                           { return T_EXCLAMATION; }
+\-\=                         { return T_XOR; }
+\-\:                         { return T_RSUB; }
+\/\:                         { return T_RDIV; }
+\+\>                         { return T_ADDSTORE; }
+\*\>                         { return T_MULSTORE; }
+\/\>                         { return T_DIVSTORE; }
+\&\>                         { return T_ANDSTORE; }
+\!\>                         { return T_ORSTORE; }
+\-\=\>                       { return T_XORSTORE; }
+\=\>                         { return T_ASSIGN; }
+\-\:->                       { return T_RSUBSTORE; }
+\/\:\>                       { return T_RDIVSTORE; }
+\<\<\-                       { return T_LLSHIFT; }
+\-\>\>                       { return T_RLSHIFT; }
 \-\>                         { return T_GOTO; }
 \;                           { }
 
