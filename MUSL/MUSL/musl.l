@@ -41,11 +41,14 @@ ADDR                         { return T_ADDR; }
 \$AD                         { return T_ADDR; }
 \*END                        { return T_END; }
 IMPORT                       { return T_IMPORT; }
+\$IM                         { return T_IMPORT; }
 INTEGER                      { return T_INTEGER; }
 $IN                          { return T_INTEGER; }
 IS                           { return T_IS; }
 LABEL                        { return T_LABEL; }
 LOGICAL                      { return T_LOGICAL; }
+LITERAL                      { return T_LITERAL; }
+\$LI                         { return T_LITERAL; }
 \$LO                         { return T_LOGICAL; }
 LSPEC                        { return T_LSPEC; }
 \$LS                         { return T_LSPEC; }

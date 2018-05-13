@@ -30,6 +30,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_INTEGER
 %token T_IS
 %token T_LABEL
+%token T_LITERAL
 %token T_LOGICAL
 %token T_LSPEC
 %token T_MODULE
@@ -37,6 +38,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_PSPEC
 %token T_REAL
 %token T_TYPE
+%token T_VSTORE
 %token T_WITHIN
 
 %token T_EQUALS
@@ -73,7 +75,7 @@ module: imports start_module T_END;
 start_module: T_MODULE | T_MODULE T_NAME;
 
 imports: imports import | ;
-import: proc_dec | type_dec; /* | var_dec | import_dec*/
+import: proc_dec | type_dec | var_dec | import_dec
 
 proc_dec:
     proc_dec_spec T_NAME
@@ -101,6 +103,28 @@ type_dec:
     |
     T_WITHIN T_NAME T_IS structure;
 
+var_dec: type name_list;
+
+import_dec: T_IMPORT kind imp_list;
+kind:
+    T_LITERAL
+    |
+    T_LITERAL numeric_type
+    |
+    T_VSTORE
+    |
+    T_VSTORE numeric_type
+    |
+    T_TYPE
+    |
+    T_LABEL;
+
+imp_list: imp_list T_COMMA imp_list_item | imp_list_item;
+imp_list_item:
+    T_NAME
+    |
+    T_NAME T_L_PAREN T_R_PAREN
+
 structure: fields | fields T_OR structure;
 fields: fields type name_list |  type name_list;
 
@@ -115,8 +139,8 @@ scalar_type:
     |
     T_ADDR numeric_type
     |
-    T_ADDR T_NAME
-    |
+/*    T_ADDR T_NAME    This part of the rule is excluded as it creates an ambiguity in variable declarations of type ADDR. I think it is meant that T_NAME is the name of a TYPE
+    |*/ 
     T_ADDR T_L_PAREN numeric_type T_R_PAREN
     |
     T_ADDR T_L_PAREN T_NAME T_R_PAREN
@@ -127,7 +151,7 @@ scalar_type:
     |
     T_ADDR T_ADDR;
 
-const: T_INTEGER; /* see 9.3.5 for the rest */
+const: T_NUMBER; /* see 9.3.5 for the rest */
 
 numeric_type:
     T_INTEGER size
