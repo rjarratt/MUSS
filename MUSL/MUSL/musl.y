@@ -170,7 +170,7 @@ statements: statements statement | statement;
 
 statement: declarative_statement | imperative_statement;
 
-declarative_statement: label_dec;
+declarative_statement: label_dec | var_dec | proc_dec | type_dec | import_dec;
 
 imperative_statement: control_st;
 
