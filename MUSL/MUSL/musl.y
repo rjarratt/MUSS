@@ -25,6 +25,7 @@ in this Software without prior written authorization from Robert Jarratt.
 */
 
 %token T_ADDR
+%token T_MODULEEND
 %token T_END
 %token T_IMPORT
 %token T_INTEGER
@@ -35,6 +36,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_LSPEC
 %token T_MODULE
 %token T_OR
+%token T_PROC
 %token T_PSPEC
 %token T_REAL
 %token T_TYPE
@@ -73,7 +75,7 @@ extern int yylineno;
 
 %%
 
-module: imports start_module exports statements T_END;
+module: imports start_module exports statements T_MODULEEND;
 start_module: T_MODULE | T_MODULE T_NAME;
 
 imports: imports import | ;
@@ -168,11 +170,14 @@ size: T_NUMBER |;
 
 statements: statements statement | statement;
 
-statement: declarative_statement | imperative_statement;
+statement: declarative_statement | imperative_statement | proc_defn;
 
 declarative_statement: label_dec | var_dec | proc_dec | type_dec | import_dec;
 
 imperative_statement: control_st;
+
+proc_defn: proc_heading statements T_END;
+proc_heading: T_PROC T_NAME | T_PROC T_NAME T_L_BRACK T_R_BRACK | T_PROC T_NAME T_L_BRACK name_list T_R_BRACK
 
 label_dec: T_NAME T_COLON;
 

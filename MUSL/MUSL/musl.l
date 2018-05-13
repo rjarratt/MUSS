@@ -39,7 +39,8 @@ INTEGER          [0-9]+
 
 ADDR                         { return T_ADDR; }
 \$AD                         { return T_ADDR; }
-\*END                        { return T_END; }
+\*END                        { return T_MODULEEND; }
+END                          { return T_END; }
 IMPORT                       { return T_IMPORT; }
 \$IM                         { return T_IMPORT; }
 INTEGER                      { return T_INTEGER; }
@@ -54,6 +55,7 @@ LSPEC                        { return T_LSPEC; }
 \$LS                         { return T_LSPEC; }
 MODULE                       { return T_MODULE; }
 OR                           { return T_OR; }
+PROC                         { return T_PROC; }
 PSPEC                        { return T_PSPEC; }
 \$PS                         { return T_PSPEC; }
 REAL                         { return T_REAL; }
