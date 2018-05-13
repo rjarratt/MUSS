@@ -39,6 +39,7 @@ INTEGER          [0-9]+
 
 ADDR                         { return T_ADDR; }
 \$AD                         { return T_ADDR; }
+DATAVEC                      { return T_DATAVEC; }
 \*END                        { return T_MODULEEND; }
 END                          { return T_END; }
 IMPORT                       { return T_IMPORT; }
@@ -69,10 +70,15 @@ WITHIN                       { return T_WITHIN; }
 \)                           { return T_R_BRACK; }
 \[                           { return T_L_PAREN; }
 \]                           { return T_R_PAREN; }
+\+                           { return T_PLUS; }
+\-                           { return T_MINUS; }
+\&                           { return T_AMPERSAND; }
+\*                           { return T_STAR; }
 \/                           { return T_SLASH; }
 \-\>                         { return T_GOTO; }
 \;                           { }
 
+\'.                          { yylval.charval = yytext[1]; return T_CHAR_CONST; }
 {NAME}                       { yylval.nameval = _strdup(yytext); return T_NAME;}
 {INTEGER}                    { yylval.unsignedval = atoi(yytext); return T_NUMBER;}
 

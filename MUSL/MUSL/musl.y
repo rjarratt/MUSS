@@ -25,6 +25,7 @@ in this Software without prior written authorization from Robert Jarratt.
 */
 
 %token T_ADDR
+%token T_DATAVEC
 %token T_MODULEEND
 %token T_END
 %token T_IMPORT
@@ -50,10 +51,15 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_R_BRACK
 %token T_L_PAREN
 %token T_R_PAREN
-%token T_SLASH
+%token T_PLUS
+%token T_MINUS
+%token T_AMPERSAND
+%token T_STAR
+token T_SLASH
 %token T_GOTO
 
 %token <nameval> T_NAME
+%token <charval> T_CHAR_CONST
 %token <unsignedval> T_NUMBER
 
 %{
@@ -69,6 +75,7 @@ extern int yylineno;
 
 %union
 {
+    char charval;
     char *nameval;
     unsigned int unsignedval;
 }
@@ -111,6 +118,13 @@ lit_dec:
 
 pointer_lit: T_SLASH T_ADDR T_L_PAREN any_type T_R_PAREN T_NAME T_EQUALS;
 any_type: type; /* any_type is not defined in the manual */
+
+data_vec: T_DATAVEC T_NAME T_L_BRACK scalar_type T_R_BRACK literals T_END;
+literals: literals literal_item | literal_item;
+literal_item: literal | literal T_L_PAREN const T_R_PAREN;
+literal: const_expr /*| aggregate_const*/;
+const_expr: const | const const_op const_expr;
+const_op: T_PLUS | T_MINUS | T_AMPERSAND | T_STAR | T_SLASH;
 
 type_dec:
     T_TYPE T_NAME
@@ -169,7 +183,9 @@ scalar_type:
     |
     T_ADDR T_ADDR;
 
-const: T_NUMBER; /* see 9.3.5 for the rest */
+const: dec_integer | char_const; /* see 9.3.5 for the rest */
+dec_integer: T_NUMBER | T_PLUS T_NUMBER | T_MINUS T_NUMBER;
+char_const: T_CHAR_CONST;
 
 numeric_type:
     T_INTEGER size
@@ -184,7 +200,7 @@ statements: statements statement | statement;
 
 statement: declarative_statement | imperative_statement | proc_defn;
 
-declarative_statement: label_dec | var_dec | proc_dec | lit_dec | type_dec | import_dec;
+declarative_statement: label_dec | var_dec | proc_dec | lit_dec | data_vec | type_dec | import_dec;
 
 imperative_statement: control_st;
 

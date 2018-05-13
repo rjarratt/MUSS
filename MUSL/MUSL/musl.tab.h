@@ -47,34 +47,41 @@ extern int yydebug;
       know about them.  */
    enum yytokentype {
      T_ADDR = 258,
-     T_MODULEEND = 259,
-     T_END = 260,
-     T_IMPORT = 261,
-     T_INTEGER = 262,
-     T_IS = 263,
-     T_LABEL = 264,
-     T_LITERAL = 265,
-     T_LOGICAL = 266,
-     T_LSPEC = 267,
-     T_MODULE = 268,
-     T_OR = 269,
-     T_PROC = 270,
-     T_PSPEC = 271,
-     T_REAL = 272,
-     T_TYPE = 273,
-     T_VSTORE = 274,
-     T_WITHIN = 275,
-     T_EQUALS = 276,
-     T_COMMA = 277,
-     T_COLON = 278,
-     T_L_BRACK = 279,
-     T_R_BRACK = 280,
-     T_L_PAREN = 281,
-     T_R_PAREN = 282,
-     T_SLASH = 283,
-     T_GOTO = 284,
-     T_NAME = 285,
-     T_NUMBER = 286
+     T_DATAVEC = 259,
+     T_MODULEEND = 260,
+     T_END = 261,
+     T_IMPORT = 262,
+     T_INTEGER = 263,
+     T_IS = 264,
+     T_LABEL = 265,
+     T_LITERAL = 266,
+     T_LOGICAL = 267,
+     T_LSPEC = 268,
+     T_MODULE = 269,
+     T_OR = 270,
+     T_PROC = 271,
+     T_PSPEC = 272,
+     T_REAL = 273,
+     T_TYPE = 274,
+     T_VSTORE = 275,
+     T_WITHIN = 276,
+     T_EQUALS = 277,
+     T_COMMA = 278,
+     T_COLON = 279,
+     T_L_BRACK = 280,
+     T_R_BRACK = 281,
+     T_L_PAREN = 282,
+     T_R_PAREN = 283,
+     T_PLUS = 284,
+     T_MINUS = 285,
+     T_AMPERSAND = 286,
+     T_STAR = 287,
+     token = 288,
+     T_SLASH = 289,
+     T_GOTO = 290,
+     T_NAME = 291,
+     T_CHAR_CONST = 292,
+     T_NUMBER = 293
    };
 #endif
 
@@ -83,14 +90,15 @@ extern int yydebug;
 typedef union YYSTYPE
 {
 /* Line 2058 of yacc.c  */
-#line 71 "musl.y"
+#line 77 "musl.y"
 
+    char charval;
     char *nameval;
     unsigned int unsignedval;
 
 
 /* Line 2058 of yacc.c  */
-#line 94 "musl.tab.h"
+#line 102 "musl.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
