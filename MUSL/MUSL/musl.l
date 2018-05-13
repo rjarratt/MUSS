@@ -43,21 +43,28 @@ ADDR                         { return T_ADDR; }
 IMPORT                       { return T_IMPORT; }
 INTEGER                      { return T_INTEGER; }
 $IN                          { return T_INTEGER; }
+IS                           { return T_IS; }
 LABEL                        { return T_LABEL; }
 LOGICAL                      { return T_LOGICAL; }
 \$LO                         { return T_LOGICAL; }
 LSPEC                        { return T_LSPEC; }
 \$LS                         { return T_LSPEC; }
 MODULE                       { return T_MODULE; }
+OR                           { return T_OR; }
+PSPEC                        { return T_PSPEC; }
+\$PS                         { return T_PSPEC; }
 REAL                         { return T_REAL; }
+TYPE                         { return T_TYPE; }
+WITHIN                       { return T_WITHIN; }
 
 =                            { return T_EQUALS; }
+\,                           { return T_COMMA; }
 \(                           { return T_L_BRACK; }
 \)                           { return T_R_BRACK; }
 \[                           { return T_L_PAREN; }
 \]                           { return T_R_PAREN; }
 \/                           { return T_SLASH; }
-\;                           { return T_SEP; }
+\;                           { }
 
 {NAME}                       { yylval.nameval = _strdup(yytext); return T_NAME;}
 {INTEGER}                    { yylval.unsignedval = atoi(yytext); return T_NUMBER;}

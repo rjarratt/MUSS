@@ -28,20 +28,24 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_END
 %token T_IMPORT
 %token T_INTEGER
+%token T_IS
 %token T_LABEL
 %token T_LOGICAL
 %token T_LSPEC
 %token T_MODULE
+%token T_OR
 %token T_PSPEC
 %token T_REAL
+%token T_TYPE
+%token T_WITHIN
 
 %token T_EQUALS
+%token T_COMMA
 %token T_L_BRACK
 %token T_R_BRACK
 %token T_L_PAREN
 %token T_R_PAREN
 %token T_SLASH
-%token T_SEP
 
 %token <nameval> T_NAME
 %token <unsignedval> T_NUMBER
@@ -69,7 +73,7 @@ module: imports start_module T_END;
 start_module: T_MODULE | T_MODULE T_NAME;
 
 imports: imports import | ;
-import: proc_dec T_SEP; /* | var_dec | import_dec | type_dec;*/
+import: proc_dec | type_dec; /* | var_dec | import_dec*/
 
 proc_dec:
     proc_dec_spec T_NAME
@@ -86,7 +90,23 @@ pspec:
     |
     T_L_BRACK t_list T_R_BRACK T_SLASH scalar_type;
 
-t_list: t_list scalar_type | ;
+t_list: t_list T_COMMA scalar_type | scalar_type | ;
+
+type_dec:
+    T_TYPE T_NAME
+    |
+    T_TYPE T_NAME T_IS structure
+    |
+    T_TYPE T_NAME const
+    |
+    T_WITHIN T_NAME T_IS structure;
+
+structure: fields | fields T_OR structure;
+fields: fields type name_list |  type name_list;
+
+type: scalar_type | scalar_type T_L_PAREN const T_R_PAREN;
+
+name_list: name_list T_COMMA T_NAME | T_NAME;
 
 scalar_type:
     numeric_type
@@ -106,6 +126,8 @@ scalar_type:
     T_ADDR
     |
     T_ADDR T_ADDR;
+
+const: T_INTEGER; /* see 9.3.5 for the rest */
 
 numeric_type:
     T_INTEGER size

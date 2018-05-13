@@ -50,21 +50,25 @@ extern int yydebug;
      T_END = 259,
      T_IMPORT = 260,
      T_INTEGER = 261,
-     T_LABEL = 262,
-     T_LOGICAL = 263,
-     T_LSPEC = 264,
-     T_MODULE = 265,
-     T_PSPEC = 266,
-     T_REAL = 267,
-     T_EQUALS = 268,
-     T_L_BRACK = 269,
-     T_R_BRACK = 270,
-     T_L_PAREN = 271,
-     T_R_PAREN = 272,
-     T_SLASH = 273,
-     T_SEP = 274,
-     T_NAME = 275,
-     T_NUMBER = 276
+     T_IS = 262,
+     T_LABEL = 263,
+     T_LOGICAL = 264,
+     T_LSPEC = 265,
+     T_MODULE = 266,
+     T_OR = 267,
+     T_PSPEC = 268,
+     T_REAL = 269,
+     T_TYPE = 270,
+     T_WITHIN = 271,
+     T_EQUALS = 272,
+     T_COMMA = 273,
+     T_L_BRACK = 274,
+     T_R_BRACK = 275,
+     T_L_PAREN = 276,
+     T_R_PAREN = 277,
+     T_SLASH = 278,
+     T_NAME = 279,
+     T_NUMBER = 280
    };
 #endif
 
@@ -73,14 +77,14 @@ extern int yydebug;
 typedef union YYSTYPE
 {
 /* Line 2058 of yacc.c  */
-#line 61 "musl.y"
+#line 65 "musl.y"
 
     char *nameval;
     unsigned int unsignedval;
 
 
 /* Line 2058 of yacc.c  */
-#line 84 "musl.tab.h"
+#line 88 "musl.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
