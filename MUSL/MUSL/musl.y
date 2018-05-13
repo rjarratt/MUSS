@@ -100,6 +100,18 @@ pspec:
 
 t_list: t_list T_COMMA scalar_type | scalar_type | ;
 
+lit_dec:
+/*    T_LITERAL integer_lits
+    |
+    T_LITERAL real_lits
+    |
+    T_LITERAL aggregate_lits
+    |*/
+    T_LITERAL pointer_lit;
+
+pointer_lit: T_SLASH T_ADDR T_L_PAREN any_type T_R_PAREN T_NAME T_EQUALS;
+any_type: type; /* any_type is not defined in the manual */
+
 type_dec:
     T_TYPE T_NAME
     |
@@ -172,7 +184,7 @@ statements: statements statement | statement;
 
 statement: declarative_statement | imperative_statement | proc_defn;
 
-declarative_statement: label_dec | var_dec | proc_dec | type_dec | import_dec;
+declarative_statement: label_dec | var_dec | proc_dec | lit_dec | type_dec | import_dec;
 
 imperative_statement: control_st;
 
