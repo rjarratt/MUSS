@@ -62,11 +62,13 @@ WITHIN                       { return T_WITHIN; }
 
 =                            { return T_EQUALS; }
 \,                           { return T_COMMA; }
+\:                           { return T_COLON; }
 \(                           { return T_L_BRACK; }
 \)                           { return T_R_BRACK; }
 \[                           { return T_L_PAREN; }
 \]                           { return T_R_PAREN; }
 \/                           { return T_SLASH; }
+\-\>                         { return T_GOTO; }
 \;                           { }
 
 {NAME}                       { yylval.nameval = _strdup(yytext); return T_NAME;}

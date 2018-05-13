@@ -43,11 +43,13 @@ in this Software without prior written authorization from Robert Jarratt.
 
 %token T_EQUALS
 %token T_COMMA
+%token T_COLON
 %token T_L_BRACK
 %token T_R_BRACK
 %token T_L_PAREN
 %token T_R_PAREN
 %token T_SLASH
+%token T_GOTO
 
 %token <nameval> T_NAME
 %token <unsignedval> T_NUMBER
@@ -71,11 +73,13 @@ extern int yylineno;
 
 %%
 
-module: imports start_module T_END;
+module: imports start_module exports statements T_END;
 start_module: T_MODULE | T_MODULE T_NAME;
 
 imports: imports import | ;
 import: proc_dec | type_dec | var_dec | import_dec
+
+exports: T_L_BRACK name_list T_R_BRACK | ;
 
 proc_dec:
     proc_dec_spec T_NAME
@@ -162,6 +166,18 @@ numeric_type:
 
 size: T_NUMBER |;
 
+statements: statements statement | statement;
 
+statement: declarative_statement | imperative_statement;
+
+declarative_statement: label_dec;
+
+imperative_statement: control_st;
+
+label_dec: T_NAME T_COLON;
+
+control_st: go_st;
+
+go_st: T_GOTO T_NAME;
 %%
 
