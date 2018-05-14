@@ -70,6 +70,7 @@ WITHIN                       { return T_WITHIN; }
 \<                           { return T_LT; }
 \,                           { return T_COMMA; }
 \:                           { return T_COLON; }
+\^                           { return T_CIRCUMFLEX; }
 \(                           { return T_L_BRACK; }
 \)                           { return T_R_BRACK; }
 \[                           { return T_L_PAREN; }

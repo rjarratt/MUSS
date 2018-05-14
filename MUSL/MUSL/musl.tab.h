@@ -72,35 +72,36 @@ extern int yydebug;
      T_LT = 281,
      T_COMMA = 282,
      T_COLON = 283,
-     T_L_BRACK = 284,
-     T_R_BRACK = 285,
-     T_L_PAREN = 286,
-     T_R_PAREN = 287,
-     T_PLUS = 288,
-     T_MINUS = 289,
-     T_STAR = 290,
-     token = 291,
-     T_SLASH = 292,
-     T_AMPERSAND = 293,
-     T_EXCLAMATION = 294,
-     T_XOR = 295,
-     T_RSUB = 296,
-     T_RDIV = 297,
-     T_ADDSTORE = 298,
-     T_MULSTORE = 299,
-     T_DIVSTORE = 300,
-     T_ANDSTORE = 301,
-     T_ORSTORE = 302,
-     T_XORSTORE = 303,
-     T_ASSIGN = 304,
-     T_RSUBSTORE = 305,
-     T_RDIVSTORE = 306,
-     T_LLSHIFT = 307,
-     T_RLSHIFT = 308,
-     T_GOTO = 309,
-     T_NAME = 310,
-     T_CHAR_CONST = 311,
-     T_NUMBER = 312
+     T_CIRCUMFLEX = 284,
+     T_L_BRACK = 285,
+     T_R_BRACK = 286,
+     T_L_PAREN = 287,
+     T_R_PAREN = 288,
+     T_PLUS = 289,
+     T_MINUS = 290,
+     T_STAR = 291,
+     token = 292,
+     T_SLASH = 293,
+     T_AMPERSAND = 294,
+     T_EXCLAMATION = 295,
+     T_XOR = 296,
+     T_RSUB = 297,
+     T_RDIV = 298,
+     T_ADDSTORE = 299,
+     T_MULSTORE = 300,
+     T_DIVSTORE = 301,
+     T_ANDSTORE = 302,
+     T_ORSTORE = 303,
+     T_XORSTORE = 304,
+     T_ASSIGN = 305,
+     T_RSUBSTORE = 306,
+     T_RDIVSTORE = 307,
+     T_LLSHIFT = 308,
+     T_RLSHIFT = 309,
+     T_GOTO = 310,
+     T_NAME = 311,
+     T_CHAR_CONST = 312,
+     T_NUMBER = 313
    };
 #endif
 
@@ -109,7 +110,7 @@ extern int yydebug;
 typedef union YYSTYPE
 {
 /* Line 2058 of yacc.c  */
-#line 96 "musl.y"
+#line 97 "musl.y"
 
     char charval;
     char *nameval;
@@ -117,7 +118,7 @@ typedef union YYSTYPE
 
 
 /* Line 2058 of yacc.c  */
-#line 121 "musl.tab.h"
+#line 122 "musl.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
