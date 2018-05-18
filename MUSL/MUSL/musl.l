@@ -38,12 +38,16 @@ INTEGER          [0-9]+
 %%
 
 ADDR                         { return T_ADDR; }
+AND                          { return T_AND; }
 \$AD                         { return T_ADDR; }
 DATAVEC                      { return T_DATAVEC; }
 DO                           { return T_DO; }
+ELSE                         { return T_ELSE; }
 \*END                        { return T_MODULEEND; }
 END                          { return T_END; }
+FI                           { return T_FI; }
 FOR                          { return T_FOR; }
+IF                           { return T_IF; }
 IMPORT                       { return T_IMPORT; }
 \$IM                         { return T_IMPORT; }
 INTEGER                      { return T_INTEGER; }
@@ -63,11 +67,16 @@ PROC                         { return T_PROC; }
 PSPEC                        { return T_PSPEC; }
 \$PS                         { return T_PSPEC; }
 REAL                         { return T_REAL; }
+THEN                         { return T_THEN; }
 TYPE                         { return T_TYPE; }
 WITHIN                       { return T_WITHIN; }
 
 =                            { return T_EQUALS; }
+\/=                          { return T_NOT_EQUALS; }
 \<                           { return T_LT; }
+\>                           { return T_GT; }
+\=<                          { return T_LE; }
+\>=                          { return T_GE; }
 \,                           { return T_COMMA; }
 \:                           { return T_COLON; }
 \^                           { return T_CIRCUMFLEX; }

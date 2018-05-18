@@ -25,13 +25,17 @@ in this Software without prior written authorization from Robert Jarratt.
 */
 
 %token T_ADDR
+%token T_AND
 %token T_DATAVEC
 %token T_DO
+%token T_ELSE
 %token T_MODULEEND
 %token T_END
+%token T_FI
 %token T_FOR
 %token T_IMPORT
 %token T_INTEGER
+%token T_IF
 %token T_IS
 %token T_LABEL
 %token T_LITERAL
@@ -43,12 +47,17 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_PROC
 %token T_PSPEC
 %token T_REAL
+%token T_THEN
 %token T_TYPE
 %token T_VSTORE
 %token T_WITHIN
 
 %token T_EQUALS
+%token T_NOT_EQUALS
 %token T_LT
+%token T_GT
+%token T_LE
+%token T_GE
 %token T_COMMA
 %token T_COLON
 %token T_CIRCUMFLEX
@@ -229,7 +238,7 @@ proc_heading: T_PROC T_NAME | T_PROC T_NAME T_L_BRACK T_R_BRACK | T_PROC T_NAME 
 
 label_dec: T_NAME T_COLON;
 
-comp_st: computation | for_st;
+comp_st: computation | if_st | for_st;
 
 control_st: go_st;
 
@@ -252,6 +261,14 @@ operand: /* simplified */
     |
     built_in_function;
 
+condition: test | test logop condition;
+test: T_L_PAREN condition T_R_PAREN | comparison
+logop: T_OR | T_AND;
+
+comparison: computation compare_list;
+compare_list: comparator computation compare_list | comparator computation;
+comparator: T_EQUALS | T_NOT_EQUALS | T_LT | T_GT | T_LE | T_GE;
+
 p_list: p_list T_COMMA computation | computation | ;
 built_in_function: T_NAME T_L_BRACK name_list T_R_BRACK;
 
@@ -259,7 +276,11 @@ built_in_function: T_NAME T_L_BRACK name_list T_R_BRACK;
 variable: T_NAME | T_NAME subscript | T_NAME T_CIRCUMFLEX subscript | T_NAME subscript T_CIRCUMFLEX subscript;
 subscript: T_L_PAREN computation T_R_PAREN ;
 
+if_st: T_IF condition action
 for_st: T_FOR computation T_DO statements T_OD | T_FOR T_NAME T_LT computation T_DO statements T_OD 
 go_st: T_GOTO T_NAME;
+
+action: T_COMMA go_st | T_THEN statements else_cl T_FI;
+else_cl: T_ELSE statements | ;
 %%
 
