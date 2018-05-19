@@ -90,6 +90,8 @@ token T_SLASH
 
 %token <nameval> T_NAME
 %token <charval> T_CHAR_CONST
+%token <stringval> T_MULTI_CHAR_CONST
+%token <stringval> T_CH_STRING
 %token <unsignedval> T_NUMBER
 
 %{
@@ -106,6 +108,7 @@ extern int yylineno;
 %union
 {
     char charval;
+    char *stringval;
     char *nameval;
     unsigned int unsignedval;
 }
@@ -213,7 +216,7 @@ scalar_type:
     |
     T_ADDR T_ADDR;
 
-const: dec_integer | char_const; /* see 9.3.5 for the rest */
+const: dec_integer | char_const | T_MULTI_CHAR_CONST | T_CH_STRING; /* see 9.3.5 for the rest */
 dec_integer: T_NUMBER | T_PLUS T_NUMBER | T_MINUS T_NUMBER;
 char_const: T_CHAR_CONST;
 

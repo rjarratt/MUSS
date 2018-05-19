@@ -111,7 +111,9 @@ extern int yydebug;
      T_GOTO = 320,
      T_NAME = 321,
      T_CHAR_CONST = 322,
-     T_NUMBER = 323
+     T_MULTI_CHAR_CONST = 323,
+     T_CH_STRING = 324,
+     T_NUMBER = 325
    };
 #endif
 
@@ -120,15 +122,16 @@ extern int yydebug;
 typedef union YYSTYPE
 {
 /* Line 2058 of yacc.c  */
-#line 107 "musl.y"
+#line 109 "musl.y"
 
     char charval;
+    char *stringval;
     char *nameval;
     unsigned int unsignedval;
 
 
 /* Line 2058 of yacc.c  */
-#line 132 "musl.tab.h"
+#line 135 "musl.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

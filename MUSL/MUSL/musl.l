@@ -108,6 +108,8 @@ WITHIN                       { return T_WITHIN; }
 \-\>                         { return T_GOTO; }
 \;                           { }
 
+\".*\"                       { yylval.stringval = _strdup(yytext); return T_MULTI_CHAR_CONST; }
+\%\".*\"                     { yylval.stringval = _strdup(&yytext[1]); return T_CH_STRING; }
 \'.                          { yylval.charval = yytext[1]; return T_CHAR_CONST; }
 {NAME}                       { yylval.nameval = _strdup(yytext); return T_NAME;}
 {INTEGER}                    { yylval.unsignedval = atoi(yytext); return T_NUMBER;}
