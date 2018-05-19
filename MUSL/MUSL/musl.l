@@ -70,6 +70,7 @@ PSPEC                        { return T_PSPEC; }
 REAL                         { return T_REAL; }
 THEN                         { return T_THEN; }
 TYPE                         { return T_TYPE; }
+WHILE                        { return T_WHILE; }
 WITHIN                       { return T_WITHIN; }
 
 =                            { return T_EQUALS; }

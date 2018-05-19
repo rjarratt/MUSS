@@ -51,6 +51,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_THEN
 %token T_TYPE
 %token T_VSTORE
+%token T_WHILE
 %token T_WITHIN
 
 %token T_EQUALS
@@ -242,7 +243,7 @@ proc_heading: T_PROC T_NAME | T_PROC T_NAME T_L_BRACK T_R_BRACK | T_PROC T_NAME 
 
 label_dec: T_NAME T_COLON;
 
-comp_st: computation | if_st | for_st;
+comp_st: computation | if_st | while_st| for_st;
 
 control_st: go_st;
 
@@ -286,6 +287,7 @@ variable: T_NAME | T_NAME subscript | T_NAME T_CIRCUMFLEX subscript | T_NAME sub
 subscript: T_L_PAREN computation T_R_PAREN ;
 
 if_st: T_IF condition action
+while_st: T_WHILE condition T_DO statements T_OD
 for_st: T_FOR computation T_DO statements T_OD | T_FOR T_NAME T_LT computation T_DO statements T_OD 
 go_st: T_GOTO T_NAME;
 
