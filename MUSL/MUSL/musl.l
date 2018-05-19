@@ -61,8 +61,9 @@ LITERAL                      { return T_LITERAL; }
 LSPEC                        { return T_LSPEC; }
 \$LS                         { return T_LSPEC; }
 MODULE                       { return T_MODULE; }
-OR                           { return T_OR; }
 OD                           { return T_OD; }
+OF                           { return T_OF; }
+OR                           { return T_OR; }
 PROC                         { return T_PROC; }
 PSPEC                        { return T_PSPEC; }
 \$PS                         { return T_PSPEC; }

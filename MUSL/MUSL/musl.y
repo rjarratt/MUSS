@@ -43,6 +43,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_LSPEC
 %token T_MODULE
 %token T_OD
+%token T_OF
 %token T_OR
 %token T_PROC
 %token T_PSPEC
@@ -251,6 +252,10 @@ operand: /* simplified */
     |
     T_CIRCUMFLEX variable
     |
+    variable T_OF context
+    |
+    T_CIRCUMFLEX variable T_OF context
+    |
     const
     |
     T_NAME T_L_BRACK p_list T_R_BRACK
@@ -260,6 +265,7 @@ operand: /* simplified */
     T_L_BRACK computation T_R_BRACK
     |
     built_in_function;
+context: variable | variable T_OF context;
 
 condition: test | test logop condition;
 test: T_L_PAREN condition T_R_PAREN | comparison
