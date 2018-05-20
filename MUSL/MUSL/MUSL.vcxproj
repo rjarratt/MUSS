@@ -156,7 +156,10 @@
     <ClInclude Include="musl.tab.h" />
   </ItemGroup>
   <ItemGroup>
-    <Bison Include="musl.y" />
+    <Bison Include="musl.y">
+      <Debug Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</Debug>
+      <Verbose Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</Verbose>
+    </Bison>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

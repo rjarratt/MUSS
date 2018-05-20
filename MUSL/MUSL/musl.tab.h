@@ -34,7 +34,7 @@
 # define YY_YY_MUSL_TAB_H_INCLUDED
 /* Enabling traces.  */
 #ifndef YYDEBUG
-# define YYDEBUG 0
+# define YYDEBUG 1
 #endif
 #if YYDEBUG
 extern int yydebug;
@@ -91,30 +91,29 @@ extern int yydebug;
      T_PLUS = 300,
      T_MINUS = 301,
      T_STAR = 302,
-     token = 303,
-     T_SLASH = 304,
-     T_AMPERSAND = 305,
-     T_EXCLAMATION = 306,
-     T_XOR = 307,
-     T_RSUB = 308,
-     T_RDIV = 309,
-     T_ADDSTORE = 310,
-     T_MULSTORE = 311,
-     T_DIVSTORE = 312,
-     T_ANDSTORE = 313,
-     T_ORSTORE = 314,
-     T_XORSTORE = 315,
-     T_ASSIGN = 316,
-     T_RSUBSTORE = 317,
-     T_RDIVSTORE = 318,
-     T_LLSHIFT = 319,
-     T_RLSHIFT = 320,
-     T_GOTO = 321,
-     T_NAME = 322,
-     T_CHAR_CONST = 323,
-     T_MULTI_CHAR_CONST = 324,
-     T_CH_STRING = 325,
-     T_NUMBER = 326
+     T_SLASH = 303,
+     T_AMPERSAND = 304,
+     T_EXCLAMATION = 305,
+     T_XOR = 306,
+     T_RSUB = 307,
+     T_RDIV = 308,
+     T_ADDSTORE = 309,
+     T_MULSTORE = 310,
+     T_DIVSTORE = 311,
+     T_ANDSTORE = 312,
+     T_ORSTORE = 313,
+     T_XORSTORE = 314,
+     T_ASSIGN = 315,
+     T_RSUBSTORE = 316,
+     T_RDIVSTORE = 317,
+     T_LLSHIFT = 318,
+     T_RLSHIFT = 319,
+     T_GOTO = 320,
+     T_NAME = 321,
+     T_CHAR_CONST = 322,
+     T_MULTI_CHAR_CONST = 323,
+     T_CH_STRING = 324,
+     T_NUMBER = 325
    };
 #endif
 
@@ -132,7 +131,7 @@ typedef union YYSTYPE
 
 
 /* Line 2058 of yacc.c  */
-#line 136 "musl.tab.h"
+#line 135 "musl.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

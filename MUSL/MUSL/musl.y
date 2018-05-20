@@ -70,7 +70,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_PLUS
 %token T_MINUS
 %token T_STAR
-token T_SLASH
+%token T_SLASH
 %token T_AMPERSAND
 %token T_EXCLAMATION
 %token T_XOR
@@ -198,13 +198,14 @@ type: scalar_type | scalar_type T_L_PAREN const T_R_PAREN;
 
 name_list: name_list T_COMMA T_NAME | T_NAME;
 
+/* shift-reduce conflict because of vector declaration in the definition of <type> above, with conflict on left square bracket */
 scalar_type:
     numeric_type
     |
     T_NAME
     |
-    T_ADDR numeric_type
-    |
+    /*T_ADDR numeric_type  This part of the rule excluded because of a shift-reduce conflict
+    |*/
 /*    T_ADDR T_NAME    This part of the rule is excluded as it creates an ambiguity in variable declarations of type ADDR. I think it is meant that T_NAME is the name of a TYPE
     |*/ 
     T_ADDR T_L_PAREN numeric_type T_R_PAREN
@@ -214,8 +215,8 @@ scalar_type:
     T_ADDR T_L_PAREN T_ADDR T_R_PAREN
     |
     T_ADDR
-    |
-    T_ADDR T_ADDR;
+    /*|
+    T_ADDR T_ADDR  Causes a shift-reduce conflict */;
 
 const: dec_integer | char_const | T_MULTI_CHAR_CONST | T_CH_STRING; /* see 9.3.5 for the rest */
 dec_integer: T_NUMBER | T_PLUS T_NUMBER | T_MINUS T_NUMBER;
