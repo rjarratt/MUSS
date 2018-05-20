@@ -248,3 +248,4 @@ ModelManifest.xml
 /Flocoder/Flip/data
 /Flocoder/Flip/*.flow
 /MUSL/MUSL/*.c
+*.output
