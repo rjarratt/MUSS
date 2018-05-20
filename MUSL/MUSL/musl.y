@@ -217,8 +217,8 @@ scalar_type:
     vector_pointer T_ADDR T_R_PAREN
     |
     T_ADDR
-    /*|
-    T_ADDR T_ADDR  Causes a shift-reduce conflict */;
+    |
+    T_ADDR T_ADDR;
 vector_pointer: T_ADDR T_L_PAREN;
 
 const: dec_integer | char_const | T_MULTI_CHAR_CONST | T_CH_STRING; /* see 9.3.5 for the rest */
