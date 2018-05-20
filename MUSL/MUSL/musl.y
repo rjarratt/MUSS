@@ -95,6 +95,8 @@ in this Software without prior written authorization from Robert Jarratt.
 %token <stringval> T_CH_STRING
 %token <unsignedval> T_NUMBER
 
+%right T_ADDR T_L_PAREN
+
 %{
 #include <stdio.h>
 #include <string.h>
@@ -208,15 +210,16 @@ scalar_type:
     |*/
 /*    T_ADDR T_NAME    This part of the rule is excluded as it creates an ambiguity in variable declarations of type ADDR. I think it is meant that T_NAME is the name of a TYPE
     |*/ 
-    T_ADDR T_L_PAREN numeric_type T_R_PAREN
+    vector_pointer numeric_type T_R_PAREN
     |
-    T_ADDR T_L_PAREN T_NAME T_R_PAREN
+    vector_pointer T_NAME T_R_PAREN
     |
-    T_ADDR T_L_PAREN T_ADDR T_R_PAREN
+    vector_pointer T_ADDR T_R_PAREN
     |
     T_ADDR
     /*|
     T_ADDR T_ADDR  Causes a shift-reduce conflict */;
+vector_pointer: T_ADDR T_L_PAREN;
 
 const: dec_integer | char_const | T_MULTI_CHAR_CONST | T_CH_STRING; /* see 9.3.5 for the rest */
 dec_integer: T_NUMBER | T_PLUS T_NUMBER | T_MINUS T_NUMBER;

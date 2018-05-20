@@ -122,7 +122,7 @@ extern int yydebug;
 typedef union YYSTYPE
 {
 /* Line 2058 of yacc.c  */
-#line 110 "musl.y"
+#line 112 "musl.y"
 
     char charval;
     char *stringval;
