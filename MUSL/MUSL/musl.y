@@ -124,7 +124,7 @@ start_module: T_MODULE | T_MODULE T_NAME;
 imports: imports import | ;
 import: proc_dec | type_dec | var_dec | import_dec
 
-exports: T_L_BRACK name_list T_R_BRACK | ;
+exports: T_L_BRACK name_list T_R_BRACK /*| ; removed optionality as it creates a shift/reduce conflict with computation statements */
 
 proc_dec:
     proc_dec_spec T_NAME
