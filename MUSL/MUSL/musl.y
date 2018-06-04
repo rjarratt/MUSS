@@ -167,7 +167,7 @@ type_dec:
     |
     T_TYPE T_NAME T_IS structure
     |
-    T_TYPE T_NAME const
+    T_TYPE T_NAME T_EQUALS const
     |
     T_WITHIN T_NAME T_IS structure;
 
