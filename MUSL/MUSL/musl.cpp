@@ -36,6 +36,7 @@ from the original MUSL code.
 #include <stdarg.h>
 #include <string.h>
 #include <ctype.h>
+#include "table.h"
 #include "musl.h"
 
 FILE *output;
@@ -46,8 +47,9 @@ extern char *yytext;
 extern int yylineno;
 extern int yylex(void);
 extern int yyparse(void);
+extern int yydebug;
 
-
+TABLE type_table;
 
 static int enable_lex_trace = 0;
 static int enable_yacc_trace = 0;
@@ -62,6 +64,7 @@ void yyerror(const char *msg, ...)
     vfprintf(stderr, msg, ap);
     fprintf(stderr, " at '%s'\n", yytext);
     va_end(ap);
+    exit(0);
 }
 
 void lex_trace(const char *msg, ...)
@@ -86,8 +89,22 @@ void yacc_trace(const char *msg, ...)
     va_end(ap);
 }
 
+void new_type(char *name)
+{
+//    printf("new_type %s\n", name);
+    add_table_entry(&type_table, name, name);
+}
+
+int is_type(char *name)
+{
+    void *entry = find_table_entry(&type_table, name);
+//    printf("is_type %s=%d\n", name, entry != NULL);
+    return entry != NULL;
+}
+
 int main(int argc, char *argv[])
 {
+    yydebug = 0;
     if (argc != 3)
     {
         fprintf(stderr, "usage: musl [infile] [outfile]\n");

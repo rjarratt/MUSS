@@ -1,4 +1,4 @@
-/* musl.h: Manchester University System Implementation Language
+/* table.cpp: Simple table structure
 
 Copyright (c) 2018, Robert Jarratt
 
@@ -23,14 +23,58 @@ Except as contained in this notice, the name of Robert Jarratt shall not be
 used in advertising or otherwise to promote the sale, use or other dealings
 in this Software without prior written authorization from Robert Jarratt.
 
+This module contains a very naive table mechanism. It is not efficient and
+does not scale well. It also assumes that the names and values to be stored
+have already been allocated.
+
 */
 
-#pragma once
+#include <stdlib.h>
+#include <string.h>
+#include "table.h"
 
-#define YYERROR_VERBOSE
+void add_table_entry(TABLE *table, char *name, void *value)
+{
+    TABLE_ENTRY *entry = (TABLE_ENTRY *)malloc(sizeof(TABLE_ENTRY));
+    entry->next = NULL;
+    entry->name = name;
+    entry->value = value;
 
-void yyerror(const char *msg, ...);
-void lex_trace(const char *msg, ...);
-void yacc_trace(const char *msg, ...);
-void new_type(char *name);
-int is_type(char *name);
+    if (table->head == NULL)
+    {
+        table->head = entry;
+        table->tail = entry;
+    }
+    else
+    {
+        table->tail->next = entry;
+        table->tail = entry;
+    }
+}
+
+void *find_table_entry(TABLE *table, char *name)
+{
+    void *result = NULL;
+    TABLE_ENTRY *entry = table->head;
+    while (entry != NULL)
+    {
+        if (strcmp(name, entry->name) == 0)
+        {
+            result = entry->value;
+            break;
+        }
+        entry = entry->next;
+    }
+
+    return result;
+}
+
+void process_table_entries(TABLE *table, void(*process)(char *name, void *value))
+{
+    TABLE_ENTRY *entry = table->head;
+    while (entry != NULL)
+    {
+        process(entry->name, entry->value);
+        entry = entry->next;
+    }
+}

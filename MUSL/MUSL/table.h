@@ -1,4 +1,4 @@
-/* musl.h: Manchester University System Implementation Language
+/* table.h: Simple table structure
 
 Copyright (c) 2018, Robert Jarratt
 
@@ -27,10 +27,19 @@ in this Software without prior written authorization from Robert Jarratt.
 
 #pragma once
 
-#define YYERROR_VERBOSE
+typedef struct TABLE_ENTRY
+{
+    char *name;
+    void *value;
+    struct TABLE_ENTRY *next;
+} TABLE_ENTRY;
 
-void yyerror(const char *msg, ...);
-void lex_trace(const char *msg, ...);
-void yacc_trace(const char *msg, ...);
-void new_type(char *name);
-int is_type(char *name);
+typedef struct
+{
+    TABLE_ENTRY *head;
+    TABLE_ENTRY *tail;
+} TABLE;
+
+void add_table_entry(TABLE *table, char *name, void *value);
+void *find_table_entry(TABLE *table, char *name);
+void process_table_entries(TABLE *table, void(*process)(char *name, void *value));

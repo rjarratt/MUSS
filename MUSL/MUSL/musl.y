@@ -54,6 +54,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_WHILE
 %token T_WITHIN
 
+%token T_SEP
 %token T_EQUALS
 %token T_NOT_EQUALS
 %token T_LT
@@ -89,6 +90,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_RLSHIFT
 %token T_GOTO
 
+%token <nameval> T_TYPE_NAME
 %token <nameval> T_NAME
 %token <charval> T_CHAR_CONST
 %token <stringval> T_MULTI_CHAR_CONST
@@ -118,11 +120,12 @@ extern int yylineno;
 
 %%
 
-module: imports start_module exports statements T_MODULEEND;
+module: imports start_module exports separator statements T_MODULEEND;
 start_module: T_MODULE | T_MODULE T_NAME;
+separator: T_SEP | ;
 
-imports: imports import | ;
-import: proc_dec | type_dec | var_dec | import_dec
+imports: imports import separator | ;
+import: proc_dec | type_dec | var_dec | import_dec; 
 
 exports: T_L_BRACK name_list T_R_BRACK /*| ; removed optionality as it creates a shift/reduce conflict with computation statements */
 
@@ -155,7 +158,7 @@ lit_dec:
 pointer_lit: T_SLASH T_ADDR T_L_PAREN any_type T_R_PAREN T_NAME T_EQUALS;
 any_type: type; /* any_type is not defined in the manual */
 
-data_vec: T_DATAVEC T_NAME T_L_BRACK scalar_type T_R_BRACK literals T_END;
+data_vec: T_DATAVEC T_NAME T_L_BRACK scalar_type T_R_BRACK separator literals separator T_END;
 literals: literals literal_item | literal_item;
 literal_item: literal | literal T_L_PAREN const T_R_PAREN;
 literal: const_expr /*| aggregate_const*/;
@@ -163,11 +166,11 @@ const_expr: const | const const_op const_expr;
 const_op: T_PLUS | T_MINUS | T_AMPERSAND | T_STAR | T_SLASH;
 
 type_dec:
-    T_TYPE T_NAME
+    T_TYPE T_NAME { new_type($2); }
     |
-    T_TYPE T_NAME T_IS structure
+    T_TYPE T_NAME T_IS structure { new_type($2); }
     |
-    T_TYPE T_NAME T_EQUALS const
+    T_TYPE T_NAME T_EQUALS const { new_type($2); }
     |
     T_WITHIN T_NAME T_IS structure;
 
@@ -204,7 +207,7 @@ name_list: name_list T_COMMA T_NAME | T_NAME;
 scalar_type:
     numeric_type
     |
-    T_NAME
+    T_TYPE_NAME
     |
     /*T_ADDR numeric_type  This part of the rule excluded because of a shift-reduce conflict
     |*/
@@ -212,7 +215,7 @@ scalar_type:
     |*/ 
     vector_pointer numeric_type T_R_PAREN
     |
-    vector_pointer T_NAME T_R_PAREN
+    vector_pointer T_TYPE_NAME T_R_PAREN
     |
     vector_pointer T_ADDR T_R_PAREN
     |
@@ -234,7 +237,7 @@ numeric_type:
 
 size: T_NUMBER |;
 
-statements: statements statement | statement;
+statements: statements statement separator | statement separator ;
 
 statement: declarative_statement | imperative_statement | proc_defn;
 
@@ -242,7 +245,7 @@ declarative_statement: label_dec | var_dec | proc_dec | lit_dec | data_vec | typ
 
 imperative_statement: comp_st | control_st;
 
-proc_defn: proc_heading statements T_END;
+proc_defn: proc_heading separator statements T_END;
 proc_heading: T_PROC T_NAME | T_PROC T_NAME T_L_BRACK T_R_BRACK | T_PROC T_NAME T_L_BRACK name_list T_R_BRACK
 
 label_dec: T_NAME T_COLON;

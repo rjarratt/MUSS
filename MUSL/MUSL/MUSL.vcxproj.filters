@@ -24,6 +24,9 @@
     <ClCompile Include="musl.tab.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="table.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Flex Include="musl.l">
@@ -35,6 +38,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="musl.tab.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="table.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

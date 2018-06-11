@@ -427,8 +427,8 @@ static void yynoreturn yy_fatal_error ( const char* msg  );
 	(yy_hold_char) = *yy_cp; \
 	*yy_cp = '\0'; \
 	(yy_c_buf_p) = yy_cp;
-#define YY_NUM_RULES 84
-#define YY_END_OF_BUFFER 85
+#define YY_NUM_RULES 85
+#define YY_END_OF_BUFFER 86
 /* This struct is not used in this scanner,
    but its presence is necessary. */
 struct yy_trans_info
@@ -438,25 +438,25 @@ struct yy_trans_info
 	};
 static const flex_int16_t yy_accept[179] =
     {   0,
-        0,    0,   85,   83,   82,   54,   83,   83,   83,   53,
-       83,   45,   46,   51,   49,   42,   50,   52,   80,   43,
-       70,   38,   36,   39,   79,   79,   79,   79,   79,   79,
-       79,   79,   79,   79,   79,   79,   79,   47,   48,   44,
-       62,    0,   71,    0,    0,    0,    0,    0,   61,   78,
-       78,   59,    0,   58,   56,   55,   69,   57,   37,   60,
-       80,    0,    0,   40,   64,   41,   79,   79,   79,   79,
-        5,   79,   79,    9,   79,   11,   79,   79,   16,   79,
-       79,   79,   79,   79,   25,   26,   27,   79,   79,   79,
-       79,   79,   79,   79,    3,   13,   15,   20,   21,   23,
+        0,    0,   86,   84,   83,   55,   84,   84,   84,   54,
+       84,   46,   47,   52,   50,   43,   51,   53,   81,   44,
+       36,   39,   37,   40,   80,   80,   80,   80,   80,   80,
+       80,   80,   80,   80,   80,   80,   80,   48,   49,   45,
+       63,    0,   72,    0,    0,    0,    0,    0,   62,   79,
+       79,   60,    0,   59,   57,   56,   70,   58,   38,   61,
+       81,    0,    0,   41,   65,   42,   80,   80,   80,   80,
+        5,   80,   80,    9,   80,   11,   80,   80,   16,   80,
+       80,   80,   80,   80,   25,   26,   27,   80,   80,   80,
+       80,   80,   80,   80,    3,   13,   15,   20,   21,   23,
 
-       30,    0,   72,   76,   77,   74,   73,   75,    0,    0,
-       63,   68,   66,    0,   81,   67,   79,    2,   79,   79,
-        8,   10,   79,   79,   79,   79,   79,   79,   79,   79,
-       79,   79,   79,   79,   79,   79,    7,   65,    1,   79,
-        6,   79,   79,   79,   79,   79,   79,   79,   28,   79,
-       31,   32,   33,   79,   79,   79,   79,   79,   17,   79,
-       79,   22,   79,   29,   34,   79,   79,   12,   79,   79,
-       79,   24,   35,    4,   14,   19,   18,    0
+       30,    0,   73,   77,   78,   75,   74,   76,    0,    0,
+       64,   69,   67,    0,   82,   68,   80,    2,   80,   80,
+        8,   10,   80,   80,   80,   80,   80,   80,   80,   80,
+       80,   80,   80,   80,   80,   80,    7,   66,    1,   80,
+        6,   80,   80,   80,   80,   80,   80,   80,   28,   80,
+       31,   32,   33,   80,   80,   80,   80,   80,   17,   80,
+       80,   22,   80,   29,   34,   80,   80,   12,   80,   80,
+       80,   24,   35,    4,   14,   19,   18,    0
     } ;
 
 static const YY_CHAR yy_ec[256] =
@@ -1107,233 +1107,232 @@ YY_RULE_SETUP
 case 36:
 YY_RULE_SETUP
 #line 76 "musl.l"
-{ return T_EQUALS; }
+{ return T_SEP; }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
 #line 77 "musl.l"
-{ return T_NOT_EQUALS; }
+{ return T_EQUALS; }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
 #line 78 "musl.l"
-{ return T_LT; }
+{ return T_NOT_EQUALS; }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
 #line 79 "musl.l"
-{ return T_GT; }
+{ return T_LT; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
 #line 80 "musl.l"
-{ return T_LE; }
+{ return T_GT; }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
 #line 81 "musl.l"
-{ return T_GE; }
+{ return T_LE; }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
 #line 82 "musl.l"
-{ return T_COMMA; }
+{ return T_GE; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
 #line 83 "musl.l"
-{ return T_COLON; }
+{ return T_COMMA; }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
 #line 84 "musl.l"
-{ return T_CIRCUMFLEX; }
+{ return T_COLON; }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
 #line 85 "musl.l"
-{ return T_L_BRACK; }
+{ return T_CIRCUMFLEX; }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
 #line 86 "musl.l"
-{ return T_R_BRACK; }
+{ return T_L_BRACK; }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
 #line 87 "musl.l"
-{ return T_L_PAREN; }
+{ return T_R_BRACK; }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
 #line 88 "musl.l"
-{ return T_R_PAREN; }
+{ return T_L_PAREN; }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
 #line 89 "musl.l"
-{ return T_PLUS; }
+{ return T_R_PAREN; }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
 #line 90 "musl.l"
-{ return T_MINUS; }
+{ return T_PLUS; }
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
 #line 91 "musl.l"
-{ return T_STAR; }
+{ return T_MINUS; }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
 #line 92 "musl.l"
-{ return T_SLASH; }
+{ return T_STAR; }
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
 #line 93 "musl.l"
-{ return T_AMPERSAND; }
+{ return T_SLASH; }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
 #line 94 "musl.l"
-{ return T_EXCLAMATION; }
+{ return T_AMPERSAND; }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
 #line 95 "musl.l"
-{ return T_XOR; }
+{ return T_EXCLAMATION; }
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
 #line 96 "musl.l"
-{ return T_RSUB; }
+{ return T_XOR; }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
 #line 97 "musl.l"
-{ return T_RDIV; }
+{ return T_RSUB; }
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
 #line 98 "musl.l"
-{ return T_ADDSTORE; }
+{ return T_RDIV; }
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
 #line 99 "musl.l"
-{ return T_MULSTORE; }
+{ return T_ADDSTORE; }
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
 #line 100 "musl.l"
-{ return T_DIVSTORE; }
+{ return T_MULSTORE; }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
 #line 101 "musl.l"
-{ return T_ANDSTORE; }
+{ return T_DIVSTORE; }
 	YY_BREAK
 case 62:
 YY_RULE_SETUP
 #line 102 "musl.l"
-{ return T_ORSTORE; }
+{ return T_ANDSTORE; }
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
 #line 103 "musl.l"
-{ return T_XORSTORE; }
+{ return T_ORSTORE; }
 	YY_BREAK
 case 64:
 YY_RULE_SETUP
 #line 104 "musl.l"
-{ return T_ASSIGN; }
+{ return T_XORSTORE; }
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
 #line 105 "musl.l"
-{ return T_RSUBSTORE; }
+{ return T_ASSIGN; }
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
 #line 106 "musl.l"
-{ return T_RDIVSTORE; }
+{ return T_RSUBSTORE; }
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
 #line 107 "musl.l"
-{ return T_LLSHIFT; }
+{ return T_RDIVSTORE; }
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
 #line 108 "musl.l"
-{ return T_RLSHIFT; }
+{ return T_LLSHIFT; }
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
 #line 109 "musl.l"
-{ return T_GOTO; }
+{ return T_RLSHIFT; }
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
 #line 110 "musl.l"
-{ }
+{ return T_GOTO; }
 	YY_BREAK
 case 71:
 YY_RULE_SETUP
-#line 112 "musl.l"
-{ yylval.stringval = _strdup(yytext); return T_MULTI_CHAR_CONST; }
+#line 111 "musl.l"
+{ }
 	YY_BREAK
 case 72:
 YY_RULE_SETUP
 #line 113 "musl.l"
-{ yylval.stringval = _strdup(&yytext[1]); return T_CH_STRING; }
+{ yylval.stringval = _strdup(yytext); return T_MULTI_CHAR_CONST; }
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
 #line 114 "musl.l"
-{ yylval.charval = '\n'; return T_CHAR_CONST; }
+{ yylval.stringval = _strdup(&yytext[1]); return T_CH_STRING; }
 	YY_BREAK
 case 74:
 YY_RULE_SETUP
 #line 115 "musl.l"
-{ yylval.charval = '\f'; return T_CHAR_CONST; }
+{ yylval.charval = '\n'; return T_CHAR_CONST; }
 	YY_BREAK
 case 75:
 YY_RULE_SETUP
 #line 116 "musl.l"
-{ yylval.charval = '\0'; return T_CHAR_CONST; }
+{ yylval.charval = '\f'; return T_CHAR_CONST; }
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
 #line 117 "musl.l"
-{ yylval.charval = '\"'; return T_CHAR_CONST; }
+{ yylval.charval = '\0'; return T_CHAR_CONST; }
 	YY_BREAK
 case 77:
 YY_RULE_SETUP
 #line 118 "musl.l"
-{ yylval.charval = '$'; return T_CHAR_CONST; }
+{ yylval.charval = '\"'; return T_CHAR_CONST; }
 	YY_BREAK
 case 78:
 YY_RULE_SETUP
 #line 119 "musl.l"
-{ yylval.charval = yytext[1]; return T_CHAR_CONST; }
+{ yylval.charval = '$'; return T_CHAR_CONST; }
 	YY_BREAK
 case 79:
 YY_RULE_SETUP
 #line 120 "musl.l"
-{ yylval.nameval = _strdup(yytext); return T_NAME;}
+{ yylval.charval = yytext[1]; return T_CHAR_CONST; }
 	YY_BREAK
 case 80:
 YY_RULE_SETUP
 #line 121 "musl.l"
-{ yylval.unsignedval = atoi(yytext); return T_NUMBER;}
+{ yylval.nameval = _strdup(yytext); return is_type(yytext) ? T_TYPE_NAME : T_NAME; }
 	YY_BREAK
 case 81:
-/* rule 81 can match eol */
 YY_RULE_SETUP
-#line 123 "musl.l"
-{ yylineno++; }
+#line 122 "musl.l"
+{ yylval.unsignedval = atoi(yytext); return T_NUMBER;}
 	YY_BREAK
 case 82:
 /* rule 82 can match eol */
@@ -1342,16 +1341,22 @@ YY_RULE_SETUP
 { yylineno++; }
 	YY_BREAK
 case 83:
+/* rule 83 can match eol */
 YY_RULE_SETUP
 #line 125 "musl.l"
-;
+{ yylineno++; }
 	YY_BREAK
 case 84:
 YY_RULE_SETUP
-#line 127 "musl.l"
+#line 126 "musl.l"
+;
+	YY_BREAK
+case 85:
+YY_RULE_SETUP
+#line 128 "musl.l"
 ECHO;
 	YY_BREAK
-#line 1354 "musl.flex.cpp"
+#line 1359 "musl.flex.cpp"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2352,6 +2357,6 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 127 "musl.l"
+#line 128 "musl.l"
 
 
