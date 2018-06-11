@@ -295,7 +295,7 @@ while_st: T_WHILE condition T_DO statements T_OD
 for_st: T_FOR computation T_DO statements T_OD | T_FOR T_NAME T_LT computation T_DO statements T_OD 
 go_st: T_GOTO T_NAME;
 
-action: T_COMMA go_st | T_THEN statements else_cl T_FI;
+action: go_st | T_COMMA go_st | T_THEN statements else_cl T_FI;
 else_cl: T_ELSE statements | ;
 %%
 
