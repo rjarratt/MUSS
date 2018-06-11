@@ -274,8 +274,6 @@ operand: /* simplified */
     T_NAME T_CIRCUMFLEX T_L_BRACK p_list T_R_BRACK
     |
     T_L_BRACK computation T_R_BRACK
-    |
-    built_in_function;
 context: variable | variable T_OF context;
 
 condition: test | test logop condition;
@@ -287,7 +285,6 @@ compare_list: comparator computation compare_list | comparator computation;
 comparator: T_EQUALS | T_NOT_EQUALS | T_LT | T_GT | T_LE | T_GE;
 
 p_list: p_list T_COMMA computation | computation | ;
-built_in_function: T_NAME T_L_BRACK name_list T_R_BRACK;
 
 /* subscripts and variables as defined in the documenation create an ambiguous grammar, so I have re-factored the grammar slightly here */
 variable: T_NAME | T_NAME subscript | T_NAME T_CIRCUMFLEX subscript | T_NAME subscript T_CIRCUMFLEX subscript;
