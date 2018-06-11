@@ -26,6 +26,7 @@ in this Software without prior written authorization from Robert Jarratt.
 
 %token T_ADDR
 %token T_AND
+%token T_BEGIN
 %token T_DATAVEC
 %token T_DO
 %token T_ELSE
@@ -239,7 +240,8 @@ size: T_NUMBER |;
 
 statements: statements statement separator | statement separator ;
 
-statement: declarative_statement | imperative_statement | proc_defn;
+statement: declarative_statement | imperative_statement | proc_defn | block;
+block: T_BEGIN statements T_END;
 
 declarative_statement: label_dec | var_dec | proc_dec | lit_dec | data_vec | type_dec | import_dec;
 

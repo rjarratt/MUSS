@@ -40,6 +40,7 @@ INTEGER          [0-9]+
 ADDR                         { return T_ADDR; }
 AND                          { return T_AND; }
 \$AD                         { return T_ADDR; }
+BEGIN                        { return T_BEGIN; }
 DATAVEC                      { return T_DATAVEC; }
 DO                           { return T_DO; }
 ELSE                         { return T_ELSE; }
