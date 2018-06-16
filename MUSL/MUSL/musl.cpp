@@ -104,7 +104,7 @@ int is_type(char *name)
 
 int main(int argc, char *argv[])
 {
-    yydebug = 1;
+    yydebug = 0;
     if (argc != 3)
     {
         fprintf(stderr, "usage: musl [infile] [outfile]\n");
