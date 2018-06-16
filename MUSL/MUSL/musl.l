@@ -108,7 +108,7 @@ WITHIN                       { return T_WITHIN; }
 \/\:\>                       { return T_RDIVSTORE; }
 \<\<\-                       { return T_LLSHIFT; }
 \-\>\>                       { return T_RLSHIFT; }
-\-\>                         { return T_GOTO; }
+\-\>                         { return T_GOTO_OR_SUBSTORE; }
 \;                           { }
 
 \".*\"                       { yylval.stringval = _strdup(yytext); return T_MULTI_CHAR_CONST; }

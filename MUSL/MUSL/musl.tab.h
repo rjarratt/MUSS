@@ -110,7 +110,7 @@ extern int yydebug;
      T_RDIVSTORE = 319,
      T_LLSHIFT = 320,
      T_RLSHIFT = 321,
-     T_GOTO = 322,
+     T_GOTO_OR_SUBSTORE = 322,
      T_TYPE_NAME = 323,
      T_NAME = 324,
      T_CHAR_CONST = 325,

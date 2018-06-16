@@ -1283,7 +1283,7 @@ YY_RULE_SETUP
 case 71:
 YY_RULE_SETUP
 #line 111 "musl.l"
-{ return T_GOTO; }
+{ return T_GOTO_OR_SUBSTORE; }
 	YY_BREAK
 case 72:
 YY_RULE_SETUP

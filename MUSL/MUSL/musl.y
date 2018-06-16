@@ -89,7 +89,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_RDIVSTORE
 %token T_LLSHIFT
 %token T_RLSHIFT
-%token T_GOTO
+%token T_GOTO_OR_SUBSTORE
 
 %token <nameval> T_TYPE_NAME
 %token <nameval> T_NAME
@@ -259,7 +259,7 @@ control_st: go_st;
 computation: opr_opd_seq;
 opr_opd_seq: operand | operand operator opr_opd_seq;
 
-operator: T_PLUS | T_MINUS | T_STAR | T_SLASH | T_AMPERSAND | T_EXCLAMATION | T_XOR | T_RSUB | T_RDIV | T_ADDSTORE | T_MULSTORE | T_DIVSTORE | T_ANDSTORE | T_ORSTORE | T_XORSTORE | T_ASSIGN | T_RSUBSTORE | T_RDIVSTORE | T_LLSHIFT | T_RLSHIFT;
+operator: T_PLUS | T_MINUS | T_STAR | T_SLASH | T_AMPERSAND | T_EXCLAMATION | T_XOR | T_RSUB | T_RDIV | T_ADDSTORE | T_GOTO_OR_SUBSTORE | T_MULSTORE | T_DIVSTORE | T_ANDSTORE | T_ORSTORE | T_XORSTORE | T_ASSIGN | T_RSUBSTORE | T_RDIVSTORE | T_LLSHIFT | T_RLSHIFT;
 operand: /* simplified */
     variable
     |
@@ -295,9 +295,9 @@ subscript: T_L_PAREN computation T_R_PAREN ;
 if_st: T_IF condition action
 while_st: T_WHILE condition T_DO statements T_OD
 for_st: T_FOR computation T_DO statements T_OD | T_FOR T_NAME T_LT computation T_DO statements T_OD 
-go_st: T_GOTO T_NAME;
+go_st: T_GOTO_OR_SUBSTORE T_NAME;
 
-action: go_st | T_COMMA go_st | T_THEN statements else_cl T_FI;
+action: T_COMMA go_st | T_THEN statements else_cl T_FI;
 else_cl: T_ELSE statements | ;
 %%
 
