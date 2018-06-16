@@ -238,7 +238,7 @@ numeric_type:
 
 size: T_NUMBER |;
 
-statements: statements statement separator | statement separator ;
+statements: statements statement separator | statement separator | ;
 
 statement: declarative_statement | imperative_statement | proc_defn | block;
 block: T_BEGIN separator statements T_END;
