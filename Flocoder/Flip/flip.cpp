@@ -98,6 +98,7 @@ static int enable_lex_trace = 0;
 static int enable_yacc_trace = 0;
 static char *label_format;
 static char *goto_format;
+static char *conditional_goto_format;
 
 static int in_selected_box = 0;
 static CHART_TABLE_ENTRY *current_chart_table_entry;
@@ -364,7 +365,7 @@ static BOX *output_box(CHART_TABLE_ENTRY *chart_table_entry, BOX * box)
     {
         //printf("Generating box %d. Type: Other\n", box_number);
         fprintf(output, " ");
-        fprintf(output, goto_format, get_box(chart_table_entry, box->true_branch_box_number)->label_number);
+        fprintf(output, conditional_goto_format, get_box(chart_table_entry, box->true_branch_box_number)->label_number);
         //next = output_box_sequence(chart_table_entry, get_box(chart_table_entry, box->true_branch_box_number), box);
         //fprintf(output, " ELSE\n");
         //next = output_box_sequence(chart_table_entry, get_box(chart_table_entry, box->next_box_number), next);
@@ -455,6 +456,7 @@ int main(int argc, char *argv[])
     {
         label_format = "LB%05d:\n";
         goto_format = "-> LB%05d;";
+        conditional_goto_format = ",-> LB%05d;";
         yyin = fopen(argv[1], "r");
         if (yyin == NULL)
         {
