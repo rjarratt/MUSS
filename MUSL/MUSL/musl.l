@@ -114,7 +114,7 @@ WITHIN                       { return T_WITHIN; }
 \".*\"                       { yylval.stringval = _strdup(yytext); return T_MULTI_CHAR_CONST; }
 \%\".*\"                     { yylval.stringval = _strdup(&yytext[1]); return T_CH_STRING; }
 \'\$L                        { yylval.charval = '\n'; return T_CHAR_CONST; }
-\'\$F                        { yylval.charval = '\f'; return T_CHAR_CONST; }
+\'\$P                        { yylval.charval = '\f'; return T_CHAR_CONST; }
 \'\$N                        { yylval.charval = '\0'; return T_CHAR_CONST; }
 \'\$\"                       { yylval.charval = '\"'; return T_CHAR_CONST; }
 \'\$\$                       { yylval.charval = '$'; return T_CHAR_CONST; }
