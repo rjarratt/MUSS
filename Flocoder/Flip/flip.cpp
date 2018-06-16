@@ -454,7 +454,7 @@ int main(int argc, char *argv[])
     else
     {
         label_format = "LB%05d:\n";
-        goto_format = "-> LB%05d";
+        goto_format = "-> LB%05d;";
         yyin = fopen(argv[1], "r");
         if (yyin == NULL)
         {
