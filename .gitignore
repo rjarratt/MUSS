@@ -249,3 +249,4 @@ ModelManifest.xml
 /Flocoder/Flip/*.flow
 /MUSL/MUSL/*.c
 *.output
+/JohnTaylorFlip
