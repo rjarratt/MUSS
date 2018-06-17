@@ -99,6 +99,8 @@ static int enable_yacc_trace = 0;
 static char *label_format;
 static char *goto_format;
 static char *conditional_goto_format;
+static char conditional_goto[80];
+char *conditional_substitution;
 
 static int in_selected_box = 0;
 static CHART_TABLE_ENTRY *current_chart_table_entry;
@@ -360,12 +362,18 @@ static BOX *output_box(CHART_TABLE_ENTRY *chart_table_entry, BOX * box)
     }
 
     //fprintf(output, "\n::::::::::::::::::BOX %d\n", box_number);
-    process_table_entries(&box->lines, output_box_line);
+    strcpy(conditional_goto, "");
     if (box->type == Test)
     {
+        sprintf(conditional_goto, conditional_goto_format, get_box(chart_table_entry, box->true_branch_box_number)->label_number);
+    }
+    conditional_substitution = NULL;
+
+    process_table_entries(&box->lines, output_box_line);
+    if (box->type == Test && conditional_substitution == NULL)
+    {
         //printf("Generating box %d. Type: Other\n", box_number);
-        fprintf(output, " ");
-        fprintf(output, conditional_goto_format, get_box(chart_table_entry, box->true_branch_box_number)->label_number);
+        fprintf(output, " %s", conditional_goto);
         //next = output_box_sequence(chart_table_entry, get_box(chart_table_entry, box->true_branch_box_number), box);
         //fprintf(output, " ELSE\n");
         //next = output_box_sequence(chart_table_entry, get_box(chart_table_entry, box->next_box_number), next);
@@ -436,7 +444,17 @@ static void output_box_line(char *name, void *value)
     }
     else
     {
-        fprintf(output, "\n%s", entry->line);
+        conditional_substitution = strstr(entry->line, "@>>");
+        if (conditional_substitution != NULL)
+        {
+            *conditional_substitution = '\0';
+            fprintf(output, "\n%s", entry->line);
+            fprintf(output, " %s", conditional_goto);
+        }
+        else
+        {
+            fprintf(output, "\n%s", entry->line);
+        }
     }
 }
 
