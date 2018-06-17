@@ -63,7 +63,8 @@ INTEGER          [0-9]+
 <DIRECTIVE_BOX_REFS>{INTEGER}            { yylval.unsignedval = atoi(yytext); lex_trace(" %s", yytext); return T_INTEGER;}
 <DIRECTIVE_BOX_REFS>\-                   { lex_trace(" ."); return T_HYPHEN;}
 <DIRECTIVE_BOX_REFS>{LABEL}              { yylval.nameval = _strdup(yytext); lex_trace(" label %s", yytext); return T_LABEL;}
-<DIRECTIVE_IGNORE>[^\n]*                 { BEGIN INITIAL; lex_trace(" value %s\n", yytext); return T_OTHERDATA;}
+<DIRECTIVE_IGNORE>\n                     { BEGIN INITIAL; lex_trace(" no other data\n"); yylineno++; }
+<DIRECTIVE_IGNORE>[^\n]*                 { BEGIN INITIAL; lex_trace(" other data %s\n", yytext); return T_OTHERDATA;}
 ^[^@\f\n\#][^\n]*                        { BEGIN INITIAL; yylval.lineval = _strdup(yytext); lex_trace("%d: %s\n", yylineno, yytext); return T_LINE;}
 ^\#                                      { BEGIN DIRECTIVE_CROSS_REF; return T_HASH;}
 ^\n                                      { BEGIN INITIAL; yylineno++; }
