@@ -372,18 +372,7 @@ static BOX *output_box(CHART_TABLE_ENTRY *chart_table_entry, BOX * box)
     process_table_entries(&box->lines, output_box_line);
     if (box->type == Test && conditional_substitution == NULL)
     {
-        //printf("Generating box %d. Type: Other\n", box_number);
         fprintf(output, " %s", conditional_goto);
-        //next = output_box_sequence(chart_table_entry, get_box(chart_table_entry, box->true_branch_box_number), box);
-        //fprintf(output, " ELSE\n");
-        //next = output_box_sequence(chart_table_entry, get_box(chart_table_entry, box->next_box_number), next);
-        //fprintf(output, " FI\n");
-    }
-    else
-    {
-        //printf("Generating box %d. Type: Other\n", box_number);
-        //fprintf(output, "\n");
-        //next = get_box(chart_table_entry, box->next_box_number);
     }
 
     if (box->type != Finish)
