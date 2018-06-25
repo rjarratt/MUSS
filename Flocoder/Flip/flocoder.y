@@ -101,7 +101,7 @@ column_directive: T_COL column_box_refs
 
 row_directive: T_ROW T_OTHERDATA
 
-flow_directive: T_FLOW { start_flow_sequence(); } flow_box_refs
+flow_directive: T_FLOW { start_flow_sequence(); } flow_box_refs { end_flow_sequence(); }
 
 box_directive: T_BOX T_INTEGER T_PERIOD T_INTEGER {start_box($2, $4); }
 

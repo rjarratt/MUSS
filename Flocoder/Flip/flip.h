@@ -41,3 +41,4 @@ void process_cross_ref(char *title);
 void process_column_box_ref(int box_number, char *box_type_name);
 void start_flow_sequence(void);
 void process_flow_box_ref(int box_number);
+void end_flow_sequence(void);

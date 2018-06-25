@@ -1449,6 +1449,12 @@ yyreduce:
     { start_flow_sequence(); }
     break;
 
+  case 31:
+/* Line 1792 of yacc.c  */
+#line 104 "flocoder.y"
+    { end_flow_sequence(); }
+    break;
+
   case 32:
 /* Line 1792 of yacc.c  */
 #line 106 "flocoder.y"
@@ -1481,7 +1487,7 @@ yyreduce:
 
 
 /* Line 1792 of yacc.c  */
-#line 1485 "flocoder.tab.cpp"
+#line 1491 "flocoder.tab.cpp"
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
