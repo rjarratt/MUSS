@@ -83,8 +83,9 @@ typedef struct
     int label_number;
     int is_branch_destination;
     int generated;
-    int next_box_number;
-    int true_branch_box_number; /* for the THEN part of a Test box */
+    int next_col_box_number;
+    int next_pflow_box_number;
+    int next_sflow_box_number; /* for the THEN part of a Test box */
     TABLE lines;
 } BOX;
 
@@ -110,7 +111,7 @@ static TABLE *current_line_table;
 
 static TABLE chart_table;
 
-static int last_flow_box_number = -1;
+static int last_box_number = -1;
 static int last_label_number = -1;
 static int flow_contains_test_box = 0;
 
@@ -120,6 +121,7 @@ static BOX *get_next_box(CHART_TABLE_ENTRY *chart_table_entry, BOX *box);
 static BOX *get_next_true_branch_box(CHART_TABLE_ENTRY *chart_table_entry, BOX *box);
 static int get_box_number(CHART_TABLE_ENTRY *chart_table_entry, BOX *box);
 static int box_is_reachable(CHART_TABLE_ENTRY *chart_table_entry, BOX *from, BOX *to);
+static void print_chart_structure(CHART_TABLE_ENTRY *chart_table_entry);
 static void output_chart(char *name, void *value);
 static void output_box_line(char *name, void *value);
 static void output_box(CHART_TABLE_ENTRY *chart_table_entry, BOX *box);
@@ -211,6 +213,11 @@ void process_cross_ref(char *title)
         add_table_entry(current_line_table, "", entry);
     }
 }
+void start_column_sequence(void)
+{
+    last_box_number = -1;
+}
+
 
 void process_column_box_ref(int box_number, char *box_type_name)
 {
@@ -254,13 +261,18 @@ void process_column_box_ref(int box_number, char *box_type_name)
     yacc_trace("col %d %s(%d)\n", box_number, box_type_name, box_type);
     if (check_box_number(box_number))
     {
+        if (last_box_number > 0)
+        {
+            current_chart_table_entry->boxes[last_box_number].next_col_box_number = box_number;
+        }
+
         current_chart_table_entry->boxes[box_number].type = box_type;
     }
 }
 
 void start_flow_sequence(void)
 {
-    last_flow_box_number = -1;
+    last_box_number = -1;
     flow_contains_test_box = 0;
 }
 
@@ -268,33 +280,59 @@ void process_flow_box_ref(int box_number)
 {
     if (check_box_number(box_number))
     {
-        if (last_flow_box_number > 0)
+        if (last_box_number > 0)
         {
-            BOX *box = get_box(current_chart_table_entry, last_flow_box_number);
-            if (box->type == Test)
+            BOX *prev_box = get_box(current_chart_table_entry, last_box_number);
+            if (prev_box->next_pflow_box_number != box_number)
             {
-                if (box->next_box_number <= 0)
+                if (prev_box->next_pflow_box_number == 0)
                 {
-                    box->next_box_number = box_number;
-                    flow_contains_test_box = 1;
+                    prev_box->next_pflow_box_number = box_number;
                 }
                 else
                 {
-                    box->true_branch_box_number = box_number;
-                    get_box(current_chart_table_entry, box_number)->is_branch_destination = 1;
+                    flow_contains_test_box = 1;
+                    if (prev_box->type == Test)
+                    {
+                        if (prev_box->next_col_box_number == box_number)
+                        {
+                            prev_box->next_sflow_box_number = prev_box->next_pflow_box_number;
+                        }
+                        else
+                        {
+                            prev_box->next_sflow_box_number = box_number;
+                        }
+                    }
+                    else
+                    {
+                        yyerror("too many flows");
+                    }
                 }
             }
-            else
-            {
-                box->next_box_number = box_number;
-                if (last_flow_box_number > 0 && box_number != last_flow_box_number + 1)
-                {
-                    get_box(current_chart_table_entry, box_number)->is_branch_destination = 1;
-                }
-            }
+            //if (prev_box->type == Test)
+            //{
+            //    if (prev_box->next_pflow_box_number <= 0)
+            //    {
+            //        prev_box->next_pflow_box_number = box_number;
+            //        flow_contains_test_box = 1;
+            //    }
+            //    else
+            //    {
+            //        prev_box->next_sflow_box_number = box_number;
+            //        get_box(current_chart_table_entry, box_number)->is_branch_destination = 1;
+            //    }
+            //}
+            //else
+            //{
+            //    prev_box->next_pflow_box_number = box_number;
+            //    if (last_box_number > 0 && box_number != last_box_number + 1)
+            //    {
+            //        get_box(current_chart_table_entry, box_number)->is_branch_destination = 1;
+            //    }
+            //}
         }
 
-        last_flow_box_number = box_number;
+        last_box_number = box_number;
     }
 }
 
@@ -302,7 +340,7 @@ void end_flow_sequence(void)
 {
     if (flow_contains_test_box)
     {
-        get_box(current_chart_table_entry, last_flow_box_number)->is_branch_destination = 1;
+        get_box(current_chart_table_entry, last_box_number)->is_branch_destination = 1;
     }
 }
 
@@ -331,9 +369,9 @@ static BOX *get_box(CHART_TABLE_ENTRY *chart_table_entry, int number)
 static BOX *get_next_box(CHART_TABLE_ENTRY *chart_table_entry, BOX *box)
 {
     BOX *next = NULL;
-    if (box->next_box_number != 0)
+    if (box->next_pflow_box_number != 0)
     {
-        next = get_box(chart_table_entry, box->next_box_number);
+        next = get_box(chart_table_entry, box->next_pflow_box_number);
     }
 
     return next;
@@ -342,9 +380,9 @@ static BOX *get_next_box(CHART_TABLE_ENTRY *chart_table_entry, BOX *box)
 static BOX *get_next_true_branch_box(CHART_TABLE_ENTRY *chart_table_entry, BOX *box)
 {
     BOX *next = NULL;
-    if (box->next_box_number != 0)
+    if (box->next_pflow_box_number != 0)
     {
-        next = get_box(chart_table_entry, box->true_branch_box_number);
+        next = get_box(chart_table_entry, box->next_sflow_box_number);
     }
 
     return next;
@@ -359,7 +397,7 @@ static int get_box_number(CHART_TABLE_ENTRY *chart_table_entry, BOX *box)
     }
     else
     {
-        result = box - chart_table_entry->boxes;
+        result = (int)(box - chart_table_entry->boxes);
     }
 
     return result;
@@ -401,11 +439,11 @@ static void output_box(CHART_TABLE_ENTRY *chart_table_entry, BOX * box)
     }
 
     fprintf(output, "\n::::::::::::::::::BOX %d\n", get_box_number(chart_table_entry, box));
-    printf("Outputting box %d, is test=%d\n", get_box_number(chart_table_entry, box), box->type == Test);
+    //printf("Outputting box %d, is test=%d\n", get_box_number(chart_table_entry, box), box->type == Test);
     strcpy(conditional_goto, "");
     if (box->type == Test)
     {
-        sprintf(conditional_goto, conditional_goto_format, get_box(chart_table_entry, box->true_branch_box_number)->label_number);
+        sprintf(conditional_goto, conditional_goto_format, get_box(chart_table_entry, box->next_sflow_box_number)->label_number);
     }
     conditional_substitution = NULL;
 
@@ -431,32 +469,37 @@ static void output_box_sequence(CHART_TABLE_ENTRY *chart_table_entry, BOX *start
     If there were any T boxes insert a goto for the last box (make sure flow ref adds label for it)
     Second pass to process other T branches, for each branch invoke this method recursively
     */
+    int i;
     BOX *box = start_box;
+    BOX *secondary_box;
     BOX *last_box = start_box;
-    int contains_test_box = 0;
-    printf("Starting sequnce\n");
+    int test_box_count = 0;
+    BOX *test_box[MAX_BOX];
+    //printf("Starting sequence at box %d\n", get_box_number(chart_table_entry, start_box));
     while (box != NULL && box->type != Finish && !box->generated)
     {
-        contains_test_box = contains_test_box || box->type == Test;
+        if (box->type == Test)
+        {
+            test_box[test_box_count++] = box;
+        }
+
         output_box(chart_table_entry, box);
         last_box = box;
         box = get_next_box(chart_table_entry, box);
     }
 
     /* If the sequence contains Test boxes do a second pass to output the branched side of the test boxes */
-    if (contains_test_box)
+    if (test_box_count > 0)
     {
         fprintf(output, goto_format, last_box->label_number); // goto the last box as we are now about to output the other side of a branch
-        box = start_box;
-        while (box != NULL && box->type != Finish)
+        for (i = 0; i < test_box_count; i++)
         {
-            printf("Checking true branch box %d, is test=%d\n", get_box_number(chart_table_entry, box), box->type == Test);
-            if (box->type == Test)
+            secondary_box = get_next_true_branch_box(chart_table_entry, test_box[i]);
+            if (!secondary_box->generated)
             {
-                output_box_sequence(chart_table_entry, get_next_true_branch_box(chart_table_entry, box), 0);
+                output_box_sequence(chart_table_entry, secondary_box, 0);
             }
 
-            box = get_next_box(chart_table_entry, box);
         }
     }
 
@@ -464,14 +507,29 @@ static void output_box_sequence(CHART_TABLE_ENTRY *chart_table_entry, BOX *start
     {
         fprintf(output, goto_format, last_box->label_number);
     }
-    printf("End sequnce\n");
+    //printf("End sequence at box %d\n", get_box_number(chart_table_entry, last_box));
+}
+
+static void print_chart_structure(CHART_TABLE_ENTRY *chart_table_entry)
+{
+    int i;
+    char *types[] = { "Unknwn", "Annotn", "Circle", "Finish", "Null", "Rect", "Start", "Test" };
+    for ( i = 0; i < MAX_BOX; i++)
+    {
+        BOX *box = get_box(chart_table_entry, i + 1);
+        if (box->type != Unknown)
+        {
+            printf("%2d %6s Pri: %2d Sec: %2d\n", i + 1, types[box->type], box->next_pflow_box_number, box->next_sflow_box_number);
+        }
+    }
 }
 
 static void output_chart(char *name, void *value)
 {
-    int i;
+    //int i;
     CHART_TABLE_ENTRY *chart_table_entry = (CHART_TABLE_ENTRY *)value;
-    printf("Generating chart %s\n", name);
+    printf("\nGenerating chart %s\n", name);
+    //print_chart_structure(chart_table_entry);
     fprintf(output, "\n:::::::::::::::::: CHART %s\n", name);
     BOX *start_box = get_box(chart_table_entry, chart_table_entry->start_box_number);
     BOX *finish_box = get_box(chart_table_entry, chart_table_entry->finish_box_number);

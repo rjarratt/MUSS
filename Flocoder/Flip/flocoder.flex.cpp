@@ -1,6 +1,6 @@
-#line 1 "D:\\Users\\Rob\\Documents\\DEC\\DECEmulation\\MUSS\\Flocoder\\Flip\\flocoder.flex.cpp"
+#line 1 "flocoder.flex.cpp"
 
-#line 3 "D:\\Users\\Rob\\Documents\\DEC\\DECEmulation\\MUSS\\Flocoder\\Flip\\flocoder.flex.cpp"
+#line 3 "flocoder.flex.cpp"
 
 #define  YY_INT_ALIGNED short int
 
@@ -617,9 +617,9 @@ in this Software without prior written authorization from Robert Jarratt.
 #include "flip.h"
 #include "flocoder.tab.h"
 
-#line 620 "D:\\Users\\Rob\\Documents\\DEC\\DECEmulation\\MUSS\\Flocoder\\Flip\\flocoder.flex.cpp"
+#line 620 "flocoder.flex.cpp"
 
-#line 622 "D:\\Users\\Rob\\Documents\\DEC\\DECEmulation\\MUSS\\Flocoder\\Flip\\flocoder.flex.cpp"
+#line 622 "flocoder.flex.cpp"
 
 #define INITIAL 0
 #define DIRECTIVE_TITLE 1
@@ -844,7 +844,7 @@ YY_DECL
 #line 46 "flocoder.l"
 
 
-#line 847 "D:\\Users\\Rob\\Documents\\DEC\\DECEmulation\\MUSS\\Flocoder\\Flip\\flocoder.flex.cpp"
+#line 847 "flocoder.flex.cpp"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -1035,7 +1035,7 @@ YY_RULE_SETUP
 #line 74 "flocoder.l"
 ECHO;
 	YY_BREAK
-#line 1038 "D:\\Users\\Rob\\Documents\\DEC\\DECEmulation\\MUSS\\Flocoder\\Flip\\flocoder.flex.cpp"
+#line 1038 "flocoder.flex.cpp"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(DIRECTIVE_TITLE):
 case YY_STATE_EOF(DIRECTIVE_CROSS_REF):

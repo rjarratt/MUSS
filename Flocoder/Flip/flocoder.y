@@ -97,7 +97,7 @@ title_directive:
   T_TITLE T_NAME T_OTHERDATA { start_chart($2); }
 | T_TITLE T_NAME { start_chart($2); }
 
-column_directive: T_COL column_box_refs
+column_directive: T_COL { start_column_sequence(); }column_box_refs
 
 row_directive: T_ROW T_OTHERDATA
 
