@@ -83,6 +83,7 @@ typedef struct
     int label_number;
     int is_branch_destination;
     int generated;
+    int inflow;
     int next_col_box_number;
     int next_pflow_box_number;
     int next_sflow_box_number; /* for the THEN part of a Test box */
@@ -297,10 +298,12 @@ void process_flow_box_ref(int box_number)
                         if (prev_box->next_col_box_number == box_number)
                         {
                             prev_box->next_sflow_box_number = prev_box->next_pflow_box_number;
+                            get_box(current_chart_table_entry, prev_box->next_sflow_box_number)->inflow--;
                         }
                         else
                         {
                             prev_box->next_sflow_box_number = box_number;
+                            get_box(current_chart_table_entry, box_number)->inflow++;
                         }
                     }
                     else
@@ -309,27 +312,6 @@ void process_flow_box_ref(int box_number)
                     }
                 }
             }
-            //if (prev_box->type == Test)
-            //{
-            //    if (prev_box->next_pflow_box_number <= 0)
-            //    {
-            //        prev_box->next_pflow_box_number = box_number;
-            //        flow_contains_test_box = 1;
-            //    }
-            //    else
-            //    {
-            //        prev_box->next_sflow_box_number = box_number;
-            //        get_box(current_chart_table_entry, box_number)->is_branch_destination = 1;
-            //    }
-            //}
-            //else
-            //{
-            //    prev_box->next_pflow_box_number = box_number;
-            //    if (last_box_number > 0 && box_number != last_box_number + 1)
-            //    {
-            //        get_box(current_chart_table_entry, box_number)->is_branch_destination = 1;
-            //    }
-            //}
         }
 
         last_box_number = box_number;
@@ -519,7 +501,7 @@ static void print_chart_structure(CHART_TABLE_ENTRY *chart_table_entry)
         BOX *box = get_box(chart_table_entry, i + 1);
         if (box->type != Unknown)
         {
-            printf("%2d %6s Pri: %2d Sec: %2d\n", i + 1, types[box->type], box->next_pflow_box_number, box->next_sflow_box_number);
+            printf("%2d %6s Pri: %2d Sec: %2d Inflow: %2d\n", i + 1, types[box->type], box->next_pflow_box_number, box->next_sflow_box_number, box->inflow);
         }
     }
 }
