@@ -37,7 +37,7 @@ from the original MUSL code.
 #include "flip.h"
 #include "table.h"
 
-#define MAX_BOX 50
+#define MAX_BOX 64
 
 FILE *output;
 
@@ -96,6 +96,11 @@ typedef struct
     int finish_box_number;
     BOX boxes[MAX_BOX + 1]; /* box numbers are 1-based */
 } CHART_TABLE_ENTRY;
+
+typedef struct
+{
+    BOX *box;
+} CODE_LIST_ENTRY;
 
 static int enable_lex_trace = 0;
 static int enable_yacc_trace = 0;
@@ -508,13 +513,29 @@ static void print_chart_structure(CHART_TABLE_ENTRY *chart_table_entry)
 
 static void output_chart(char *name, void *value)
 {
-    //int i;
+    CODE_LIST_ENTRY code_list[MAX_BOX];
+    int code_list_count;
     CHART_TABLE_ENTRY *chart_table_entry = (CHART_TABLE_ENTRY *)value;
+    BOX *start_box = get_box(chart_table_entry, chart_table_entry->start_box_number);
+    BOX *finish_box = get_box(chart_table_entry, chart_table_entry->finish_box_number);
+    int k = 1;
+    BOX *current_box = start_box;
+
+    do
+    {
+        do
+        {
+            code_list[code_list_count++].box = current_box;
+            current_box = get_box(chart_table_entry, current_box->next_pflow_box_number);
+        } while (current_box != NULL);
+
+        current_box = get_box(chart_table_entry, k);
+    } while (current_box->type != Unknown && current_box->inflow == 0);
+
+    //int i;
     printf("\nGenerating chart %s\n", name);
     //print_chart_structure(chart_table_entry);
     fprintf(output, "\n:::::::::::::::::: CHART %s\n", name);
-    BOX *start_box = get_box(chart_table_entry, chart_table_entry->start_box_number);
-    BOX *finish_box = get_box(chart_table_entry, chart_table_entry->finish_box_number);
 
     //output_box(chart_table_entry, start_box);
     //for ( i = 0; i < MAX_BOX; i++)
