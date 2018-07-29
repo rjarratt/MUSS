@@ -80,7 +80,9 @@ typedef struct
 typedef struct
 {
     BOX_TYPE type;
+    int box_no;
     int label_number;
+    int lab_count;
     int is_branch_destination;
     int generated;
     int inflow;
@@ -100,6 +102,7 @@ typedef struct
 typedef struct
 {
     BOX *box;
+    int jump_info;
 } CODE_LIST_ENTRY;
 
 static int enable_lex_trace = 0;
@@ -117,6 +120,10 @@ static TABLE *current_line_table;
 
 static TABLE chart_table;
 
+static CODE_LIST_ENTRY code_list[MAX_BOX];
+static int code_list_count = 0;
+
+
 static int last_box_number = -1;
 static int last_label_number = -1;
 static int flow_contains_test_box = 0;
@@ -126,7 +133,6 @@ static BOX *get_box(CHART_TABLE_ENTRY *chart_table_entry, int number);
 static BOX *get_next_box(CHART_TABLE_ENTRY *chart_table_entry, BOX *box);
 static BOX *get_next_true_branch_box(CHART_TABLE_ENTRY *chart_table_entry, BOX *box);
 static int get_box_number(CHART_TABLE_ENTRY *chart_table_entry, BOX *box);
-static int box_is_reachable(CHART_TABLE_ENTRY *chart_table_entry, BOX *from, BOX *to);
 static void print_chart_structure(CHART_TABLE_ENTRY *chart_table_entry);
 static void output_chart(char *name, void *value);
 static void output_box_line(char *name, void *value);
@@ -171,6 +177,10 @@ void start_chart(char *title)
     yacc_trace("New chart %s\n", title);
 
     current_chart_table_entry = (CHART_TABLE_ENTRY *)calloc(1, sizeof(CHART_TABLE_ENTRY));
+    for (int i = 0; i < MAX_BOX; i++)
+    {
+        current_chart_table_entry->boxes[i].box_no = i;
+    }
     current_chart_name = title;
     add_table_entry(&chart_table, title, current_chart_table_entry);
 }
@@ -289,6 +299,7 @@ void process_flow_box_ref(int box_number)
         if (last_box_number > 0)
         {
             BOX *prev_box = get_box(current_chart_table_entry, last_box_number);
+            /* Box 7 */
             if (prev_box->next_pflow_box_number != box_number)
             {
                 if (prev_box->next_pflow_box_number == 0)
@@ -302,23 +313,31 @@ void process_flow_box_ref(int box_number)
                     {
                         if (prev_box->next_col_box_number == box_number)
                         {
+                            /* Box 10 */
                             prev_box->next_sflow_box_number = prev_box->next_pflow_box_number;
                             get_box(current_chart_table_entry, prev_box->next_sflow_box_number)->inflow--;
                         }
                         else
                         {
+                            /* Box 14 */
                             prev_box->next_sflow_box_number = box_number;
-                            get_box(current_chart_table_entry, box_number)->inflow++;
+                            goto Box12;
                         }
                     }
                     else
                     {
                         yyerror("too many flows");
                     }
+
+                    /* Box 11 */
+                    prev_box->next_pflow_box_number = box_number;
+                    get_box(current_chart_table_entry, box_number)->inflow++;
                 }
             }
         }
 
+    Box12:
+        /* Box 12 */
         last_box_number = box_number;
     }
 }
@@ -390,62 +409,18 @@ static int get_box_number(CHART_TABLE_ENTRY *chart_table_entry, BOX *box)
     return result;
 }
 
-static int box_is_reachable(CHART_TABLE_ENTRY *chart_table_entry, BOX *from, BOX *to)
-{
-    int reachable = 0;
-    BOX *next = from;
-    printf("Can reach %d from %d:", get_box_number(chart_table_entry, to), get_box_number(chart_table_entry, from));
-    while (next != NULL && !reachable)
-    {
-        if (next == to)
-        {
-            reachable = 1;
-        }
-        else
-        {
-            next = get_next_box(chart_table_entry, next);
-        }
-    }
-
-    if (reachable)
-    {
-        printf("Yes\n");
-    }
-    else
-    {
-        printf("No\n");
-    }
-    return reachable;
-}
-
 static void output_box(CHART_TABLE_ENTRY *chart_table_entry, BOX * box)
 {
-    if (box->is_branch_destination)
-    {
-        fprintf(output, label_format, box->label_number);
-    }
-
     fprintf(output, "\n::::::::::::::::::BOX %d\n", get_box_number(chart_table_entry, box));
-    //printf("Outputting box %d, is test=%d\n", get_box_number(chart_table_entry, box), box->type == Test);
-    strcpy(conditional_goto, "");
-    if (box->type == Test)
-    {
-        sprintf(conditional_goto, conditional_goto_format, get_box(chart_table_entry, box->next_sflow_box_number)->label_number);
-    }
-    conditional_substitution = NULL;
 
     process_table_entries(&box->lines, output_box_line);
-    if (box->type == Test && conditional_substitution == NULL)
-    {
-        fprintf(output, " %s", conditional_goto);
-    }
 
-    if (box->type != Finish)
-    {
-        fprintf(output, "\n");
-    }
+    //if (box->type != Finish)
+    //{
+    //    fprintf(output, "\n");
+    //}
 
-    box->generated = 1;
+    //box->generated = 1;
 }
 
 /* stop if box is reachable from root box*/
@@ -511,26 +486,261 @@ static void print_chart_structure(CHART_TABLE_ENTRY *chart_table_entry)
     }
 }
 
+static void plant_box(CHART_TABLE_ENTRY *chart_table_entry, BOX *box, BOX **finish_box)
+{
+    BOX *secondary_box;
+    /* Box 13 */
+    box->inflow = 1;
+
+    /* Box 14 */
+    if (box->type != Null && box->type != Annotation)
+    {
+        /* Box 2 */
+        if (box->generated) goto Box10;
+
+        /* Box 3 */
+        box->generated = 1;
+
+        /* Box 4 */
+        if (box->type == Finish) goto Box5;
+
+        /* Box 6 */
+        code_list[code_list_count].box = box;
+        code_list[code_list_count].jump_info = 0;
+        code_list_count++;
+
+        /* Box 7 */
+        secondary_box = get_box(chart_table_entry, box->next_sflow_box_number);
+        if (secondary_box != NULL)
+        {
+            /* Box 8 */
+
+            while (secondary_box->type == Unknown || secondary_box->type == Null || secondary_box->type == Annotation)
+            {
+                secondary_box = get_box(chart_table_entry, secondary_box->next_pflow_box_number);
+            }
+
+            code_list[code_list_count].box = secondary_box;
+            code_list[code_list_count].jump_info = 2;
+            code_list_count++;
+            secondary_box->lab_count++;
+
+            //WHILE T OF BOXTAB[SJ] < 3 DO
+            //    PFLOW.LINK OF BOXTAB[SJ] = > SJ;
+            //OD
+            //    SJ = > BNO OF CODELIST[CLPTR];
+            //2 = > JMP.INFO OF CODELIST[CLPTR];
+            //1 + > CLPTR;
+            //1 + > LAB.COUNT OF BOXTAB[SJ];
+
+
+        }
+
+        goto Box12;
+
+    Box5:
+        /* Box 5 */
+        *finish_box = box;
+
+    Box10:
+        /* Box 10 */
+        box->next_pflow_box_number = 0;
+        box->lab_count++;
+
+        /* Box 11 */
+        code_list[code_list_count].box = box;
+        code_list[code_list_count].jump_info = 1;
+        code_list_count++;
+
+    Box12:;
+    }
+}
+
+static void order_boxes(char *name, void *value)
+{
+    CHART_TABLE_ENTRY *chart_table_entry = (CHART_TABLE_ENTRY *)value;
+    BOX *finish_box = NULL;
+    int k = 1;
+    BOX *current_box = get_box(chart_table_entry, chart_table_entry->start_box_number);
+
+    code_list_count = 0;
+
+Box4:
+    
+    plant_box(chart_table_entry, current_box, &finish_box);
+
+    /* Box 5 */
+    current_box = get_box(chart_table_entry, current_box->next_pflow_box_number);
+    if (current_box != NULL) goto Box4;
+
+Box17:
+    /* Box 17 */
+    current_box = get_box(chart_table_entry, k);
+
+    /* Box 6 */
+    if (current_box->type != Unknown && current_box->inflow == 0) goto Box4;
+
+Box7:
+    /* Box 7 */
+    current_box = get_box(chart_table_entry, current_box->next_pflow_box_number);
+    if (current_box == NULL) goto Box16;
+
+    /* Box 8 */
+    if (get_box_number(chart_table_entry, current_box) > k) goto Box7;
+
+    /* Box 9 */
+    if (current_box->type == Null || current_box->type == Annotation || current_box->type == Unknown || current_box->generated) goto Box7;
+    goto Box4;
+
+Box16:
+    k++;
+
+    /* Box 11 */
+    if (k < MAX_BOX) goto Box17;
+
+    /* Box 12 */
+    if (finish_box != NULL)
+    {
+        code_list[code_list_count].box = finish_box;
+        code_list[code_list_count].jump_info = 0;
+        code_list_count++;
+    }
+}
+
+static void generate_chart_text(char *name, void *value)
+{
+    CHART_TABLE_ENTRY *chart_table_entry = (CHART_TABLE_ENTRY *)value;
+    int clptr;
+    BOX *next_box;
+    int next_jump_info;
+    int jmpsw;
+
+    /* Box 2 */
+    order_boxes(name, value);
+    for (int i = 0; i < code_list_count; i++)
+    {
+        printf("Code list, box %d, jump=%d\n", get_box_number(chart_table_entry, code_list[i].box), code_list[i].jump_info);
+    }
+
+    /* Box 3 */
+    clptr = 0;
+
+Box4:
+    /* Box 4 */
+
+    next_box = code_list[clptr].box;
+    if (next_box != NULL) printf("Next box %d has lab count %d\n", get_box_number(chart_table_entry, next_box), next_box->lab_count);
+    next_jump_info = code_list[clptr].jump_info;
+    clptr++;
+
+    /* Box 6 */
+    if (next_jump_info >= 1) goto Box11;
+
+    /* Box 5 */
+    if (clptr > code_list_count) goto Box16;
+
+    /* Box 7 */
+
+    /* Box 8 */
+    if (next_box->lab_count != 0)
+    {
+        /* Box 9 */
+        printf("Box 9 label %d\n", get_box_number(chart_table_entry, next_box));
+        fprintf(output, label_format, next_box->label_number);
+        //BNO OF NEXT.EL = >LABLIST[1 + >LABPTR];
+        //COPYSTR(LABL, TDIND, BNO OF NEXT.EL);
+        //NEWLINES(1);
+    }
+
+    /* Box 22 */
+    jmpsw = code_list[clptr].jump_info > 1;
+
+    /* Box 10 */
+    printf("Box 10 body %d\n", get_box_number(chart_table_entry, next_box));
+    output_box(chart_table_entry, next_box);
+    //IF TEXTPTR OF BOXTAB[BNO OF NEXT.EL] = > I /= 0 THEN
+    //    CLPTR = >T1;
+    //WHILE BTB[I] /= EOBWC DO
+    //    IF BTB[I] = '@ AND JMPSW = 1 AND BTB[I+1]='>
+    //    AND BTB[I + 2] = '> THEN
+    //    BNO OF CODELIST[CLPTR] = > BNO OF NEXT.EL;
+    //CLPTR + 1 = > T1;
+    //COPYSTR(RELJUMP, TDIND, BNO OF NEXT.EL);
+    //4 + >I;
+    //ELSE
+    //    OUTCH(BTB[I]);
+    //1 + > I;
+    //FI
+    //    OD
+    //    T1 = > CLPTR;
+    //FI
+    goto Box4;
+
+Box11:
+    /* Box 11 */
+    if (next_jump_info == 1) goto Box13;
+
+    /* Box 12 */
+    printf("Box 12 cjump %d\n", get_box_number(chart_table_entry, next_box));
+    fprintf(output, conditional_goto_format, next_box->label_number);
+    //SET.O.POS(O.POS() - 1);
+    //COPYSTR(RELJUMP, TDIND, BNO OF NEXT.EL);
+    //NEWLINES(1);
+    goto Box4;
+
+Box13:
+    /* Box 13 */
+    if (next_box != code_list[clptr].box) goto Box15;
+
+    /* Box 14 */
+    code_list[clptr].box->lab_count--;
+    goto Box4;
+
+Box15:
+    /* Box 15 */
+    printf("Box 15 jump %d\n",  get_box_number(chart_table_entry, next_box));
+    fprintf(output, goto_format, next_box->label_number);
+    // COPYSTR(JUMP,TDIND,BNO OF NEXTEL);
+    goto Box4;
+
+Box16:
+    /* Box 16 */
+    ;
+    //64 = > LABLIST[1 + >LABPTR];
+    //OUTCH(EOCWC);
+    //SELECT.OUTPUT(OLD.OUT);
+
+
+}
+
 static void output_chart(char *name, void *value)
 {
     CODE_LIST_ENTRY code_list[MAX_BOX];
-    int code_list_count;
+    int code_list_count = 0;
     CHART_TABLE_ENTRY *chart_table_entry = (CHART_TABLE_ENTRY *)value;
     BOX *start_box = get_box(chart_table_entry, chart_table_entry->start_box_number);
     BOX *finish_box = get_box(chart_table_entry, chart_table_entry->finish_box_number);
     int k = 1;
     BOX *current_box = start_box;
 
-    do
+    while (1)
     {
         do
         {
-            code_list[code_list_count++].box = current_box;
-            current_box = get_box(chart_table_entry, current_box->next_pflow_box_number);
-        } while (current_box != NULL);
+            do
+            {
+                code_list[code_list_count++].box = current_box;
+                current_box = get_box(chart_table_entry, current_box->next_pflow_box_number);
+            } while (current_box != NULL);
 
-        current_box = get_box(chart_table_entry, k);
-    } while (current_box->type != Unknown && current_box->inflow == 0);
+            current_box = get_box(chart_table_entry, k);
+        } while (current_box->type != Unknown && current_box->inflow == 0);
+
+        do
+        {
+            current_box = get_box(chart_table_entry, current_box->next_pflow_box_number);
+        } while (get_box_number(chart_table_entry, current_box) > k || current_box->type == Null || current_box->type == Annotation || current_box->type == Unknown || current_box->generated);
+    }
 
     //int i;
     printf("\nGenerating chart %s\n", name);
@@ -558,7 +768,7 @@ static void output_box_line(char *name, void *value)
     if (entry->line_type == CrossReference)
     {
         CHART_TABLE_ENTRY *chart_entry = (CHART_TABLE_ENTRY *)find_table_entry(&chart_table, entry->line);
-        output_chart(entry->line, chart_entry);
+        generate_chart_text(entry->line, chart_entry);
         //fprintf(output, "\nXREF %s", entry->line);
     }
     else
@@ -579,7 +789,7 @@ static void output_box_line(char *name, void *value)
 
 static void output_code(void)
 {
-    output_chart(chart_table.head->name, chart_table.head->value);
+    generate_chart_text(chart_table.head->name, chart_table.head->value);
     //process_table_entries(&chart_table, output_chart);
 }
 
