@@ -1,0 +1,30 @@
+   1: FLOW STATEMENT
+
+
+   2: F
+
+   3: READ BOX NO AND NOTE AS "PREVBOX"
+
+|->17: MONITOR FAULT IF PREVBOX UNDEFINED
+|
+|  5: IS NEXT NON-BLANK SYM = "@"?  ---> FINISH
+|
+|  4: COPY FLOWCAP TO BOX TEXT BUFFER
+|
+|  6: READ BOX NO AND NOTE AS "CURBOX"
+|
+|  7: IS PFLOW OF PREVBOX TO CURBOX? -+
+|                                     |    
+|  8: HAS PREVBOX ANY PFLOW? ---------|-> 15:IS PREVBOX A TEST BOX? --------> 9: IS CURBOX NEXT IN COL TO PREVBOX? ---Y---> 10: MOVE PFLOW AND PFLOWCAP OF PREVBOX TO  SFLOW AND SFLOWCAP
+|                                     |                                                                                         DECREMENT INFLOW OF BOX TO WHICH THIS FLOW GOES
+|                                     |   16: FAULT - TOO MANY FLOWS          14: SET SFLOW OF PREVBOX TO CURBOX            |
+|                                     |                                           SET SFLOWCAP OF PREVBOX                   |
+|                                     |   |                                   |                                             |
+|                                     |   |                                   |                                             |
+|                                     |   |                                   |                                             |
+|                                     |   |                                   |                                             |
+|  11: SET PFLOW OF PREVBOX TO CURBOX |<--------------------------------------|----------------------------------------------
+|      SET PFLOWCAP OF PREVBOX        |                                       |
+|      INCREMENT INFLOW OF CURBOX     |                                       |
+|                                     |                                       |
+|--12: SET PREVBOX = CURBOX  <-------------------------------------------------

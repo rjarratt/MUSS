@@ -1,0 +1,113 @@
+   1: ORDER BOXES
+   
+   2: SET F = 0(I.E. NO FINISH BOX)
+      INITIALISE CODE LIST
+      CLEAR ALL PLANTED MARKERS
+      SET K = 1
+      SELECT START BOX
+   
++->4: PLANT BOX  <----------------------+
+|                                       |
+|  5: SELECT NEXT BOX IN PRIMARY  Y-----+
+|     FLOW IF ONE EXISTS                |
+|           N                           |
+|  17: SELECT BOX K  <------------------|-----------------+
+|                                       |                 |
+|  6:  IS IT THE START OF  Y------------+                 |
+|      A PRIMARY FLOW PATH?                               |
+|            N                                            |
+|  7: SELECT NEXT BOX IN PRIMARY <---------------+  N-----|-->  16: INCREMENT K
+|     FLOW IF ONE EXISTS                         |        |
+|        Y                                       |        |     11: K > MAXIMUM BOX NO?  Y---->  12: IS THERE A FINISH BOX ----> 13: ENTER FINISH BOX ON CODE LIST
+|  8: IS CURRENT BOX NO. > K? Y------------------+        |         | N                                                              |
+|     N                                          |        +---------+                            14: ENTER END MARK ON CODE LIST  <--+
+|  9: IS BOX NULL/ANNOT/UNDEFINED OR PLANTED Y---+
+|     N                                                                                          15: RETURN (FINISH)
+|     |
++-----+
+
+
+
+1: PLANT BOX
+
+13: MARK BOX NOT START
+    OF PRIMARY FLOW
+
+14: IS BOX NULL/ANNOT?  ---------+
+                                 |
+2:  IS BOX ALREADY PLANTED? -----|---------------------+
+                                 |                     |
+3: MARK BOX PLANTED              |                     |
+                                 |                     |
+4: IS IT THE FINISH BOX?  -------|---------------------|------------>  5: SET FINISH BOX = J
+                                 |                     |              
+6: ENTER BOX ON CODELIST         |                     +------------>  10: CLEAR PRIMARY FLOW LINK OF THIS BOX
+                                 |                                        INC LABEL COUNT FOR BOX
+                                 |                                    
+                                 |                                    11: ENTER JUMP TO THIS BOX ON CODELIST
+                                 |                                        |
+                                 |                                        |
+                                 |                                        |
+7: HAS BOX ANY SECONDARY FLOW?  -|--> 8: FIND 1ST NON-NULL/ANNOT BOX      |
+                                 |       ON SECONDARY FLOW PATH           |
+                                 |       ENTER CJUMP TO IT ON CODELIST    |
+                                 |       INC ITS LABEL COUNT              |
+                                 |       |                                |
+ +-------------------------------+-------+--------------------------------+
+ |
+ v
+12: RETURN
+
+
+
+1: GENERATE CHART TEXT
+
+2: [ORDER BOXES]
+
+3: SET PTR TO SCAN CODELIST
+
++--->4: EXAMINE NEXT ENTRY IN
+|       CODE LIST
+|    
+|    6: IS IT A JUMP ENTRY?-----------------Y----------------------------------> 11: IS IT UNCONDITIONAL?  --Y------> 13: IS JUMP TO NEXT BOX IN CODE LIST? ----N------> 15: COPY JUMP TEXT TO
+|                                                                                       |                                                                                    CURRENT OUTPUT
+|                                                                                       N                                                                                    [DOC03.1.1.3]
+|             |                                                                         |                                         Y                                                 |
+|             |                                                                  12: REMOVE LAST NL &                 14: DECREMENT LABEL COUNT FOR NEXT BOX                        |
+|             |                                                                      COPY CJUMP TEXT                              |                                                 |
+|             |                                                                      TO CURRENT OUTPUT                            |                                                 |
+|             |                                                                      [DOC03.1.1.3]                                |                                                 |
+|             |                                                                         |                                         |                                                 |
++-------------|-------------------------------------------------------------------------+-----------------------------------------+-------------------------------------------------+
+|             |
+|             N
+|             |
+|             V
+|    5: IS IT THE END MARKER?------------------------Y------------------------>16: COPY EOC WARNING
+|             N                                                                    TO CURRENT OUTPUT
+|             |                                                                    STORE END MARKER IN LABEL LIST
+|             V                                                                    
+|    7: OUTPUT BOX HEADING                                                     18: IS MONITOR = 0 -----N------+     
+|       IF MONITOR 2 SET                                                                                      |   
+|                                                                              19: [LIST CODE]                |
+|    8: IS THE SPECIFIED BOX LABELLED? -------N--------+                           |                          |
+|             Y                                        |                           +--------------------------+
+|             |                                        |                           |
+|             V                                        |                           |
+|    9: STORE BOX NO IN                                |                           | 
+|       LABEL LIST                                     |                           |
+|       COPY LABEL TO                                  |                           |
+|       CURRENT OUTPUT                                 |                           |
+|                                                      |                           |
+|    22: SET SWITCH IF BOX IS <------------------------+                           |
+|        CONDITIONAL BRANCH                                                        |
+|                                                                                  |
+|    10: COPY BOX TEXT TO                                                          |
+|        CURRENT OUTPUT INSERTING                                                  |
+|        INTERNAL CONDITIONAL JUMPS                                                |
+|        WHERE NECESSARY                                                           |
+|        |                                                                         |
++--------+                                                                         |
+                                                                                   |
+                                                                                   |
+17: RETURN <-----------------------------------------------------------------------+
