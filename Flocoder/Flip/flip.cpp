@@ -410,7 +410,18 @@ static void output_box(CHART_TABLE_ENTRY *chart_table_entry, BOX * box)
 {
     //fprintf(output, "\n::::::::::::::::::BOX %d\n", get_box_number(chart_table_entry, box));
 
+    strcpy(conditional_goto, "");
+    if (box->type == Test)
+    {
+        sprintf(conditional_goto, conditional_goto_format, get_box(chart_table_entry, box->next_sflow_box_number)->label_number);
+    }
+    conditional_substitution = NULL;
+
     process_table_entries(&box->lines, output_box_line);
+    if (box->type == Test && conditional_substitution == NULL)
+    {
+        fprintf(output, " %s", conditional_goto);
+    }
 }
 
 static void print_chart_structure(CHART_TABLE_ENTRY *chart_table_entry)
@@ -581,6 +592,7 @@ Box4:
     if (next_box->lab_count != 0)
     {
         /* Box 9 */
+        fprintf(output, "\n");
         fprintf(output, label_format, next_box->label_number);
         //BNO OF NEXT.EL = >LABLIST[1 + >LABPTR];
         //COPYSTR(LABL, TDIND, BNO OF NEXT.EL);
@@ -631,6 +643,7 @@ Box13:
 
 Box15:
     /* Box 15 */
+    fprintf(output, "\n");
     fprintf(output, goto_format, next_box->label_number);
     // COPYSTR(JUMP,TDIND,BNO OF NEXTEL);
     goto Box4;
