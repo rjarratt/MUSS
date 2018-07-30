@@ -94,16 +94,19 @@ typedef struct
 
 typedef struct
 {
-    int start_box_number;
-    int finish_box_number;
-    BOX boxes[MAX_BOX + 1]; /* box numbers are 1-based */
-} CHART_TABLE_ENTRY;
-
-typedef struct
-{
     BOX *box;
     int jump_info;
 } CODE_LIST_ENTRY;
+
+typedef struct
+{
+    int start_box_number;
+    int finish_box_number;
+    BOX boxes[MAX_BOX + 1]; /* box numbers are 1-based */
+    CODE_LIST_ENTRY code_list[MAX_BOX];
+    int code_list_count = 0;
+
+} CHART_TABLE_ENTRY;
 
 static int enable_lex_trace = 0;
 static int enable_yacc_trace = 0;
@@ -119,10 +122,6 @@ static char *current_chart_name;
 static TABLE *current_line_table;
 
 static TABLE chart_table;
-
-static CODE_LIST_ENTRY code_list[MAX_BOX];
-static int code_list_count = 0;
-
 
 static int last_box_number = -1;
 static int last_label_number = -1;
@@ -409,7 +408,7 @@ static int get_box_number(CHART_TABLE_ENTRY *chart_table_entry, BOX *box)
 
 static void output_box(CHART_TABLE_ENTRY *chart_table_entry, BOX * box)
 {
-    fprintf(output, "\n::::::::::::::::::BOX %d\n", get_box_number(chart_table_entry, box));
+    //fprintf(output, "\n::::::::::::::::::BOX %d\n", get_box_number(chart_table_entry, box));
 
     process_table_entries(&box->lines, output_box_line);
 }
@@ -447,9 +446,9 @@ static void plant_box(CHART_TABLE_ENTRY *chart_table_entry, BOX *box, BOX **fini
         if (box->type == Finish) goto Box5;
 
         /* Box 6 */
-        code_list[code_list_count].box = box;
-        code_list[code_list_count].jump_info = 0;
-        code_list_count++;
+        chart_table_entry->code_list[chart_table_entry->code_list_count].box = box;
+        chart_table_entry->code_list[chart_table_entry->code_list_count].jump_info = 0;
+        chart_table_entry->code_list_count++;
 
         /* Box 7 */
         secondary_box = get_box(chart_table_entry, box->next_sflow_box_number);
@@ -462,9 +461,9 @@ static void plant_box(CHART_TABLE_ENTRY *chart_table_entry, BOX *box, BOX **fini
                 secondary_box = get_box(chart_table_entry, secondary_box->next_pflow_box_number);
             }
 
-            code_list[code_list_count].box = secondary_box;
-            code_list[code_list_count].jump_info = 2;
-            code_list_count++;
+            chart_table_entry->code_list[chart_table_entry->code_list_count].box = secondary_box;
+            chart_table_entry->code_list[chart_table_entry->code_list_count].jump_info = 2;
+            chart_table_entry->code_list_count++;
             secondary_box->lab_count++;
 
             //WHILE T OF BOXTAB[SJ] < 3 DO
@@ -490,9 +489,9 @@ static void plant_box(CHART_TABLE_ENTRY *chart_table_entry, BOX *box, BOX **fini
         box->lab_count++;
 
         /* Box 11 */
-        code_list[code_list_count].box = box;
-        code_list[code_list_count].jump_info = 1;
-        code_list_count++;
+        chart_table_entry->code_list[chart_table_entry->code_list_count].box = box;
+        chart_table_entry->code_list[chart_table_entry->code_list_count].jump_info = 1;
+        chart_table_entry->code_list_count++;
 
     Box12:;
     }
@@ -505,7 +504,7 @@ static void order_boxes(char *name, void *value)
     int k = 1;
     BOX *current_box = get_box(chart_table_entry, chart_table_entry->start_box_number);
 
-    code_list_count = 0;
+    chart_table_entry->code_list_count = 0;
 
 Box4:
     
@@ -543,9 +542,9 @@ Box16:
     /* Box 12 */
     if (finish_box != NULL)
     {
-        code_list[code_list_count].box = finish_box;
-        code_list[code_list_count].jump_info = 0;
-        code_list_count++;
+        chart_table_entry->code_list[chart_table_entry->code_list_count].box = finish_box;
+        chart_table_entry->code_list[chart_table_entry->code_list_count].jump_info = 0;
+        chart_table_entry->code_list_count++;
     }
 }
 
@@ -566,15 +565,15 @@ static void generate_chart_text(char *name, void *value)
 Box4:
     /* Box 4 */
 
-    next_box = code_list[clptr].box;
-    next_jump_info = code_list[clptr].jump_info;
+    next_box = chart_table_entry->code_list[clptr].box;
+    next_jump_info = chart_table_entry->code_list[clptr].jump_info;
     clptr++;
 
     /* Box 6 */
     if (next_jump_info >= 1) goto Box11;
 
     /* Box 5 */
-    if (clptr > code_list_count) goto Box16;
+    if (clptr > chart_table_entry->code_list_count) goto Box16;
 
     /* Box 7 */
 
@@ -589,7 +588,7 @@ Box4:
     }
 
     /* Box 22 */
-    jmpsw = code_list[clptr].jump_info > 1;
+    jmpsw = chart_table_entry->code_list[clptr].jump_info > 1;
 
     /* Box 10 */
     output_box(chart_table_entry, next_box);
@@ -624,10 +623,10 @@ Box11:
 
 Box13:
     /* Box 13 */
-    if (next_box != code_list[clptr].box) goto Box15;
+    if (next_box != chart_table_entry->code_list[clptr].box) goto Box15;
 
     /* Box 14 */
-    code_list[clptr].box->lab_count--;
+    chart_table_entry->code_list[clptr].box->lab_count--;
     goto Box4;
 
 Box15:
@@ -652,8 +651,8 @@ static void output_box_line(char *name, void *value)
     if (entry->line_type == CrossReference)
     {
         CHART_TABLE_ENTRY *chart_entry = (CHART_TABLE_ENTRY *)find_table_entry(&chart_table, entry->line);
+//        fprintf(output, "\n***************XREF %s", entry->line);
         generate_chart_text(entry->line, chart_entry);
-        //fprintf(output, "\nXREF %s", entry->line);
     }
     else
     {
