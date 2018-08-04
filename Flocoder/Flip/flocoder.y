@@ -71,7 +71,7 @@ documentation_lines: documentation_lines simple_line | simple_line;
 
 chart_list: chart_list chart | chart;
 
-chart: title_directive column_directive_list row_directive_list flow_directive_list box_list end_directive;
+chart: title_directive column_directive_list row_directive_list flow_directive_list row_directive_list box_list end_directive;
 
 column_directive_list: column_directive_list column_directive | column_directive;
 
