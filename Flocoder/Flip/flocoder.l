@@ -52,10 +52,10 @@ INTEGER          [0-9]+
 {START_DIRECTIVE}COL                     { BEGIN DIRECTIVE_BOX_REFS; lex_trace("col"); return T_COL; }
 {START_DIRECTIVE}FLOW                    { BEGIN DIRECTIVE_BOX_REFS; lex_trace("flow"); return T_FLOW; }
 {START_DIRECTIVE}END                     { BEGIN INITIAL; lex_trace("end\n"); return T_END; }
-{START_DIRECTIVE}[^ \t\n]*               { yyerror("Unexpected directive \'%s\'\n", yytext); }
+{START_DIRECTIVE}[^ 0-9\t\n]*               { yyerror("Unexpected directive \'%s\'\n", yytext); }
 <DIRECTIVE_TITLE>{NAME}                  { BEGIN DIRECTIVE_IGNORE; yylval.nameval = _strdup(yytext); lex_trace(" name \"%s\"", yytext); return T_NAME;}
 <DIRECTIVE_TITLE>[ ]*                    { ; }
-<DIRECTIVE_CROSS_REF>{NAME}              { BEGIN INITIAL; yylval.nameval = _strdup(yytext); lex_trace(" name \"%s\"", yytext); return T_NAME;}
+<DIRECTIVE_CROSS_REF>{NAME}              { BEGIN DIRECTIVE_BOX; yylval.nameval = _strdup(yytext); lex_trace(" name \"%s\"", yytext); return T_NAME;}
 <DIRECTIVE_BOX>{INTEGER}                 { yylval.unsignedval = atoi(yytext); lex_trace(" %s(%d)", yytext, yylval.unsignedval); return T_INTEGER;}
 <DIRECTIVE_BOX>[ ]*                      { ; }
 <DIRECTIVE_BOX>\.                        { lex_trace(" ."); return T_PERIOD;}
@@ -66,7 +66,7 @@ INTEGER          [0-9]+
 <DIRECTIVE_IGNORE>\n                     { BEGIN INITIAL; lex_trace(" no other data\n"); yylineno++; }
 <DIRECTIVE_IGNORE>[^\n]*                 { BEGIN INITIAL; lex_trace(" other data %s\n", yytext); return T_OTHERDATA;}
 ^[^@\f\n\#][^\n]*                        { BEGIN INITIAL; yylval.lineval = _strdup(yytext); lex_trace("%d: %s\n", yylineno, yytext); return T_LINE;}
-^\#                                      { BEGIN DIRECTIVE_CROSS_REF; return T_HASH;}
+<DIRECTIVE_BOX>^\#                       { BEGIN DIRECTIVE_CROSS_REF; return T_HASH;}
 ^\n                                      { BEGIN INITIAL; yylineno++; }
 \n                                       { BEGIN INITIAL; yylineno++; }
 \f                                       { BEGIN INITIAL; }
