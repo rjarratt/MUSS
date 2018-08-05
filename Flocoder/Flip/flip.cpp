@@ -386,15 +386,12 @@ static void output_box(CHART_TABLE_ENTRY *chart_table_entry, BOX * box)
     strcpy(conditional_goto, "");
     if (box->type == Test)
     {
+        /* This next line isn't really right because it assumes the next sflow is the destination, it might not be of course, the normal OrderBoxes routine plants the relative jump, may need to improve code here */
         sprintf(conditional_goto, conditional_goto_format, get_box(chart_table_entry, box->next_sflow_box_number)->label_number);
     }
     conditional_already_substituted = 0;
 
     process_table_entries(&box->lines, output_box_line);
-    if (box->type == Test && !conditional_already_substituted)
-    {
-        fprintf(output, " %s", conditional_goto);
-    }
 }
 
 static void print_chart_structure(CHART_TABLE_ENTRY *chart_table_entry)
@@ -602,7 +599,10 @@ Box11:
     if (next_jump_info == 1) goto Box13;
 
     /* Box 12 */
-    fprintf(output, conditional_goto_format, next_box->label_number);
+    if (!conditional_already_substituted)
+    {
+        fprintf(output, conditional_goto_format, next_box->label_number);
+    }
     //SET.O.POS(O.POS() - 1);
     //COPYSTR(RELJUMP, TDIND, BNO OF NEXT.EL);
     //NEWLINES(1);
