@@ -39,7 +39,7 @@ in this Software without prior written authorization from Robert Jarratt.
 
 START_DIRECTIVE  ^\f?@
 NAME             [A-Z][A-Z0-9\.\/]*
-LABEL            [A-Z][^\-\n]*
+LABEL            [A-Z\=][^\-\n]*
 INTEGER          [0-9]+
 
 %%
