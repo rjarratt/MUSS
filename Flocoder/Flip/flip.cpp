@@ -114,7 +114,7 @@ static char *label_format;
 static char *goto_format;
 static char *conditional_goto_format;
 static char conditional_goto[80];
-char *conditional_substitution;
+static int conditional_already_substituted;
 
 static int in_selected_box = 0;
 static CHART_TABLE_ENTRY *current_chart_table_entry;
@@ -412,10 +412,10 @@ static void output_box(CHART_TABLE_ENTRY *chart_table_entry, BOX * box)
     {
         sprintf(conditional_goto, conditional_goto_format, get_box(chart_table_entry, box->next_sflow_box_number)->label_number);
     }
-    conditional_substitution = NULL;
+    conditional_already_substituted = 0;
 
     process_table_entries(&box->lines, output_box_line);
-    if (box->type == Test && conditional_substitution == NULL)
+    if (box->type == Test && !conditional_already_substituted)
     {
         fprintf(output, " %s", conditional_goto);
     }
@@ -657,6 +657,8 @@ Box16:
 
 static void output_box_line(char *name, void *value)
 {
+    char *conditional_substitution = NULL;
+
     LINE_TABLE_ENTRY *entry = (LINE_TABLE_ENTRY *)value;
     if (entry->line_type == CrossReference)
     {
@@ -671,12 +673,17 @@ static void output_box_line(char *name, void *value)
     }
     else
     {
-        conditional_substitution = strstr(entry->line, "@>>");
+        if (!conditional_already_substituted)
+        {
+            conditional_substitution = strstr(entry->line, "@>>");
+        }
+
         if (conditional_substitution != NULL)
         {
             *conditional_substitution = '\0';
             fprintf(output, "\n%s", entry->line);
             fprintf(output, " %s", conditional_goto);
+            conditional_already_substituted = 1;
         }
         else
         {
