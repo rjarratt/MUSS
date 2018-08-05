@@ -37,7 +37,6 @@ void start_chart(char *title);
 void start_box(int number, int level);
 void end_box(void);
 void process_line(char *line);
-void process_cross_ref(char *title);
 void start_column_sequence(void);
 void process_column_box_ref(int box_number, char *box_type_name);
 void start_flow_sequence(void);

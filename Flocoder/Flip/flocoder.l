@@ -33,7 +33,6 @@ in this Software without prior written authorization from Robert Jarratt.
 %}
 
 %x DIRECTIVE_TITLE
-%x DIRECTIVE_CROSS_REF
 %s DIRECTIVE_BOX
 %s DIRECTIVE_BOX_REFS
 %x DIRECTIVE_IGNORE
@@ -55,7 +54,6 @@ INTEGER          [0-9]+
 {START_DIRECTIVE}[^ 0-9\t\n]*               { yyerror("Unexpected directive \'%s\'\n", yytext); }
 <DIRECTIVE_TITLE>{NAME}                  { BEGIN DIRECTIVE_IGNORE; yylval.nameval = _strdup(yytext); lex_trace(" name \"%s\"", yytext); return T_NAME;}
 <DIRECTIVE_TITLE>[ ]*                    { ; }
-<DIRECTIVE_CROSS_REF>{NAME}              { BEGIN DIRECTIVE_BOX; yylval.nameval = _strdup(yytext); lex_trace(" name \"%s\"", yytext); return T_NAME;}
 <DIRECTIVE_BOX>{INTEGER}                 { yylval.unsignedval = atoi(yytext); lex_trace(" %s(%d)", yytext, yylval.unsignedval); return T_INTEGER;}
 <DIRECTIVE_BOX>[ ]*                      { ; }
 <DIRECTIVE_BOX>\.                        { lex_trace(" ."); return T_PERIOD;}
@@ -65,8 +63,7 @@ INTEGER          [0-9]+
 <DIRECTIVE_BOX_REFS>{LABEL}              { yylval.nameval = _strdup(yytext); lex_trace(" label %s", yytext); return T_LABEL;}
 <DIRECTIVE_IGNORE>\n                     { BEGIN INITIAL; lex_trace(" no other data\n"); yylineno++; }
 <DIRECTIVE_IGNORE>[^\n]*                 { BEGIN INITIAL; lex_trace(" other data %s\n", yytext); return T_OTHERDATA;}
-^[^@\f\n\#][^\n]*                        { BEGIN INITIAL; yylval.lineval = _strdup(yytext); lex_trace("%d: %s\n", yylineno, yytext); return T_LINE;}
-<DIRECTIVE_BOX>^\#                       { BEGIN DIRECTIVE_CROSS_REF; return T_HASH;}
+^[^@\f\n][^\n]*                          { BEGIN INITIAL; yylval.lineval = _strdup(yytext); lex_trace("%d: %s\n", yylineno, yytext); return T_LINE;}
 ^\n                                      { BEGIN INITIAL; yylineno++; }
 \n                                       { BEGIN INITIAL; yylineno++; }
 \f                                       { BEGIN INITIAL; }

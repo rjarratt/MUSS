@@ -209,23 +209,20 @@ void process_line(char *line)
     if (in_selected_box)
     {
         entry = (LINE_TABLE_ENTRY *)malloc(sizeof(LINE_TABLE_ENTRY));
-        entry->line_type = NormalLine;
-        entry->line = line;
+        if (line[0] == '#')
+        {
+            entry->line_type = CrossReference;
+            entry->line = &line[1];
+        }
+        else
+        {
+            entry->line_type = NormalLine;
+            entry->line = line;
+        }
         add_table_entry(current_line_table, "", entry);
     }
 }
 
-void process_cross_ref(char *title)
-{
-    LINE_TABLE_ENTRY *entry;
-    if (in_selected_box)
-    {
-        entry = (LINE_TABLE_ENTRY *)malloc(sizeof(LINE_TABLE_ENTRY));
-        entry->line_type = CrossReference;
-        entry->line = title;
-        add_table_entry(current_line_table, "", entry);
-    }
-}
 void start_column_sequence(void)
 {
     last_box_number = -1;
@@ -664,6 +661,11 @@ static void output_box_line(char *name, void *value)
     if (entry->line_type == CrossReference)
     {
         CHART_TABLE_ENTRY *chart_entry = (CHART_TABLE_ENTRY *)find_table_entry(&chart_table, entry->line);
+        if (chart_entry == NULL)
+        {
+            fprintf(stderr, "Chart cross reference not found: %s\n", entry->line);
+        }
+
 //        fprintf(output, "\n***************XREF %s", entry->line);
         generate_chart_text(entry->line, chart_entry);
     }

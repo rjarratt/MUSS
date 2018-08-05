@@ -35,7 +35,6 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_END
 %token T_PERIOD
 %token T_HYPHEN
-%token T_HASH
 %token <nameval> T_NAME
 %token <nameval> T_LABEL
 %token <unsignedval> T_INTEGER
@@ -59,7 +58,6 @@ extern int yylineno;
 }
 
 %type <lineval> simple_line
-%type <nameval> cross_ref_line
 
 %%
 
@@ -86,10 +84,8 @@ box: box_directive box_lines;
 box_lines: box_lines box_line | ;
 
 simple_line: T_LINE { $$ = $1; }
-cross_ref_line: T_HASH T_NAME { $$ = $2; }
 box_line:
   simple_line { process_line($1); }
-| cross_ref_line { process_cross_ref($1); }
 
 x_directive: T_X T_OTHERDATA
 
