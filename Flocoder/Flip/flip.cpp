@@ -418,7 +418,7 @@ static void plant_box(CHART_TABLE_ENTRY *chart_table_entry, BOX *box, BOX **fini
     box->inflow = 1;
 
     /* Box 14 */
-    if (box->type != Null && box->type != Annotation)
+    if (box->type != Unknown && box->type != Null && box->type != Annotation)
     {
         /* Box 2 */
         if (box->generated) goto Box10;
@@ -526,10 +526,12 @@ Box16:
     /* Box 12 */
     if (finish_box != NULL)
     {
+        /* Box 13 */
         chart_table_entry->code_list[chart_table_entry->code_list_count].box = finish_box;
         chart_table_entry->code_list[chart_table_entry->code_list_count].jump_info = 0;
         chart_table_entry->code_list_count++;
     }
+    /*  Box 14 implicit */
 }
 
 static void generate_chart_text(char *name, void *value)
