@@ -1,0 +1,707 @@
+@X @~
+~V7 56 2 -5
+~D10
+~H                    MUSS
+~
+~
+~D10
+~H             DOC101
+~D10
+~MMANCHESTER UNIVERSITY  -  CONFIDENTIAL
+~
+~
+                                                            ISSUE 11~
+~V9 -1
+~P
+~V9 1
+~YDOC101
+~S~M~ODOCUMENTATION IMPLEMENTATION DESCRIPTION
+~
+~M~OSection 10 Version 1
+~S1~OSection 10.1 Graphics Device Driver
+~S~O1. General Description
+~BThis module is the device driver for all devices other than the
+lineprinter.  These are all driven via the CORE graphics system, whose
+interface is described in the User Manual.  This module consists of a set of
+procedures for initialising and controlling a graphics device for
+line drawing, text output and drawing of box shapes.  These procedures make call
+s
+on the CORE system to select a device and draw charts on it.
+~S~O2. Interface
+~
+~OProcedures~
+  INIT.COR~
+  INITCHT.COR~
+  DRAWSHAPE.COR~
+  DRAWLINE.COR~
+  DRAWTEXT.COR~
+  ENDCHT.COR~
+  OUTPUTPAGE.COR~
+  END.COR~
+~
+~OData Structures~
+~S~O2.1 Hardware Specification
+~BNone.
+~S~O2.2 Software Specification
+~BThis consists of the following procedures.~
+~
+~
+1) INIT.COR(DESTINATION, DEVICE.TYPE)~
+~BThis procedure sets up an output stream to the destination
+and arranges that the correct type of output will be generated
+for the requested device type.~
+~
+~
+2) INIT.CHT.COR()~
+~BThis procedure selects the character size to be used by
+examining the chart dimensions, and arranges to centre it
+in its viewport.~
+~
+~
+3) DRAW.SHAPE.COR(BOXNO)~
+~BThis procedure draws the shape corresponding to the type of box
+number BOXNO and appends the box number above and slightly right of centre.~
+~
+~
+4) DRAWLINE.COR(X1,Y1,X2,Y2,ARROW)~
+~BThis procedure draws a line from X1, Y1 to X2, Y2. An arrow is drawn
+in the middle if ARROW is non zero.~
+~
+~
+5) DRAWTEXT.COR(TEXT.VECTOR,X,Y,TEXTPTR,NOLS,EOTX,CHSIZE)~
+~BThis procedure outputs NOLS lines of text from TEXTPTR within the
+TEXT.VECTOR at position X, Y until it encounters an EOTX character.~
+~
+~
+6) OUTPUT.PAGE.COR()~
+~BNull.~
+~
+~
+7) END.CHT.COR()~
+~BThis outputs the title at the bottom right of the chart and the date
+at bottom left. The legend 'MANCHESTER UNIVERSITY - CONFIDENTIAL'
+appears in the middle in double sized characters.~
+~
+~
+8) END.COR()~
+~BThis releases the selected graphics device.~
+~S~O3. Implementation
+~S~O3.1 Outline of Operation
+~BThe viewport for a chaert is device dependent, as is the
+selected character size.  A margin is included for
+binding and the chart may be drawn upright or sideways. Mapping coordinates
+are calculated which cause the chart to be central in its frame. If the
+chart cannot fit in the frame at the normal character size a reduced size
+is used. If it still will not fit it will be drawn at the reduced size
+with a framework which just encloses it. Chart dimensions are passed on
+from DRAW.CHART in the global variables MAXX and MINY.
+~BThe coodinate values sent by DRAW.CHART are in half character size units
+starting from 0 in the X-plane and working down from the top of the chart
+from 512 in the Y-plane. These are mapped so that the chart appears in
+the middle of the viewport with its origin (0,0) in the bottom left hand corner.
+~S~O3.3 Data Structures
+~T# 16
+~
+XPOS,YPOS~Iinteger quantities specifying for the selected device the current coo
+rdinate position.~
+~
+XMAP,YMAP~Imapping coordinates for the selected device which are added to the va
+lues of X and Y
+sent by DRAW.CHART to position a chart in the centre of its viewport.~
+~
+XSCALE,YSCALE~Iinteger scaling values for the selected device applied to the X a
+nd Y coordinates.~
+~
+XD,YD~Ithese give the dimensions of the
+required viewport in world coordinates.~
+~
+A4X,A4SX~
+A4Y,A4SX~Iliterals giving the number of half characters across
+an A4 page at standard character size
+for both potrait and landscape drawing.~
+~
+NXMARG,NYMARG~
+SXMARG,SYMARG~Iliterals giving width in half character units at
+normal size for both portrait and landscape drawing.~
+~
+LXMARG,LYMARG~
+LSXMARG,LSYMARG~Ias above but in terms of the reduced character size.~
+~Y
+~V9 -1
+~P
+~D15
+~HFLOWCHARTS
+~
+~
+~H                DOC101
+~V9 -1
+~F
+@TITLE DOC10(1,10)
+@COL 1S-2R-3R-4R-5R-6F
+@FLOW 1-2-3-4-5-6
+@BOX 1.0
+CORE DRIVER
+@BOX 2.0
+@BOX 3.0
+@BOX 4.0
+PROCEDURES IN MODULE
+   INIT CORE [DOC10.1]
+   INIT CHART.COR [DOC10.2]
+   DRAW SHAPE.COR [DOC10.3]
+   DRAW LINE.COR [DOC10.4]
+   DRAW TEXT.COR [DOC10.5]
+   OUTPUT PAGE.COR [DOC10.6]
+   END CHART.COR [DOC10.7]
+   END CORE [DOC10.8]
+@BOX 5.0
+#DOC10.1
+#DOC10.2
+#DOC10.3
+#DOC10.4
+#DOC10.5
+#DOC10.6
+#DOC10.7
+#DOC10.8
+@BOX 6.0
+END
+@BOX 1.1
+#DOC10/1
+MODULE(INIT.CORE,INITCHT.COR,DRAWSHAPE.COR,DRAWLINE.COR,DRAWTEXT.COR,
+OUTPUTPAGE.COR,ENDCHT.COR,END.CORE);
+@BOX 2.1
+$PS CP1($AD[$LO8],$LO64)/$IN;
+$PS CP2($IN,$IN);
+$PS CP3();
+$PS CP4($RE,$RE);
+$PS CP5();
+$PS CP6($RE,$RE);
+$PS CP7($RE,$RE);
+$PS CP8($AD[$LO8],$IN);
+*GLOBAL 3;
+$ADCP1 INIT.CORE.STR.P;
+$ADCP2 A4.FRAME.P;
+$ADCP3 TERM.STR.P;
+$ADCP4 SET.CHAR.SIZE.P;
+$ADCP5 NEW.FRAME.P;
+$ADCP6 MOVE.ABS2.P;
+$ADCP7 LINE.ABS2.P;
+$ADCP8 TEXT.P;
+*GLOBAL 0;
+@BOX 3.1
+$LI A4X=280,A4SX=396,A4Y=198,A4SY=140;
+$LI LXMARG=15,LYMARG=8,NXMARG=12,NYMARG=6;
+$LI SXMARG=12,SYMARG=6,LSXMARG=15,LSYMARG=8;
+@BOX 4.1
+$PS INIT.CORE($AD[$LO8],$LO64)/$IN;
+$PS INIT.CHT.COR();
+$PS DRAWSHAPE.COR($IN);
+$PS DRAWLINE.COR($IN,$IN,$IN,$IN,$IN);
+$PS DRAWTEXT.COR($AD[$LO8],$IN,$IN,$IN,$IN,$LO8,$IN);
+$PS OUTPUT.PAGE.COR();
+$PS END.CHT.COR();
+$PS END.CORE();
+$PS MOVE($IN,$IN,$IN);
+@BOX 5.1
+#DOC10.1
+#DOC10.2
+#DOC10.3
+#DOC10.4
+#DOC10.5
+#DOC10.6
+#DOC10.7
+#DOC10.8
+@BOX 6.1
+*END
+@END
+@TITLE DOC10/1(1,10)
+@COL 1S-2R-3F
+@FLOW 1-2-3
+@BOX 1.0
+EXTERNAL ENVIRONMENT
+@BOX 2.0
+EXTERNALS
+@BOX 3.0
+END
+@BOX 1.1
+::EXTERNALS
+@BOX 2.1
+$PS DUMMYP();
+TYPE T IS ADDR DUMMYP PAD;
+$LS LINK($AD[$LO8],$AD[T])/$IN;
+TYPE BOXSPECS IS $IN COL.LINK,ROW.LINK,PFLOW.LINK,YCOORD
+$IN SFLOWLINK,TEXT.PTR,PFLOW.TEXT,SFLOW.TEXT,HT,TEXTPTR1
+$LO8 T,BOXHT,BOXWTH,COL,INFLOW,LAB.COUNT,PLANTED,YFIXED,BOXHT1,BOXWTH1;
+BOXSPECS[64] BOXTAB;
+$LO8[10] DATESTR;
+$LO8[64] TBUFF;$LO8[8192]BTB;
+$IN[8] COLX;
+$IN MAXX,MINY,XMAP,YMAP,XPOS,YPOS,XSCALE,YSCALE,XD,YD,XM,YM;
+$IM$LI HWR,MINX,MAXY;
+$IM$LI EOBWC,CRWC,PWC;
+@BOX 3.1
+::END
+@END
+@TITLE DOC10.1(1,10)
+@COL 1S-2T-3R-4T-5R-6F
+@COL 7R-8R-9R
+@ROW 3-7
+@ROW 5-8
+@FLOW 1-2FOUND-3-4OK-5-6
+@FLOW 2FAIL-7-9-6
+@FLOW 4FAULT-8-9
+@BOX 1.0
+INITIALISE CORE
+@BOX 2.0
+FIND CORE PROCEDURES ADDRESSES
+@BOX 3.0
+STORE PROC ADDRESSES
+@BOX 4.0
+SELECT CORE OUTPUT STREAM
+@BOX 5.0
+SET STREAM NUMBER AS RESULT
+@BOX 6.0
+END
+@BOX 7.0
+MONITOR-CORE LIB NOT SELECTED
+@BOX 8.0
+MONITOR-DEVICE NOT AVAILABLE
+@BOX 9.0
+SET RESULT NEGATIVE
+@BOX 1.1
+PROC INIT.CORE(OUTFILE,DEVICE);
+DATAVEC CORE.INT($LO8)
+"INITCORESTR" 10
+"A4FRAME" 10
+"TERMSTR" 10
+"SETCHARSIZE" 10
+"NEWFRAME" 10
+"MOVEABS2" 10
+"LINEABS2" 10
+"TEXT"10
+END
+T[8] CPADDRS;
+DATAVEC NULLHDR($LO8)
+0 0
+END
+@BOX 2.1
+IF LINK(^CORE.INT,^CPADDRS) < 0
+@BOX 3.1
+PAD OF CPADDRS[0] => INIT.CORE.STR.P;
+PAD OF CPADDRS[1] => A4.FRAME.P;
+PAD OF CPADDRS[2] => TERM.STR.P;
+PAD OF CPADDRS[3] => SET.CHAR.SIZE.P;
+PAD OF CPADDRS[4] => NEW.FRAME.P;
+PAD OF CPADDRS[5] => MOVE.ABS.2.P;
+PAD OF CPADDRS[6] => LINE.ABS2.P;
+PAD OF CPADDRS[7] => TEXT.P;
+@BOX 4.1
+IF INIT.CORE.STR.P^(OUTFILE,DEVICE)=>INIT.CORE < 0
+@BOX 5.1
+::UNNECESSARY
+@BOX 6.1
+END
+@BOX 7.1
+CAPTION(%"CORE LIB NOT OPEN");
+@BOX 8.1
+CAPTION(%"DEVICE NOT AVAILABLE");
+@BOX 9.1
+-1 => INIT.CORE;
+@END
+@TITLE DOC10.2(1,10)
+@COL 1C-2R-3R-4R-5R-6F
+@FLOW 1-2-3-4-5-6
+@BOX 1.0
+INITIALISE PLOTTER CHART
+@BOX 2.0
+INITIALISE CHART VARIABLES
+@BOX 3.0
+SELECT CORRECT SHAPE AND
+CHARACTER SIZE FOR CHART
+@BOX 4.0
+SET MAPPING TO CENTRALISE CHART
+SET WINDOW TO A4 PROPORTIONALLY
+SET A4 SIZED VIEWPORT
+SET CHAR SIZE
+@BOX 5.0
+DRAW SIDE LINES
+@BOX 6.0
+END
+@BOX 1.1
+PROC INIT.CHT.COR;
+$IN UDAX,UDAY,SDAX,SDAY;
+$IN UDBX,UDBY,SDBX,SDBY;
+$IN YL;
+@BOX 2.1
+0 => XMAP => YMAP;1=>XSCALE;2=>YSCALE;
+0 => XPOS => YPOS;
+@BOX 3.1
+A4X=>UDAX;A4Y=>UDAY;
+A4SX=>SDAX;A4SY=>SDAY;
+UDAX*5->>2=>UDBX;UDAY*5->>2=>UDBY;
+MAXY-MINY=>YL;
+SDAX*5->>2=>SDBX;SDAY*5->>2=>SDBY;
+IF MAXX<UDAX AND YL<UDAY THEN UDAX=>XD;
+   UDAY=>YD;
+ELSE IF MAXX<SDAX AND YL<SDAY THEN
+   SDAX=>XD;SDAY=>YD;
+ELSE IF MAXX<UDBX AND YL < UDBY THEN
+   UDBX=>XD;
+   UDBY=>YD;
+ELSE IF MAXX < SDBX AND YL < SDBY THEN
+   SDBX=>XD;SDBY=>YD;
+ELSE
+   UDBX=>XD;UDBY=>YD;
+FI FI FI FI
+@BOX 5.1
+(XD-MAXX)/2 => XMAP;
+(YD-MINY)/2-256 => YMAP;
+@BOX 4.1
+A4.FRAME.P^(XD*XSCALE,YD*YSCALE);
+SETCHARSIZE.P^(2.0,3.3);
+@BOX 6.1
+END
+@END
+@TITLE DOC10.3(1,10)
+@COL 7R-9R-10N
+@COL 1S-2R-3R-4R-5R-6N
+@COL 18R-19R-11R-13R-16N-8R-17F
+@ROW 2-18
+@ROW 7-3-11
+@ROW 10-6-16
+@FLOW 1-2
+@FLOW 7-9-10-6-16
+@FLOW 3-4-5-6
+@FLOW 11-13-16-8-17
+@FLOW 18-19-16
+@BOX 1.0
+DRAW BOX SHAPE
+@BOX 2.0
+SWITCH ON BOX TYPE
+@BOX 3.0
+TEST
+@BOX 4.0
+CALC POSNS
+OF SIDES
+@BOX 5.0
+DRAW SIDES
+@BOX 7.0
+RECTANGLE
+@BOX 8.0
+OUTPUT BOX NUMBER
+@BOX 9.0
+DRAW SIDES
+@BOX 11.0
+FINISH
+@BOX 13.0
+DRAW BOTTOM LINE
+@BOX 17.0
+END
+@BOX 18.0
+CIRCLE
+@BOX 19.0
+DRAW ROUND BRACKETS
+@BOX 1.1
+PROC DRAWSHAPE.COR(BOX);
+$IN X,Y,WTH,HGT,XWTH,I,TENS,NOZ;
+@BOX 2.1
+COLX[COL OF BOXTAB[BOX]] => X;
+BOX*3 => I;
+IF BOX/10 => TENS > 0 THEN
+TENS + '0 => BTB[I];
+2 => NOZ;
+1 +> I;
+ELSE
+1 => NOZ;
+FI
+BOX -(TENS*10) + '0 => BTB[I];
+EOBWC => BTB[I+1];
+YCOORD OF BOXTAB[BOX] => Y;
+BOXWTH OF BOXTAB[BOX] +1 => WTH;
+HT OF BOXTAB[BOX]+1 => HGT;
+IF TEXTPTR OF BOXTAB[BOX] = 0 , ->START;
+SWITCH T OF BOXTAB[BOX]-1\
+NULL,NULL,START,RECT,TEST,FIN,CIRC;
+@BOX 9.1
+DRAW.LINE.COR(X-WTH,Y+HGT,X,Y+HGT,0);
+DRAWLINE.COR(NOZ*2+X+2,Y+HGT,X+WTH,Y+HGT,0);
+DRAW.LINE.COR(X+WTH,Y+HGT,X+WTH,Y-HGT,0);
+DRAW.LINE.COR(X+WTH,Y-HGT,X-WTH,Y-HGT,0);
+DRAW.LINE.COR(X-WTH,Y-HGT,X-WTH,Y+HGT,0);
+@BOX 4.1
+HGT-1*HWR => XWTH;
+1->WTH;
+@BOX 5.1
+DRAWLINE.COR(X-WTH+XWTH,Y+HGT,X,Y+HGT,0);
+DRAWLINE.COR(NOZ*2+X+2,Y+HGT,X+WTH-XWTH,Y+HGT,0);
+DRAWLINE.COR(X+WTH-XWTH,Y+HGT,X+WTH,Y,0);
+DRAWLINE.COR(X+WTH,Y,X+WTH-XWTH,Y-HGT,0);
+DRAWLINE.COR(X+WTH-XWTH,Y-HGT,X-WTH+XWTH,Y-HGT,0);
+DRAWLINE.COR(X-WTH+XWTH,Y-HGT,X-WTH,Y,0);
+DRAWLINE.COR(X-WTH,Y,X-WTH+XWTH,Y+HGT,0);
+@BOX 12.1
+@BOX 13.1
+DRAWLINE.COR(X+WTH,Y-HGT,X-WTH,Y-HGT,0);
+DRAWLINE.COR(X-WTH,Y-HGT-1,X+WTH,Y-HGT-1,0);
+@BOX 19.1
+DRAWTEXT.COR(%")]",X+WTH,Y,0,1,'],0);
+DRAWTEXT.COR(%"(]",X-WTH,Y,0,1,'],0);
+@BOX 3.1
+TEST:
+@BOX 7.1
+RECT:
+@BOX 11.1
+FIN:
+@BOX 8.1
+START:
+DRAWTEXT.COR(^BTB,X+NOZ+1,Y+HGT,BOX*3,1,EOBWC,0);
+NULL:
+@BOX 17.1
+END
+@BOX 18.1
+CIRC:
+@END
+@TITLE DOC10.4(1,10)
+@COL 1S-2R-8T-3T-4R-5R-6R-7F
+@FLOW 1-2-8N-3Y-4-5-6-7
+@FLOW 8Y-7
+@FLOW 3N-6
+@BOX 1.0
+DRAW LINE
+@BOX 2.0
+MOVE CURSOR TO START OF LINE
+@BOX 3.0
+ARROW?
+@BOX 4.0
+DRAW LINE TO MIDPOINT
+@BOX 5.0
+DRAW ARROW
+@BOX 6.0
+DRAW LINE TO DESTINATION
+@BOX 7.0
+END
+@BOX 8.0
+LENGTH ZERO?
+@BOX 1.1
+PROC DRAWLINE.COR(X1,Y1,X2,Y2,ARROW);
+$IN LENTH;
+@BOX 2.1
+MOVE(X1,Y1,0);
+@BOX 3.1
+IF ARROW = 0
+@BOX 4.1
+MOVE(X2-X1/2+>X1,Y2-Y1/2+>Y1,1);
+@BOX 5.1
+#DOC10.4.2
+@BOX 6.1
+MOVE(X2,Y2,1);
+@BOX 7.1
+END
+#DOC10.4.1
+@BOX 8.1
+IF X1=X2 AND Y1=Y2
+@END
+@TITLE DOC10.4.1(1,10)
+@COL 1S-3R-4T-6R-8F
+@COL 7R
+@ROW 6-7
+@FLOW 1-3-4DOWN-6-8
+@FLOW 4UP-7-8
+@BOX 1.0
+MOVE
+@BOX 3.0
+NOTE NEW CURSOR POSN
+@BOX 4.0
+PEN UP/DOWN?
+@BOX 6.0
+DRAW LINE TO NEW POSN
+@BOX 7.0
+MOVE TO NEW POSN
+@BOX 8.0
+END
+@BOX 1.1
+PROC MOVE(X,Y,UPDOWN);
+$RE XP,YP;
+@BOX 3.1
+X+XMAP*XSCALE=> XPOS;Y+YMAP*YSCALE=> YPOS;
+@BOX 4.1
+IF UPDOWN = 0
+@BOX 6.1
+LINE.ABS.2.P^((XPOS),(YPOS));
+@BOX 7.1
+MOVE.ABS.2.P^((XPOS),(YPOS));
+@BOX 8.1
+END
+@END
+@TITLE DOC10.4.2(1,10)
+@COL 1S-9R-7F
+@FLOW 1-9-7
+@BOX 1.0
+DRAW ARROW
+@BOX 9.0
+OUTPUT ARROW
+IN CORRECT ATTITUDE
+@BOX 7.0
+END
+@BOX 1.1
+DRAW.ARROW:
+@BOX 9.1
+$IN XINC,YINC;
+1 => XINC => YINC;
+IF Y2=Y1 THEN
+IF X2-X1 < 0 THEN
+0 -:> XINC; 0 -:> YINC;
+FI
+MOVE(X1-XINC,Y1+YINC,1);
+MOVE(X1-XINC,Y1-YINC,1);
+MOVE(X1,Y1,1);
+ELSE
+IF Y2-Y1 < 0 THEN
+0 -:> XINC; 0 -:> YINC;
+FI
+MOVE(X1-XINC,Y1-YINC,1);
+MOVE(X1+XINC,Y1-YINC,1);
+MOVE(X1,Y1,1);
+FI
+@BOX 7.1
+::END
+@END
+@TITLE DOC10.5(1,10)
+@COL 1S-2R-3R-4R-5T-6R-8F
+@FLOW 1-2-3-4-5Y-6-4
+@FLOW 5N-8
+@BOX 1.0
+DRAW TEXT
+@BOX 2.0
+READ TEXT NOTING LENGTH
+OF LONGEST LINE
+@BOX 3.0
+MOVE CURSOR TO START
+OF FIRST LINE
+@BOX 4.0
+OUTPUT A LINE OF TEXT
+@BOX 5.0
+ANY MORE LINES?
+@BOX 6.0
+MOVE CURSOR TO START
+OF NEXT LINE
+@BOX 8.0
+END
+@BOX 1.1
+PROC DRAWTEXT.COR(TADDR,X,Y,TPTR,NOLS,EOTX,CHSIZE);
+$IN MAXWTH,WIDTH,CH,I,PTR,OLDCHZ;
+$LO8[512] TXT;
+@BOX 2.1
+0 => MAXWTH; TPTR => PTR;
+FOR NOLS DO
+   0 => WIDTH;
+   WHILE TADDR^[PTR] => CH /= '$L /= EOTX DO
+   IF CH = CRWC OR CH = PWC THEN
+      5+>PTR;
+   ELSE
+      1+>WIDTH;1+>PTR;
+   FI OD
+   1 +> PTR;
+   IF WIDTH > MAXWTH THEN
+      WIDTH => MAXWTH; FI
+OD
+@BOX 3.1
+MOVE(MAXWTH->X,NOLS-2+>Y,0);
+@BOX 4.1
+#DOC10.5.1
+@BOX 5.1
+IF 1->NOLS = 0
+@BOX 6.1
+MOVE(X,2->Y,0);
+@BOX 8.1
+END
+@END
+@TITLE DOC10.5.1(1,10)
+@COL 1S-2R-7R-11F
+@FLOW 1-2-7-11
+@BOX 1.0
+OUTLINE
+@BOX 2.0
+READ LINE INTO BUFFER REMOVING
+TRAILING SPACESP AND COUNTING NO
+OF CHARACTERS
+@BOX 7.0
+FORM STRING POINTER
+@BOX 11.0
+END
+@BOX 1.1
+OUTLINE:
+@BOX 2.1
+-1 => I;
+WHILE TADDR^[TPTR] => CH /= '$L /= EOTX DO
+   IF CH = CRWC OR CH = PWC THEN 5 +> TPTR;
+   ELSE
+      CH => TXT[1+>I];1+>TPTR;1+>PTR;
+   FI
+OD
+1+>TPTR;WHILE I>=0 AND TXT[I]=" " DO 1->I OD
+@BOX 7.1
+TEXT.P^(PART(^TXT,0,I),I+1);
+@BOX 11.1
+::END
+@END
+@TITLE DOC10.6(1,10)
+@COL 1S-3F
+@FLOW 1-3
+@BOX 1.0
+OUTPUT CORE PAGE
+@BOX 3.0
+END
+@BOX 1.1
+PROC OUTPUT.PAGE.COR;
+@BOX 3.1
+END
+@END
+@TITLE DOC10.7(1,10)
+@COL 1S-2R-3R-4R-5F
+@FLOW 1-2-3-4-5
+@BOX 1.0
+END CORE CHART
+@BOX 2.0
+OUTPUT "MANCHESTER UNIVERSITY
+- CONFIDENTIAL" AT BOTTOM OF PAGE
+@BOX 3.0
+OUTPUT DATE AT BOTTOM LEFT
+@BOX 4.0
+OUTPUT TITLE AT BOTTOM RIGHT
+@BOX 5.0
+END
+@BOX 1.1
+PROC END.CHT.COR;
+$IN I;
+@BOX 2.1
+SETCHARSIZE.P^(4.0,6.6);
+DRAWTEXT.COR(%"MANCHESTER UNIVERSITY - CONFIDENTIAL]",
+XD/2-34-XMAP,4+YM-YMAP,0,1,'],10);
+SETCHARSIZE.P^(2.0,3.3);
+@BOX 3.1
+DRAWTEXT.COR(^DATESTR,20+XM-XMAP,4+YM-YMAP,0,1,'],5);
+@BOX 4.1
+-1 => I;
+WHILE TBUFF[1+>I] /= '$L DO OD
+DRAWTEXT.COR(^TBUFF,XD-XMAP-XM-(2*I)-6,
+4+YM-YMAP,0,1,'$L,5);
+NEWFRAME.P^();
+@BOX 5.1
+END
+@END
+@TITLE DOC10.8(1,10)
+@COL 1S-2R-3F
+@FLOW 1-2-3
+@BOX 1.0
+END CORE
+@BOX 2.0
+DESELECT DEVICE
+@BOX 3.0
+END
+@BOX 1.1
+PROC END.CORE;
+@BOX 2.1
+TERM.STR.P^();
+@BOX 3.1
+END
+@END

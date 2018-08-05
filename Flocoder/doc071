@@ -1,0 +1,866 @@
+@X @~
+~V7 56 2 -5
+~D10
+~H                    MUSS
+~
+~
+~D10
+~H             DOC071
+~D10
+~MMANCHESTER UNIVERSITY  -  CONFIDENTIAL
+~
+~
+                                                           ISSUE 11~
+~V9 -1
+~P
+~V9 1
+~YDOC071
+~S1~M~ODOCUMENTATION IMPLEMENTATION DESCRIPTION
+~S~M~OSection 7 Version 1
+~S~OSection 7.1 Lineprinter Driver
+~S1~O1. General Description
+~BThis module is the device driver for lineprinters
+used by the DRAW.CHART procedure in Section 4 and the interactive
+flowcharting in Section 8.
+It consists of a set of
+procedures for controlling the layout of charts and for line drawing,
+text output and box shapes.
+~BThe output produced by these procedures is initially stored
+in a vector which represents the complete chart. If output is to a
+lineprinter, the OUTPUTPAGE.LPT procedure will scan the vector and
+output the chart in the middle of the page or if it is too wide
+in a series of strips from left to right across
+the chart appearing one after another on the lineprinter with
+a newpage between.  The interactive
+drawing module in Section 8 accepts the buffered form
+of the chart (in the picture vector) and uses
+procedures that produce output from it
+in a similar manner to the OUTPUTPAGE.LPT procedure.
+~S~OInterfaces~
+~
+~OProcedures~
+   INITCHT.LPT~
+   DRAWSHAPE.LPT~
+   DRAWLINE.LPT~
+   DRAWTEXT.LPT~
+   ENDCHT.LPT~
+   OUTPUTPAGE.LPT~
+   END.LPT~
+~OData Structures~
+   PICVEC~
+~S1~O2.1 Hardware Specification
+~BLineprinter or VDU.
+~S1~O2.2 Software Specification
+~BThis consists of the following procedures.~
+~
+~
+1) INITCHT.LPT()~
+~BThis initialises chart variables.~
+~
+~
+2) DRAWSHAPE.LPT(BOXNO)
+~BThis arranges to output the specified box number
+above and right of centre by storing an entry in the OCT (Output Command
+Table).~
+~
+~
+3) DRAWLINE.LPT(X1,Y1,X2,Y2,ARROW)
+~BThis arranges to draw a line from X1,Y1 to X2,Y2 with an arrow in the
+middle if ARROW is non-zero, by storing an entry in the OCT.~
+~
+~
+4) DRAWTEXT.LPT(TEXT.VECTOR,X,Y,TEXTPTR,NOLS,EOTX,DUMMY)
+~BThis arranges to output NOLS lines of text from TEXT.PTR within the
+TEXT.VECTOR at X,Y until an EOTX character is encountered, by storing
+an entry in the OCT.~
+~
+~
+5) ENDCHT.LPT()
+~BThis arranges to output the date in the top left hand corner and the
+title in the bottom left of the chart calling DRAWTEXT.LPT.
+It also buffers the chart output in the picture vector, by
+scanning the OCT for each line of the chart.~
+~
+~
+6) OUTPUTPAGE.LPT()
+~BThis outputs the chart a line at a time from top to bottom
+of the page working from the picture vector.~
+~
+~
+7) END.LPT()
+~BOutputs a newpage.
+~BThere is also a special output procedure which is a private version
+of the library output procedure OUTCH. This
+routes output to a vector of bytes,
+called the picture vector.~
+~T# 16
+~
+OUTCHP(CH) -~IOutput
+is stored to the picture vector
+~X %*
+with the following packing rule. Multiple spaces
+are packed as TAB followed by a number + %80. This gives the number
+~X %%
+of spaces and avoids it looking like a conventional character.~
+~S1~O3. Implementation
+~S1~O3.1 Outline of Operation
+~BThe procedures for drawing lines and text do not produce their
+output directly. It is tabulated in the Output Command Table (OCT) and
+stored as a vector of bytes by the ENDCHT.LPT procedure. This
+scans the OCT for each line of the chart and forms a line buffer from
+the entries relating to the current line. This action is complicated
+by the coordinates being in terms of half character units as specified
+by DRAW.CHART. As a result, the buffer is a byte vector in terms of
+horizontal half character positions. It is initialised with spaces and
+has characters loaded at the positions specified by the OCT entry. This
+buffer relates only to the line at the current vertical half character
+position.
+~BIt is amalgamated with the half line below and the result has
+pairs of characters amalgamated together across the buffer to produce the
+final line of output. This is possible because DRAW.CHART ensures
+that text appears on even half character positions on the page and
+horizontal lines appear in even vertical positions thus ensuring
+the minimum in clashing. The line produced by this means is then
+stored in the picture vector. The OUTPUTPAGE.LPT procedure is for
+the use of the lineprinter option and assumes a default width of
+132 characters. It prints the chart centrally on the page unless
+it is too wide when only the left side appears. The picture vector
+is available for screen refreshment by the interactive drawing
+module (Section 8).
+~S1~O3.2 Data Structures
+~
+OCT~IThe Output Command Table - see section 6.~
+OCTPTR~ISection 6.~
+PICVEC~IThe vector area holding
+all characters for output.
+Used for screen refreshing in
+interactive work.~
+PICPTR~IAn integer indexing PIC.~
+LIBUFF~IThe line buffer has a byte for each half
+character position across the printer.~
+PBUFF~IA byte vector similar to the LIBUFF for the second half line.~
+AMALG~IA descriptor pointing to the amalgamated line buffer.~
+CLINE~IAn integer specifying the current line number (511 is the top
+of the page).~
+NEXT.L~Ian integer giving the next line on which output will appear.~
+OCT.END~IAn integer giving the number of entries in OCT.~
+PLANTED~IA flag specifying whether any output has been planted in the
+line buffer for the current line.~
+PWTH,PHGT~ISection 6.~
+XMAP,YMAP~ISection 5.~
+MINX,MINY~ISection 4.~
+MAXX,MAXY~
+~Y
+~V9 -1
+~P
+~D15
+~HFLOWCHARTS
+~
+~
+~H                DOC071
+~V9 -1
+~F
+@TITLE DOC07(1,9)
+@COL 1S-2R-3R-4R-5R-6F
+@FLOW 1-2-3-4-5-6
+@BOX 1.0
+LINEPRINTER DRIVER
+@BOX 2.0
+@BOX 3.0
+@BOX 4.0
+PROCEDURES IN MODULE
+   INIT CHART.LPT [DOC07.2]
+   DRAW SHAPE.LPT [DOC07.3]
+   DRAW LINE.LPT [DOC07.4]
+   DRAW TEXT.LPT [DOC07.5]
+   END CHART.LPT [DOC07.6]
+  OUTPUT PAGE.LPT [DOC07.7]
+   END LPT [DOC07.8]
+@BOX 5.0
+#DOC07.2
+#DOC07.3
+#DOC07.4
+#DOC07.5
+#DOC07.6
+#DOC07.7
+#DOC07.8
+@BOX 6.0
+END
+@BOX 1.1
+#DOC07/1
+MODULE(INITCHT.LPT,DRAWSHAPE.LPT,DRAWLINE.LPT,DRAWTEXT.LPT,
+OUTPUTPAGE.LPT,ENDCHT.LPT,END.LPT,PICVEC);
+@BOX 2.1
+@BOX 3.1
+$LI/$LO8 MINUS=%2D,VB=124,TAB=9;
+*GLOBAL 3;
+$LO8[192] BNOS;
+::MU6 $LO8[32000] PICVEC;
+*GLOBAL 0;
+::PDP *GLOBAL 4;
+::PDP $LO8[10168] DUMMYA;
+::PDP $LO8[PWTH]LIBUFF,PBUFF;
+::PDP $LO8[5688] PICVEC;
+::PDP *GLOBAL 0;
+@BOX 4.1
+$PS INIT.CHT.LPT();
+$PS DRAWSHAPE.LPT($IN);
+$PS DRAWLINE.LPT($IN,$IN,$IN,$IN,$IN);
+$PS DRAWTEXT.LPT($AD[$LO8],$IN,$IN,$IN,$IN,$LO8,$IN);
+$PS OUTPUT.PAGE.LPT();
+$PS END.CHT.LPT();
+$PS END.LPT();
+#DOC07/2
+@BOX 5.1
+#DOC07.2
+#DOC07.3
+#DOC07.4
+#DOC07.5
+#DOC07.6
+#DOC07.7
+#DOC07.8
+@BOX 6.1
+*END
+@END
+@TITLE DOC07/1(1,9)
+@COL 1S-2R-3F
+@FLOW 1-2-3
+@BOX 1.0
+EXTERNAL ENVIRONMENT
+@BOX 2.0
+EXTERNALS
+@BOX 3.0
+END
+@BOX 1.1
+::EXTERNALS
+@BOX 2.1
+$LS OUTCH($IN);$LS SPACES($IN);$LS NEWLINES($IN);
+TYPE BOXSPECS IS $IN COL.LINK,ROW.LINK,PFLOW.LINK,YCOORD
+$IN SFLOWLINK,TEXT.PTR,PFLOW.TEXT,SFLOW.TEXT,HT,TEXTPTR1
+$LO8 T,BOXHT,BOXWTH,COL,INFLOW,LAB.COUNT,PLANTED,YFIXED,BOXHT1,BOXWTH1;
+TYPE DATA IS $IN LENGTH OR $AD[$LO8] CHSTR;
+TYPE OUTCOM IS $LO8 OCTYPE $IN HPOS,VPOS DATA PARAMS;
+OUTCOM[300] OCT;
+BOXSPECS[64] BOXTAB;
+$LO8[10] DATESTR;
+$IN[8] COLX;
+$LO8[64] TBUFF;$LO8[8192] BTB;
+$IN MAXX,MINY,XMAP,YMAP,OCTPTR;
+$IN PHGT,PICPTR,SPCT;
+$IM$LI HWR,MINX,MAXY,LPTWTH,LPTHGT;
+$IM$LI PWC,EOBWC,CRWC,PWTH;
+@BOX 3.1
+::END
+@END
+@TITLE DOC07/2(1,9)
+@COL 1S-3T-6T-7R-8R
+@COL 4R-9F
+@ROW 6-4
+@FLOW 1-3Y-4-9
+@FLOW 3N-6Y-7-8-9
+@FLOW 6N-8
+@BOX 1.0
+PRIVATE OUTCH PROC(CHAR)
+@BOX 3.0
+CHAR = SPACE?
+@BOX 4.0
+STORE SPACE
+INC SPACE COUNT
+@BOX 6.0
+SPACE COUNT > 2?
+@BOX 7.0
+RESET DATAVEC POINTER TO
+START OF SPACE STRING
+PLANT TAB FOLLOWED BY
+NO OF SPACES
+@BOX 8.0
+SET SPACE COUNT ZERO
+PLANT CHAR
+@BOX 9.0
+END
+@BOX 1.1
+$PS OUTCHP($IN);
+PROC OUTCHP(CH);
+@BOX 3.1
+IF CH = " " AND SPCT < 127
+@BOX 4.1
+CH => PICVEC[1+>PICPTR];
+1 +> SPCT;
+@BOX 6.1
+IF SPCT =< 2
+@BOX 7.1
+SPCT -> PICPTR;
+TAB => PICVEC[1+>PICPTR];
+SPCT ! %80 => PICVEC[1+>PICPTR];
+@BOX 8.1
+0 => SPCT;
+CH => PICVEC[1+>PICPTR];
+@BOX 9.1
+END
+@END
+@TITLE DOC07.2(1,9)
+@COL 1S-5R-3F
+@FLOW 1-5-3
+@BOX 1.0
+INITIALISE LINEPRINTER CHART
+@BOX 5.0
+INITIALISE DATA POINTERS
+@BOX 3.0
+END
+@BOX 1.1
+PROC INIT.CHT.LPT;
+@BOX 5.1
+-1 => OCTPTR => PICPTR; 0 => SPCT;
+@BOX 3.1
+END
+@END
+@TITLE DOC07.3(1,9)
+@COL 1S-2R-3F
+@FLOW 1-2-3
+@BOX 1.0
+DRAW BOX SHAPE
+@BOX 2.0
+OUTPUT BOX NUMBER
+@BOX 3.0
+END
+@BOX 1.1
+PROC DRAWSHAPE.LPT(BOX);
+$IN X,Y,HGT,I,TENS,NX;
+@BOX 2.1
+YCOORD OF BOXTAB[BOX] => Y;
+COLX[COL OF BOXTAB[BOX]] => X;
+HT OF BOXTAB[BOX] => HGT;
+BOX*3 => I;
+IF BOX/10 => TENS > 0 THEN
+   TENS + '0 => BNOS[I];
+   X + 3 => NX;1 +> I;
+ELSE
+   X + 2 => NX;
+FI
+BOX - (TENS*10) + '0 => BNOS[I];
+EOBWC => BNOS[I+1];
+DRAWTEXT.LPT(^BNOS,NX,Y+HGT+1,BOX*3,1,EOBWC,0);
+@BOX 3.1
+END
+@END
+@TITLE DOC07.4(1,8)
+@COL 1S-2R-3R-4T-5R-6F
+@FLOW 1-2-3-4Y-5-6
+@FLOW 4N-6
+@BOX 1.0
+DRAW LINEPRINTER LINE
+@BOX 2.0
+CALCULATE DIRECTION
+OF LINE
+@BOX 3.0
+FORM OCT ENTRY OF TYPE
+LINE AND PARAMETERS
+POSITION, LENGTH WITH
+NO ARROW
+@BOX 4.0
+ARROW REQD?
+@BOX 5.0
+SET ARROW BIT
+ACCORDING TO DIRECTION
+IN OCT ENTRY
+@BOX 6.0
+END
+@BOX 1.1
+PROC DRAWLINE.LPT(X1,Y1,X2,Y2,ARROW);
+$IN LENTH,DIRN;
+@BOX 2.1
+IF X2-X1 => LENTH > 0 THEN
+   1 -> Y1;
+   1 => DIRN;
+   ELSE IF LENTH < 0 THEN
+      1 -> Y1;
+      3 => DIRN;
+      0 -:> LENTH;
+      X2 => X1;
+      ELSE IF Y2-Y1 => LENTH > 0 THEN
+         0 => DIRN;
+         Y2 => Y1;
+         ELSE
+         2 => DIRN;
+         0 -:> LENTH;
+FI 1 -> X1;
+FI  FI
+@BOX 3.1
+DIRN => OCTYPE OF OCT[1+>OCTPTR];
+X1 => HPOS OF OCT[OCTPTR];
+Y1 => VPOS OF OCT[OCTPTR];
+LENTH => LENGTH OF PARAMS OF OCT[OCTPTR];
+@BOX 4.1
+IF ARROW = 0
+@BOX 5.1
+4 +> OCTYPE OF OCT[OCTPTR];
+@BOX 6.1
+END
+@END
+@TITLE DOC07.5(1,9)
+@COL 1S-2R-3R-4R-5T-6R-7T-8R-9F
+@FLOW 1-2-3-4-5Y-6-7N-8-9
+@FLOW 5N-7Y-3
+@BOX 1.0
+DRAW LINEPRINTER TEXT
+@BOX 2.0
+SET MAX WIDTH ZERO
+CALCULATE VERTICAL POSITION
+OF FIRST LINE
+@BOX 3.0
+SELECT NEXT OCT ENTRY
+STORE CAPTION AS OC TYPE
+STORE VERTICAL POSN
+@BOX 4.0
+READLINE STORE
+STRING POINTER AND
+NOTE WIDTH
+@BOX 5.0
+WIDTH > MAX WIDTH?
+@BOX 6.0
+WIDTH => MAX WIDTH
+@BOX 7.0
+ANY MORE LINES
+IN CAPTION?
+@BOX 8.0
+SET HORIZONTAL POSN
+FOR ALL ENTRIES
+@BOX 9.0
+END
+@BOX 1.1
+PROC DRAWTEXT.LPT(TADDR,X,Y,TPTR,NOLS,EOTX,CHSIZE);
+$IN MAXWTH,WIDTH,CH,I,PTR;
+$LO8[128] TEXT;
+@BOX 2.1
+0 => MAXWTH => I;
+NOLS+> Y;
+@BOX 3.1
+2->Y => VPOS OF OCT[1+>OCTPTR];
+8 => OCTYPE OF OCT[OCTPTR];
+@BOX 4.1
+TPTR => PTR; 0 => WIDTH;
+WHILE TADDR^[PTR] => CH /= '$L /= EOTX DO
+IF CH = CRWC OR CH = PWC THEN 5 +> PTR;
+ELSE 1 +> WIDTH; 1 +> PTR; FI OD
+PART(TADDR,TPTR,PTR) => CHSTR OF PARAMS OF OCT[OCTPTR];
+1 +> PTR => TPTR;
+@BOX 5.1
+IF WIDTH =< MAX.WTH
+@BOX 6.1
+WIDTH => MAX.WTH;
+@BOX 7.1
+IF 1 +> I < NOLS
+@BOX 8.1
+FOR I < NOLS DO
+X-MAXWTH/2*2 => HPOS OF OCT[OCTPTR-I];
+OD
+@BOX 9.1
+END
+@END
+@TITLE DOC07.6(1,9)
+@COL 1S-8R-9R-2R-3T-4R-5R-6R
+@COL 7F
+@ROW 4-7
+@FLOW 1-8-9-2-3OK-4-5-6-3NONE-7
+@BOX 1.0
+END LINEPRINTER CHART
+@BOX 8.0
+OUTPUT TITLE AT
+TOP LEFT OF PAGE
+@BOX 9.0
+OUTPUT DATE AT
+BOTTOM LEFT OF PAGE
+@BOX 2.0
+INIT LINE NO
+STORE NO OF OC ENTRIES
+@BOX 3.0
+SELECT NEXT LINE
+@BOX 4.0
+FILL PREVBUFF AND
+LIBUFF WITH SPACES
+@BOX 5.0
+FORM PRINTER LINE
+@BOX 6.0
+[DOC07.6.2]
+@BOX 6.0
+OUTPUT PRINTER LINE
+@BOX 7.0
+END
+@BOX 1.1
+PROC END.CHT.LPT;
+$IN LAST.SP,OVERPRINT,J,K,CLINE,OCTEND,I;
+$LO8 CH,CH1,PLANTED;
+::MU6 $LO8[PWTH] LIBUFF,PBUFF;
+$AD[$LO8] AMALG;
+$PS LINE.IMAGE($AD[$LO8]);
+#DOC07.6.1
+@BOX 8.1
+-1 => I;
+WHILE TBUFF[1+>I] /= '$L DO OD
+DRAWTEXT.LPT(^TBUFF,20,MAXY-2,0,1,'$L,0);
+@BOX 9.1
+DRAWTEXT.LPT(^DATESTR,20,MINY+2,0,1,'],0);
+@BOX 2.1
+MAXY => CLINE;
+OCTPTR+1 => OCT.END;
+@BOX 3.1
+IF 1 -> CLINE < MINY
+@BOX 4.1
+FOR I < PWTH DO
+" " => LIBUFF[I] => PBUFF[I];
+OD
+0 => PLANTED;
+@BOX 5.1
+#DOC07.6.2
+@BOX 6.1
+IF PLANTED /= 0 THEN
+-2 => I;
+WHILE 2 +> I <PWTH DO
+IF AMALG^[I] => CH = " " THEN
+   AMALG^[1+I] => CH;
+FI
+OUTCHP(CH&%7F);
+OD
+FI
+OUTCHP('$L);
+@BOX 7.1
+END
+@END
+@TITLE DOC07.6.1(1,9)
+@COL 13C-14T-17R
+@COL 1S-2R-3C-4T-5R-6C-7T-10R-8T-9R-12C
+@COL 18F-19C-20T-25R-26T-27R
+@ROW 5-18
+@ROW 13-6-19
+@FLOW 1-2-3-4OK-5
+@FLOW 4NONE-18
+@FLOW 13-14N-12
+@FLOW 14Y-17-12
+@FLOW 6-7Y-10-8Y-9-12
+@FLOW 7N-12
+@FLOW 8N-12
+@FLOW 19-20N-12
+@FLOW 20Y-25-26Y-27-12
+@FLOW 26N-12
+@BOX 1.0
+FORM LINE IMAGE
+@BOX 2.0
+INITIALISE POINTER INTO OCT
+@BOX 3.0
+NEXT
+ENTRY
+@BOX 4.0
+PICK UP NEXT ENTRY
+@BOX 5.0
+SWITCH ON OUTPUT
+COMMAND TYPE
+@BOX 6.0
+HORIZ
+LINE
+@BOX 7.0
+ON THIS LINE?
+@BOX 8.0
+ARROW REQUD?
+@BOX 9.0
+PLANT ARROW IN BUFFER
+@BOX 10.0
+PLANT MINUS'S IN BUFFER
+@BOX 12.0
+NEXT
+ENTRY
+@BOX 13.0
+CAPTION
+@BOX 14.0
+ON THIS LINE?
+@BOX 17.0
+PLANT CAPTION
+IN LIBUFF
+@BOX 18.0
+END
+@BOX 19.0
+VERT
+LINE
+@BOX 20.0
+ANY COMPONENT
+ON THIS LINE?
+@BOX 25.0
+PLANT VB IN LIBUFF
+@BOX 26.0
+AROW REQD?
+@BOX 27.0
+PLANT SPECIAL CHTAR
+FOR OVERPRINTED ARROW
+@BOX 1.1
+$PR LINE.IMAGE(CLBUFF);
+$DA AROW($LO8);
+%C1 %BE %D6 %BC
+END
+$IN J,VP,LENTH;
+$AD[$LO8] STRNG;
+$LO8 T;
+@BOX 2.1
+-1 => OCTPTR;
+@BOX 3.1
+NEXT.ENTRY:;
+@BOX 4.1
+IF 1 +> OCTPTR >= OCT.END
+@BOX 5.1
+VPOS OF OCT[OCTPTR]=>VP;
+SWITCH OCTYPE OF OCT[OCTPTR]
+=> T\VL,HL,VL,HL,VL,HL,VL,
+HL,CAPT;
+@BOX 13.1
+CAPT:;
+@BOX 14.1
+IF VP /= CLINE
+@BOX 17.1
+1 => PLANTED;
+CHSTR OF PARAMS OF OCT[OCTPTR]
+=>STRNG;
+HPOS OF OCT[OCTPTR]-2 => I;
+0 => J;
+SIZE(STRNG)-1=>LENTH;
+WHILE J < LENTH AND I < (PWTH-2) DO
+STRNG^[J] => CH;
+IF CH = CRWC OR CH = PWC THEN
+      5 +> J;
+      ELSE 1+>J;
+       CH => CLBUFF^[2+>I];
+FI
+OD
+@BOX 6.1
+HL:;
+@BOX 7.1
+IF VP /= CLINE
+@BOX 8.1
+IF T < 4
+@BOX 9.1
+HPOS OF OCT[OCTPTR]
++ (LENGTH OF PARAMS OF
+OCT[OCTPTR] ->> 1) => I;
+IF I < PWTH THEN
+AROW[T-4] => CLBUFF^[I];
+FI
+@BOX 10.1
+1 => PLANTED;
+LENGTH OF PARAMS OF OCT[OCTPTR]
+ => LENTH;
+HPOS OF OCT[OCTPTR] -2 => I;
+FOR (LENTH ->> 1) DO
+IF 2+>I < PWTH THEN
+MINUS => CLBUFF^[I];
+FI
+OD
+IF LENTH & 1 /= 0 AND I < (PWTH-2) THEN
+MINUS => CLBUFF^[1+>I] FI
+@BOX 12.1
+-> NEXT.ENTRY;
+@BOX 18.1
+END
+@BOX 19.1
+VL:;
+@BOX 20.1
+IF CLINE > (VP-2) OR CLINE < VP-
+(LENGTH OF PARAMS OF
+OCT[OCTPTR] => LENTH)
+@BOX 25.1
+1 => PLANTED;
+IF HPOS OF OCT[OCTPTR]=>I<PWTH THEN
+VB => CLBUFF^[I];
+FI
+@BOX 26.1
+IF T < 4 OR VP -
+(LENTH ->> 1) /= CLINE
+@BOX 27.1
+IF I < PWTH THEN
+AROW[T-4] => CLBUFF^[I];
+FI
+@END
+@TITLE DOC07.6.2(1,9)
+@COL 1S-2R-4R-3T-5T-6R-7T-8R-9R-10F
+@FLOW 1-2-4-3N-5N-6-7OK-8-7NONE-9-10
+@FLOW 3Y-10
+@FLOW 5Y-9-10
+@BOX 1.0
+FORM PRINTER LINE
+@BOX 2.0
+FORM TOP HALF LINE
+IN PREV.BUFF
+@BOX 3.0
+NOTHING PLANTED IN
+EITHER HALF?
+@BOX 4.0
+FORM BOTTOM HALF LINE
+IN LIBUFF
+@BOX 5.0
+NOTHING IN TOP HALF?
+@BOX 6.0
+INITIALISE LINE POINTER
+@BOX 7.0
+SELECT NEXT ELEMENT IN LINE
+@BOX 8.0
+AMALGAMATE THE TOP ELEMENT
+INTO THE BOTTOM
+@BOX 9.0
+SELECT BOTTOM HALF LINE ONLY
+@BOX 10.0
+END
+@BOX 1.1
+FORM.PRINTER.LINE:;
+@BOX 2.1
+LINE.IMAGE(^PBUFF);
+@BOX 3.1
+IF K = 0 AND PLANTED = 0
+@BOX 4.1
+PLANTED => K;
+0 => PLANTED;
+1 -> CLINE;
+LINE.IMAGE(^LIBUFF);
+@BOX 5.1
+IF K = 0
+@BOX 6.1
+-1 => K;
+@BOX 7.1
+IF 1 +> K >= PWTH
+@BOX 8.1
+IF LIBUFF[K] = " " THEN
+   PBUFF[K] => LIBUFF[K];
+ELSE
+   IF PBUFF[K] & %80 /= 0 THEN
+      PBUFF[K] => LIBUFF[K];
+   FI
+FI
+@BOX 9.1
+1 => PLANTED;
+^LIBUFF => AMALG;
+@BOX 10.1
+::END
+@END
+@TITLE DOC07.7(1,11)
+@COL 1S-2R-3R-4R-5R-6T-7F
+@FLOW 1-2-3-4-5-6N-7
+@FLOW 6Y-4
+@BOX 1.0
+OUTPUT LINEPRINTER PAGE
+@BOX 2.0
+OUTPUT NEWLINES TO
+CENTRALISE CHART
+@BOX 3.0
+CALCULATE NO OF SPACES
+TO CENTRALISE CHART
+@BOX 4.0
+SET PICTURE VECTOR INDEX TO START
+CALCULATE STRIP START AND
+FINISH POINTS
+@BOX 5.0
+OUTPUT STRIP
+@BOX 6.0
+MORE STRIPS REQUIRED?
+@BOX 7.0
+END
+@BOX 1.1
+PROC OUTPUT.PAGE.LPT;
+$IN CH,TDISP,WTH,J,I,M,SSTART,SFIN;
+@BOX 2.1
+LPTHGT-MAXY+MINY/4 => YMAP;
+IF YMAP < 0 THEN
+   0 => YMAP;
+FI
+NEWLINES(YMAP);
+@BOX 3.1
+LPTWTH - MAXX/4 => XMAP;
+IF XMAP < 0 THEN
+   0 => XMAP;
+FI
+0 => SFIN;
+@BOX 4.1
+-1 => I;
+IF SFIN < MAXX-LPTWTH/2 THEN
+   LPTWTH/2 => WTH;
+ELSE
+   MAXX/2 - SFIN => WTH;
+FI
+SFIN => SSTART;
+WTH +> SFIN;
+@BOX 5.1
+#DOC07.7.1
+@BOX 6.1
+IF SFIN < MAX.X/2
+@BOX 7.1
+END
+@END
+@TITLE DOC07.7.1(1,11)
+@COL 1S-2R-3R-4R-5R-6T-7R-8F
+@FLOW 1-2-3-4-5-6Y-7-8
+@FLOW 6N-2
+@BOX 1.0
+OUTPUT STRIP
+@BOX 2.0
+OUTPUT CENTRALISING SPACES
+@BOX 3.0
+SKIP THROUGH LINE UNTIL
+START OF STRIP
+@BOX 4.0
+OUTPUT STRIP LINE
+@BOX 5.0
+SKIP TO END OF LINE
+@BOX 6.0
+END OF OUTPUT?
+@BOX 7.0
+OUTPUT NEWPAGE
+@BOX 8.0
+END
+@BOX 1.1
+OUTPUT.STRIP:
+@BOX 2.1
+SPACES(XMAP);
+@BOX 3.1
+0 => M;
+FOR J < SSTART DO
+   IF PICVEC[1+>I] => CH = TAB THEN
+      PICVEC[1+>I] & %7F +>J;
+      IF J > SSTART THEN
+         SPACES(J-SSTART=>M);
+      FI
+      1 -> J;
+   FI
+OD
+@BOX 4.1
+WHILE 1+>M < WTH+1 DO
+   IF PICVEC[1+>I] => CH = '$L, -> OUT;
+   IF CH = TAB THEN
+      IF PICVEC[1+>I] & %7F => TDISP -1 +> M > WTH, -> OUT;
+      SPACES(TDISP);
+   ELSE
+      OUTCH(CH);
+   FI
+OD
+OUT:
+@BOX 5.1
+IF CH /= '$L THEN
+   WHILE PICVEC[1+>I] /= '$L DO OD
+FI
+OUTCH(%D); OUTCH(%A);
+@BOX 6.1
+IF I < PICPTR
+@BOX 7.1
+OUTCH('$P);
+@BOX 8.1
+::END
+@END
+@TITLE DOC07.8(1,7)
+@COL 1S-2R-3F
+@FLOW 1-2-3
+@BOX 1.0
+END LINEPRINTER DRAWING
+@BOX 2.0
+OUTPUT EXTRA NEWPAGE
+@BOX 3.0
+END
+@BOX 1.1
+PROC END.LPT;
+@BOX 2.1
+OUTCHP('$P);
+@BOX 3.1
+END
+@END

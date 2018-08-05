@@ -1,0 +1,1237 @@
+@X @~
+~L3 COUK1247
+80
+~V7 56 2 -5
+~D10
+~H                    MUSS
+~
+~
+~D10
+~H            DOC151
+~D10
+~MMANCHESTER UNIVERSITY  -  CONFIDENTIAL~
+~
+~
+                                                              ISSUE 11~
+~V9 -1
+~P
+~V9 1
+~YDOC151
+~S~M~ODOCUMENTATION IMPLEMENTATION DESCRIPTION
+~S~M~OSection 15 Version 1
+~S~OSection 15.1 Interactive Editor/Word Processor.
+~S1~O1. General Description
+~BThis module is an interactive word processor
+which combines screen editing with text formatting and
+document layout.
+~S1~O2. Interface
+~
+Procedures~
+   WP~
+~
+Data Structures~
+~S1~O2.1 Hardware Specification
+~S1~O2.2 Software Interface
+~BThis consists of the following procedures.~
+~T% 30
+~
+~
+1) WP ()~
+~S1~O3 Implementation
+~S1~O3.1 Outline of Operation
+~BThe operation of this editor is best described at two
+levels.  At the detail level it operates with a segment termed
+the working buffer containing the text being edited.  There
+is also a more global level which is concerned with the
+mapping of files into the working buffer.
+~BThe organisation at the detail level requires that the
+working buffer is directly accessible in virtual memory.
+Thus the working buffer is a segment (with a fixed address)
+containing the complete file which is being edited.  In the working
+buffer there are control characters interleaved with
+the text to represent, for example, section boundaries,
+paragraph boundaries, and formatting rules.  When an
+edited file is saved these control characters are removed so that
+the files produced by the editor may be treated as ordinary
+text files.  However, additional information is kept
+at the end of the text file so that they may be re-introduced
+for subsequent editing.
+~BIn summary we are concerned with the text file
+and a working buffer.
+~BA text file has the format~
+~Q 10
+~3
+~
+~
+~M~O                              ~O
+~N~O|OPERATING SYSTEM INFORMATION|~O
+~N|                            |
+~N|                            |
+~N|         USER TEXT          |
+~N|                            |
+~N~O|                            |~O
+~N~O|    EDITOR INFORMATION      |~O
+~0
+~
+~
+From the point of view of this document the operating
+system information may be regarded as identifying
+the start and finish of the USER TEXT, and hence also
+the start of the EDITOR INFORMATION.  The EDITOR INFORMATION
+is simply a list giving the positions and values of the
+warning sequences which are to be embedded in the text
+at the time of editing.
+~BThe working buffer differs from the text file from which it is derived in the
+following ways.  It contains an empty space which is notionally
+at the cursor position (called the CURSOR.SPACE) so as to
+facilitate addition of new material, and it also contains the
+warning sequences placed at their correct positions.
+~BThe action at the detail level is really one of
+moving the CURSOR.SPACE through the file according to
+user commands, and maintaining a screen display consistent
+with the state of the working buffer.
+When additional text is inserted it is placed at
+the start of the CURSOR.SPACE.  This reduces the size of
+the CURSOR.SPACE.  When text is deleted it is removed from
+ in front of the
+CURSOR.SPACE thus increasing its size.  This
+alteration in the size of the CURSOR.SPACE
+can cause a need to reorganise the information in the working
+buffer.  The operation of the detail level is controlled
+by the variables which record the current state of the
+buffer and screen.  The buffer is described by CURS.BACK
+and CURS.FRONT which specify the start of the CURSOR.SPACE
+and the first character following it, and CURS.END which
+points to the last text character in the buffer.  The physical cursor
+position on the screen is recorded in CLPTR (its line number)
+and CLPOS (its character position in the line).
+The values of these variables result from cursor movements
+given by the user and the physical position so specified determines
+which sections of the working buffer are to be displayed on the screen.
+~BThe following conditions may arise in manipulating
+the buffer pointers which require special action.~
+~T% 11
+~
+~
+  1)~ILack of the CURSOR.SPACE due to insertion of new text.~
+~
+  2)~IEnd of buffer area detected when moving the cursor
+forward.~
+~
+  3)~IStart of buffer detected when moving the cursor backwards.
+~BThe screen display is updated according to the character sequences
+input by the user.  It is not necessarily updated separately for each character
+if the user has typed ahead.
+Thus the screen is updated either when there is
+no more input waiting to be processed, or
+when a character sequence occurs which necessitates a screen update.
+This circumstance is recognised by conceptually dividing characters
+into 3 mutually exclusive categories which require the screen
+to be updated between them.  These are as follows:~
+~
+  1)~ILine actions i.e. delete, insert, horizontal cursor movements.~
+~
+  2)~IVertical cursor movements.~
+~
+  3)~IInsertion/deletion of lines.~
+~BScreen updating is performed by the
+Screen Manager which acts on the status of the REFRESH.SW
+which is bit significant.
+Category 1 characters result in characters being output
+and the B.O bit being set on the REFRESH.SW and/or the setting
+of the REF.LINE bit.  In the latter case the characters output
+need not be sent to the screen.  Category 2 characters result in
+the new cursor position being noted and the CUR.MOVR bit being
+set in the REFRESH.SW.  Category 3 characters cause the REF.S
+bit to be set.
+~S1~O3.2 Data Structures
+~
+~T# 11
+~
+BUFF~Ia vector of bytes used as the working buffer~
+~
+CLPTR~Ian integer specifying the line number at which the
+cursor is currently positioned on the screen~
+~
+CLPOS~Ian integer specifying the position in the line on the
+screen at which the cursor is currently positioned~
+~
+CURS.BACK~Ian integer pointer to the first character in
+the CURSOR.SPACE.~
+~
+CURS.FRONT~Ian integer pointer to the first character
+following the CURSOR.SPACE.~
+~
+CURS.END~Ian integer pointer to the last text character
+in the working buffer.~
+~
+REFRESH.SW~Ia bit significant status word used by the screen
+manager to control output to the screen.  The layout is:~
+~Q 9
+~3
+~
+~I ~O                            ~O~
+~I|~O                    | | | | ~O|~
+~I                      | | | |~
+~I                      | | |  ---- B.O (Break Output)~
+~I                      | |  ------ REF.LINE (Refresh Line)~
+~I                      |  -------- REF.SC (Refresh Screen~
+~I                      |                   from cursor down)~
+~I                       ---------- CUR.MOVE (Move Cursor)~
+~0
+~
+CH.TYPE~Ia byte variable specifying the type of character
+just read according to the following breakdown.~
+~
+~IType  Character~
+~I  0   New character for insertion (any character)~
+~I  1   Carriage return (interpreted as newline)~
+~I  2   Insert space~
+~I  3   Delete character~
+~I  4   Delete line~
+~I  5   Move cursor vertically~
+~I  6   Move cursor vertically~
+~I  7   Change format~
+~I  8   Move position~
+~I%FF   Terminating character.~
+~
+CONTROL.CH~Ia datavec of bytes giving the CH.TYPE of
+each control character.~
+~
+CH.CLASS~Ia datavec of bytes expressing the category
+of each type (CH.TYPE) of character, in the form of
+a negative mask of the bits this category will set in
+the REFRESH.SW.~
+~Y
+~V9 -1
+~P
+~V9 -1
+~D15
+~HFLOWCHARTS
+~
+~
+~H               DOC151
+~V9 -1
+~F
+@TITLE DOC15(1,11)
+@COL 1S-2R-3R-4R-5R-6F
+@FLOW 1-2-3-4-5-6
+@BOX 1.0
+WORD PROCESSING
+@BOX 2.0
+@BOX 3.0
+@BOX 4.0
+PROCEDURES IN MODULE
+   WP
+@BOX 5.0
+   #DOC15.1
+@BOX 6.0
+END
+@BOX 1.1
+$LS MAP($IN,$IN,$IN);
+$LS OUTI($IN32,$IN);
+$LS WAIT($LO,$IN);
+$LS CHANGE.SIZE($IN,$AD);
+$LS FILE($AD[$LO8],$LO64,$IN);
+$LS PROMPT($AD[$LO8]);
+$LS INNAME()/$LO64;
+$LS DEFINEOUTPUT($IN,$AD[$LO8],$IN32,$IN32)/$IN;
+$LS BREAKOUTPUT ($IN);
+$LS OUTBACKSPACE ($IN);
+$LS OPENFILE($AD[$LO8],$LO64,$IN,$LO);
+$LS RELEASE.SEGMENT($IN)
+$LS CREATE.SEGMENT($IN,$AD);
+$LS ISOURCE($AD[$IN]);
+$LS CHANGE.CHANNEL($IN,$IN,$LO);
+$LS READCH($IN)/$LO16;
+$LS INCH()/$IN;
+$LS OUTCH($IN);
+$AD PW0,PW1,PW2,PW3;
+$IM$LI ADDR SYS14.SEG.SIZE;
+$IM$LI WORK.SEG,SYS14.SEG.SHIFT;
+MODULE(WP);
+@BOX 2.1
+@BOX 3.1
+::GLOBALS
+*GLOBAL 7;
+$LO8[%8000] BUFF;  ::TEMP BOUND
+:: - INADEQUATE MOTOROLA MUSL
+*GLOBAL 0;
+@BOX 4.1
+LSPEC WP();
+@BOX 5.1
+   #DOC15.1
+@BOX 6.1
+*END
+@END
+@TITLE DOC15.1(1,11)
+@COL 1S-2R-5R-6R-7R-8T-11R-9R-10T
+@COL 13R-14R-16F
+@ROW 11-13
+@FLOW 1-2-5-6-7-8N-11-9-10Y-6
+@FLOW 10N-7
+@FLOW 8Y-13-14-16
+@BOX 1.0
+WORD PROCESSOR
+@BOX 2.0
+GET INPUT FILE IN A SEGMENT
+COPY TO THE WORKING BUFFER
+LEAVING A CURSOR GAP AT THE START
+@BOX 5.0
+INITIALISE TERMINAL
+SET UP BATCH OUTPUT STREAM
+SET CURSOR POSN AT TOP LEFT HAND
+SET REFRESH SWITCH TO FULL SCREEN
+@BOX 6.0
+CALL SCREEN MANAGER TO
+REFRESH SCREEN
+@BOX 7.0
+READ CH
+@BOX 8.0
+TERMINATE CH?
+@BOX 11.0
+CALL SCREEN MANAGER IF CLASS OF CH IS
+INCOMPATIBLE WITH REFRESH.SW WAITING
+@BOX 9.0
+PROCESS CH ACCORDING TO TYPE
+   NEW CHAR
+   NEWLINE
+   INSERT
+   DELETE CH
+   DELETE LINE
+   MOVE CURSOR HORIZ
+   MOVE CURSOR VERT
+   CHANGE FORMAT RULES/MODE
+   MOVE POSITION IN FILE
+@BOX 10.0
+REFRESH REQUIRED AND NO
+MORE INPUT WAITING?
+@BOX 13.0
+RESTORE TERMINAL TO NORMAL MODE
+@BOX 14.0
+GET OUTPUT FILENAME
+MOVE CURSOR GAP TO END OF BUFFER
+CHANGE SEGMENT SIZE DOWN AND
+GENERATE OUTPUT FILE
+@BOX 16.0
+END
+@BOX 1.1
+PROC WP;
+#DOC15.1/1
+@BOX 2.1
+#DOC15.1.1.1
+@BOX 5.1
+ISOURCE(^SRC);
+CHANGE.CHANNEL(SRC[0],0,%209D);
+PW1 => DEV.ID;PW2 => PREV.MODE;
+WAIT(-1,1);
+CURRENT.OUTPUT () => ONLINE;
+DEFINE.OUTPUT (-1,%"REP0*",%200,0) => BATCH;
+SELECT.OUTPUT(BATCH);
+OUTHDR(NULLSTR);
+SELECTOUTPUT(ONLINE);
+0 => CLPTR => CLPOS;
+4 => REFRESH.SW;
+@BOX 6.1
+SCR.MAN();
+@BOX 7.1
+READCH(DEV.ID);
+PW1 & %FF => CH;
+PW1 & %100 => NOMORE;
+@BOX 8.1
+0 => CH.TYPE;
+IF CH < " " THEN
+   CONTROL.CH[CH] => CH.TYPE;
+FI
+IF CH.TYPE = TERM.CH
+@BOX 11.1
+IF CH.CLASS[CH.TYPE] & REFRESH.SW /= 0 THEN
+   SCR.MAN();
+FI
+@BOX 9.1
+ALTERNATIVE CH.TYPE FROM
+   #DOC15.1.1
+   ->NEW.CHAR     ::NEWLINE
+   #DOC15.1.2
+   #DOC15.1.3
+   #DOC15.1.4
+   #DOC15.1.5
+   #DOC15.1.6
+   MODE.PROMPT();
+   POSN.PROMPT();
+END
+@BOX 10.1
+IF REFRESH.SW = 0 OR NO.MORE = 0
+@BOX 13.1
+WAIT(-1,1);
+CHANGE.CHANNEL(SRC[0],1,PREV.MODE);
+PROMPT(^ARROW);
+@BOX 14.1
+#DOC15.1.1.2
+@BOX 16.1
+END
+@END
+@TITLE DOC15.1/1(1,11)
+@COL 1S-2R-3R-4R
+@FLOW 1-2-3-4
+@BOX 1.0
+DECLARATIONS
+@BOX 2.0
+CONSTANTS AND DATAVECS
+@BOX 3.0
+VARIABLES
+@BOX 4.0
+SUBPROCS INCLUDE
+   GETINFILE
+   GENOUTFILE
+   MODE.PROMPT
+   POSN.PROMPT
+   SCREEN MANAGER
+@BOX 1.1
+::DECLARATIONS
+@BOX 2.1
+$LI CR=13,NL=10,SOB=12,FSTART=12,SP=%20;
+$LI/$LO8 TERM.CH=%FF;
+$LI MU=%1C,MD=%1D,MR=%19,ML=%8;
+$LI/$AD[$LO8] NULLSTR=;
+
+DATAVEC CONTROL.CH($LO8)
+TERM.CH[4] 3 TERM.CH[3] 5 TERM.CH 1 TERM.CH[2]
+1 TERM.CH[4] 2 TERM.CH[5] 4 5 TERM.CH[2] 6[2]
+TERM.CH[2]
+END
+DATAVEC CH.CLASS($LO8)
+%C %B %C %C %B %C 7
+END
+DATAVEC CLEAR ($LO8)
+%1B '[ 'K
+END
+DATAVEC ARROW($LO8)
+'- '>
+END
+@BOX 3.1
+$IN[4] SRC;
+INTEGER CLPTR,CLPOS,INIT.SEG,FILESEG,OFSEG;
+INTEGER DEV.ID,PREV.MODE,CH,NOMORE,CH.TYPE,REFRESH.SW;
+INTEGER POS,COUNT,ONLINE,BATCH,OLD.PTR,OLD.POS;
+INTEGER32 CURS.FRONT,CURS.BACK,CURS.END,I,J,K;
+INTEGER32 FSIZE,SEG.SIZE,BUFF.END,NO.OF.CHS,END.TEXT,OLD.CB;
+$LO8[16] INFILE,OUTFILE;
+$AD[$LO8] FVEC,OFVEC,IFNAME,OFNAME;
+@BOX 4.1
+PSPEC SEND.CURS();
+PSPEC MODE.PROMPT();
+PSPEC POSN.PROMPT();
+PSPEC SCR.MAN();
+   #DOC15.1.7
+   #DOC15.1.8
+   #DOC15.1.9
+PROC SEND.CURS;
+OUTCH(%1B); OUTCH('[);
+OUTI(CLPTR+1,0);OUTCH(";");
+OUTI(CLPOS+1,0); OUTCH('H);
+END
+@END
+@TITLE DOC15.1.1(1,11)
+@COL 10R
+@COL 1S-2T-3T-4T-5T-6R-7R-8R-9F
+@COL 11T-12R-13R
+@ROW 5-11
+@ROW 10-6
+@FLOW 1-2N-3N-4Y-5N-6-7-8-9
+@FLOW 2Y-11N-12-13-8
+@FLOW 3Y-5
+@FLOW 4N-10-7
+@FLOW 5Y-7
+@FLOW 11Y-13
+@BOX 1.0
+NEW CHAR
+@BOX 2.0
+NEWLINE?
+@BOX 3.0
+CURSOR AT END OF BUFFER?
+@BOX 4.0
+CURSOR ON NEWLINE?
+@BOX 5.0
+ROOM IN CURSOR SPACE?
+@BOX 6.0
+MONITOR - NO SPACE AT CURSOR
+@BOX 7.0
+ECHO CHAR AND SET B.O.
+IN REFRESH.SW
+@BOX 8.0
+ADD CHAR TO CURS.BACK
+@BOX9.0
+END
+@BOX 10.0
+REMOVE CHAR FROM CURS.FRONT
+@BOX 11.0
+ROOM IN CURSOR SPACE?
+@BOX 12.0
+CALL BUFFER MANAGER -
+NO SPACE AT CURSOR
+@BOX 13.0
+SET REFRESH.SCREEN BIT
+IN REFRESH.SW
+@BOX 1.1
+NEW.CHAR: BEGIN
+@BOX 2.1
+IF CH = NL
+@BOX 3.1
+IF CURS.FRONT = CURS.END
+@BOX 4.1
+IF BUFF [CURS.FRONT] /= NL
+@BOX 5.1
+IF CURS.BACK < CURS.FRONT
+@BOX 6.1
+CAPTION(%"NO.SPACE");
+BREAKOUTPUT(-1);
+@BOX 7.1
+OUTCH (CH);
+1 !> REFRESH.SW;
+@BOX 8.1
+CH => BUFF [CURS.BACK];
+1 +> CURS.BACK;
+1 +> CLPOS;
+@BOX 9.1
+END
+@BOX 10.1
+1 +> CURS.FRONT;
+@BOX 11.1
+IF CURS.BACK < CURS.FRONT
+@BOX 12.1
+CAPTION(%"NO.SPACE");
+NEWLINES(1);
+@BOX 13.1
+4 !> REFRESH.SW;
+@END
+@TITLE DOC15.1.1.1(1,11)
+@COL 1S-2R-3R-4R-5R-6F
+@FLOW 1-2-3-4-5-6
+@BOX 1.0
+SET UP INPUT TEXT
+@BOX 2.0
+OPEN FILE
+CREATE SEG OF MAX SIZE
+@BOX 3.0
+COPY FILE INTO SEG LEAVING
+CURSOR SPACE
+@BOX 4.0
+RELEASE FILE SEG
+@BOX 5.0
+SET BUFFER CURSOR POINTERS
+@BOX 6.0
+END
+@BOX 1.1
+SET.UP: BEGIN
+@BOX 2.1
+AGAIN:
+PART(^INFILE,0,INSTR(^INFILE)-1) => IFNAME;
+OPENFILE(IFNAME,0,-1,12);
+IF PW3 & %20 /= 0 THEN
+   RELEASESEGMENT(PW1);CAPTION(%"XSEG - TRY AGAIN");
+   BREAKOUTPUT(-1);-> AGAIN;
+ELSE
+   PW2 => FSIZE;
+FI
+PW1 => INIT.SEG;
+CREATESEGMENT(WORKSEG,-1);
+@BOX 3.1
+MAKE($LO8,PW2=>SEG.SIZE,INIT.SEG<<-SYS14.SEG.SHIFT)=>FVEC;
+FVEC^[7]<<-8!FVEC^[6]<<-8!FVEC^[5]<<-8!FVEC^[4]=>NO.OF.CHS;
+NO.OF.CHS + FSTART => I;
+SEG.SIZE => K;
+FOR NO.OF.CHS DO
+   FVEC^[1->I] => BUFF[1->K];
+OD
+@BOX 4.1
+RELEASESEGMENT(INIT.SEG);
+@BOX 5.1
+K => CURS.FRONT;
+SOB => CURS.BACK;
+SEG.SIZE => CURS.END;
+@BOX 6.1
+END
+@END
+@TITLE DOC15.1.1.2(1,11)
+@COL 1S-2R-3R-4R-5R-6F
+@FLOW 1-2-3-4-5-6
+@BOX 1.0
+GENERATE TEXT FILE
+@BOX 2.0
+MOVE PHYSICAL CURSOR TO BOTTOM OF SCREEN
+ASK FOR OUTPUT FILE NAME
+READ FILE NAME
+@BOX 3.0
+MOVE CURSOR TO END OF TEXT
+@BOX 4.0
+INSERT O/S HEADER INFO
+@BOX 5.0
+CHANGE SIZE DOWN TO ACTUAL SIZE
+FILE THE TEXT
+@BOX 6.0
+END
+@BOX 1.1
+FILE.OUTPUT: BEGIN
+@BOX 2.1
+23=>CLPTR;0=>CLPOS;SEND.CURS();
+NEWLINES(1);
+CAPTION(%"OUTPUT FILE NAME?");
+NEWLINES(1);
+PART(^OUTFILE,0,INSTR(^OUTFILE)-1) => OFNAME;
+@BOX 3.1
+WHILE CURS.FRONT < CURS.END DO
+   BUFF[1+>CURS.FRONT-1]=>BUFF[1+>CURS.BACK-1];
+OD
+@BOX 4.1
+CURS.BACK=>NO.OF.CHS;
+NO.OF.CHS&%FF=>BUFF[4];
+NO.OF.CHS->>8&%FF=>BUFF[5];
+NO.OF.CHS->>16&%FF=>BUFF[6];
+NO.OF.CHS->>24&%FF=>BUFF[7];
+FSTART => BUFF[0];
+0=>BUFF[1]=>BUFF[2]=>BUFF[3]=>BUFF[8]
+=>BUFF[9]=>BUFF[10]=>BUFF[11];
+@BOX 5.1
+CHANGE.SIZE(WORKSEG,NO.OF.CHS+FSTART+%200);
+FILE(OFNAME,0,WORKSEG);
+RELEASE.SEGMENT(WORKSEG);
+END.OUTPUT(BATCH,0);
+@BOX 6.1
+END
+@END
+@TITLE DOC15.1.2(1,11)
+@COL 1S-2T-3R-4R-5R-6F
+@FLOW 1-2N-3-4-5-6
+@FLOW 2Y-4
+@BOX 1.0
+INSERT CHAR
+@BOX 2.0
+ROOM IN CURSOR SPACE?
+@BOX 3.0
+MONITOR - NO SPACE AT CURSOR
+@BOX 4.0
+SET REFRESH LINE BIT
+IN REFRESH.SW
+@BOX 5.0
+INSERT SPACE AT CURS.FRONT
+@BOX 6.0
+END
+@BOX 1.1
+INSERT: BEGIN
+@BOX 2.1
+IF CURS.BACK < CURS.FRONT
+@BOX 3.1
+CAPTION(%"NO.SPACE");
+BREAKOUTPUT(-1);
+@BOX 4.1
+2 !> REFRESH.SW;
+@BOX 5.1
+SP => BUFF [1 -> CURS.FRONT];
+@BOX 6.1
+END
+@END
+@TITLE DOC15.1.3(1,11)
+@COL 1S-2R-3T-4T-5R-6F
+@FLOW 1-2-3N-4N-5-6
+@FLOW 3Y-6
+@FLOW 4Y-6
+@BOX 1.0
+DELETE CHAR
+@BOX 2.0
+SET REFRESH LINE BIT
+IN REFRESH.SW
+@BOX 3.0
+CURSOR AT END OF BUFFER?
+@BOX 4.0
+CURSOR ON NEWLINE?
+@BOX 5.0
+REMOVE CHAR AT CURS.FRONT
+@BOX 6.0
+END
+@BOX 1.1
+DEL.CHAR: BEGIN
+@BOX 2.1
+2 !> REFRESH.SW;
+@BOX 3.1
+IF CURS.FRONT = CURS.END
+@BOX 4.1
+IF BUFF [CURS.FRONT] = NL
+@BOX 5.1
+1 +> CURS.FRONT;
+@BOX 6.1
+END
+@END
+@TITLE DOC15.1.4(1,10)
+@COL 1S-2R-3T-4R-5T-6F
+@FLOW 1-2-3N-4-5Y-6
+@FLOW 3Y-6
+@FLOW 5N-3
+@BOX 1.0
+DELETE LINE
+@BOX 2.0
+SET REFRESH SCREEN BIT
+IN REFRESH.SW
+@BOX 3.0
+CURSOR AT END OF BUFFER?
+@BOX 4.0
+REMOVE CHAR AT CURS.FRONT
+@BOX 5.0
+WAS IT A NEWLINE?
+@BOX 6.0
+END
+@BOX 1.1
+DEL.LINE: BEGIN
+@BOX 2.1
+4 !> REFRESH.SW;
+@BOX 3.1
+IF CURS.FRONT = CURS.END
+@BOX 4.1
+1 +> CURS.FRONT;
+@BOX 5.1
+IF BUFF [CURS.FRONT - 1] /= NL
+@BOX 6.1
+END
+@END
+@TITLE DOC15.1.5(1,10)
+@COL 1S-2T-3T-4T-5R-6R-7F
+@COL 8T-9T-10R
+@ROW 3-8
+@FLOW 1-2LEFT-3N-4N-5-6-7
+@FLOW 2RIGHT-8N-9N-10-6-7
+@FLOW 3Y-7
+@FLOW 8Y-7
+@FLOW 4Y-7
+@FLOW 9Y-7
+@BOX 1.0
+HORIZ CURSOR
+@BOX 2.0
+DIRECTION?
+@BOX 3.0
+CURSOR AT START OF BUFFER?
+@BOX 4.0
+PREVIOUS CHAR = NL?
+@BOX 5.0
+MOVE PREVIOUS CHAR TO CURS.FRONT AND
+DECREMENT CURSOR POINTERS
+@BOX 6.0
+SEND OUTPUT TO POSITION
+PHYSICAL CURSOR
+SET B.O. IN REFRESH.SW
+@BOX 7.0
+END
+@BOX 8.0
+CURSOR AT END OF BUFFER?
+@BOX 9.0
+CURSOR ON NL?
+@BOX 10.0
+MOVE CHAR TO CURS.BACK AND
+INCREMENT CURSOR POINTERS
+@BOX 1.1
+HORIZ.CURSOR: BEGIN
+@BOX 2.1
+IF CH = MR
+@BOX 3.1
+IF CURS.BACK = SOB
+@BOX 4.1
+IF BUFF [CURS.BACK - 1] = NL
+@BOX 5.1
+BUFF [1 -> CURS.BACK] => BUFF [1 -> CURS.FRONT];
+1 -> CLPOS;
+@BOX 6.1
+SEND.CURS ();
+1 !> REFRESH.SW;
+@BOX 7.1
+END
+@BOX 8.1
+IF CURS.FRONT = CURS.END
+@BOX 9.1
+IF BUFF [CURS.FRONT] = NL
+@BOX 10.1
+BUFF [CURS.FRONT] => BUFF [CURS.BACK];
+1 +> CURS.FRONT;
+1 +> CURS.BACK;
+1 +> CLPOS;
+@END
+@TITLE DOC15.1.6(1,11)
+@COL 8T-9R-10R-17N
+@COL 1S-2R-3T-7R-20N-4R-16R-18N-5R-6F
+@COL 11R-12T-13R-14R-15R-19N
+@ROW 8-20-11
+@ROW 9-4
+@ROW 17-18-19
+@FLOW 1-2-3DOWN-7-8N-9-10-17-18-5-6
+@FLOW 8Y-4-18-5-6
+@FLOW 3UP-11-12N-13-14-15-19-18
+@FLOW 12Y-16-18-5-6
+@BOX 1.0
+VERT CURSOR
+@BOX 2.0
+SAVE BUFFER POINTERS
+@BOX 3.0
+DIRECTION?
+@BOX 4.0
+:: SPECIAL ACTION??
+@BOX 5.0
+SET CURSOR LINE POSITION
+SET CURSOR MOVE BIT IN
+THE REFRESH.SW
+@BOX 6.0
+END
+@BOX 7.0
+MOVE BUFFER CURSOR TO END OF
+BUFFER OR NEWLINE WHICHEVER FIRST
+@BOX 8.0
+CURSOR AT END OF BUFFER?
+@BOX 9.0
+MOVE BUFFER CURSOR TO END OF
+LINE OR CLPOS WHICHEVER FIRST
+@BOX 10.0
+INCREMENT CURSOR LINE PTR
+@BOX 11.0
+MOVE BUFFER CURSOR BACK TO
+START OF LINE OR BUFFER
+@BOX 12.0
+START OF BUFFER?
+@BOX 13.0
+COUNT CHARS ON PREVIOUS LINE
+@BOX 14.0
+MOVE BUFFER CURSOR BACK TO END
+OF PREVIOUS LINE OR CLPOS
+@BOX 15.0
+DECREMENT CURSOR LINE POINTER
+@BOX 16.0
+:: SPECIAL ACTION??
+@BOX 1.1
+VERT.CURS: BEGIN
+@BOX 2.1
+CLPOS => POS;
+@BOX 3.1
+IF CH = MU
+@BOX 4.1
+::SPECIAL ACTION
+@BOX 16.1
+0 => POS;
+::SPECIAL ACTION
+@BOX 5.1
+POS =>CLPOS;
+8 !>REFRESH.SW;
+@BOX 6.1
+END
+@BOX 7.1
+WHILE CURS.FRONT < CURS.END AND
+   BUFF[1+>CURS.FRONT-1]=>
+   BUFF[1+>CURS.BACK-1] /= NL DO
+      1 +>POS;
+OD
+@BOX 8.1
+IF CURS.FRONT = CURS.END
+@BOX 9.1
+-1 => I;
+WHILE 1 +> I < CLPOS AND CURS.FRONT
+ < CURS.END AND BUFF[CURS.FRONT]
+ =>CH /= NL DO
+   CH => BUFF[CURS.BACK];
+   1 +> CURS.FRONT;
+   1 +> CURS.BACK;
+OD
+I => POS;
+@BOX 10.1
+1 +> CLPTR;
+@BOX 11.1
+FOR POS DO
+   BUFF[1->CURS.BACK]=>
+   BUFF[1->CURS.FRONT];
+OD
+@BOX 12.1
+IF CURS.BACK = SOB
+@BOX 13.1
+CURS.BACK-1=>I;
+WHILE 1->I >= SOB AND
+ BUFF[I] /= NL DO OD
+CURS.BACK-I-2=>COUNT;
+@BOX 14.1
+IF COUNT > CLPOS THEN
+   FOR COUNT-CLPOS+1 DO
+      BUFF[1->CURS.BACK]=>
+      BUFF[1->CURS.FRONT];
+   OD
+ELSE
+   COUNT => POS;
+   BUFF[1->CURS.BACK]=>
+   BUFF[1->CURS.FRONT];
+FI
+@BOX 15.1
+1 -> CLPTR;
+@END
+@TITLE DOC15.1.7(1,10)
+@COL 1S-2F
+@FLOW 1-2
+@BOX 1.0
+CHANGE FORMAT RULES/MODE
+@BOX 2.0
+END
+@BOX 1.1
+PROC MODE.PROMPT;
+@BOX 2.1
+END
+@END
+@TITLE DOC15.1.8(1,10)
+@COL 1S-2F
+@FLOW 1-2
+@BOX 1.0
+MOVE POSN IN FILE
+@BOX 2.0
+END
+@BOX 1.1
+PROC POSN.PROMPT;
+@BOX 2.1
+END
+@END
+@TITLE DOC15.1.9(1,10)
+@COL 10R-11T-12R
+@COL 1S-2T-3T-4T-5T-6R-7R-8R-9F
+@COL 16N-17N-13R-14R-15R
+@ROW 10-4
+@ROW 6-13
+@ROW 2-16
+@ROW 4-17
+@FLOW 1-2N-3CM-4N-5ABOVE-6-8-9
+@FLOW 2Y-16-15-8
+@FLOW 3REFRESH-10-11SCREEN-12-8
+@FLOW 4Y-17-14-15
+@FLOW 5BELOW-13-8
+@FLOW 11LINE-7-8
+@BOX 1.0
+SCREEN MANAGER
+@BOX 2.0
+BREAKOUTPUT ONLY?
+@BOX 3.0
+REFRESH OR CURSOR MOVE?
+@BOX 4.0
+CURSOR STILL ON SCREEN?
+@BOX 5.0
+CURSOR ABOVE OR BELOW SCREEN?
+@BOX 6.0
+REFRESH SCREEN WITH NEW WINDOW
+STARTING FROM REQUIRED LINE
+@BOX 7.0
+REFRESH LINE
+@BOX 8.0
+RESET REFRESH SWITCH
+@BOX 9.0
+END
+@BOX 10.0
+DISCARD ONLINE OUTPUT
+@BOX 11.0
+SCREEN OR LINE REFRESH?
+@BOX 12.0
+REFRESH SCREEN
+@BOX 13.0
+SCROLL SCREEN UNTIL REQUIRED
+CURSOR POSITION
+@BOX 14.0
+SEND PHYSICAL CURSOR TO
+NEW POSITION
+@BOX 15.0
+BREAK OUTPUT
+@BOX 1.1
+$PS SET.TO.START ();
+$PS OUT.LINE ();
+$PS RESTORE.CURSOR ();
+#DOC15.1.9.5
+#DOC15.1.9.6
+#DOC15.1.9.7
+PROC SCR.MAN;
+@BOX 2.1
+IF REFRESH.SW & 1 /= 0
+@BOX 3.1
+IF REFRESH.SW < 8
+@BOX 4.1
+IF CLPTR >= 0 < 24
+@BOX 5.1
+IF CLPTR > 23
+@BOX 6.1
+#DOC15.1.9.3
+@BOX 7.1
+#DOC15.1.9.2
+@BOX 8.1
+0 => REFRESH.SW;
+@BOX 9.1
+END
+@BOX 10.1
+OUTBACKSPACE(-1);
+@BOX 11.1
+IF REFRESH.SW < 4
+@BOX 12.1
+#DOC15.1.9.1
+@BOX 13.1
+#DOC15.1.9.4
+@BOX 14.1
+SEND.CURS();
+@BOX 15.1
+BREAKOUTPUT(-1);
+@END
+@TITLE DOC15.1.9.1(1,11)
+@COL 9R-10R-11F
+@COL 1S-2R-3R-4R-5T-7R-6T-8R
+@ROW 9-7
+@FLOW 1-2-3-4-5N-7-6Y-4
+@FLOW 5Y-9-10-11
+@FLOW 6N-8-4
+@BOX 1.0
+REFRESH SCREEN
+@BOX 2.0
+SELECT BATCH OUTPUT STREAM
+@BOX 3.0
+NOTE CURSOR POSN ON SCREEN
+   AND IN BUFFER
+MOVE BOTH PHYSICAL AND BUFFER
+CURSOR BACK TO START OF LINE
+@BOX 4.0
+OUTPUT LINE
+@BOX 5.0
+SCREEN FULL?
+@BOX 6.0
+END OF TEXT?
+@BOX 7.0
+MOVE PHYSICAL CURSOR TO
+START OF NEXT LINE
+@BOX 8.0
+MOVE BUFFER CURSOR TO
+START OF NEXT LINE
+@BOX 9.0
+RESTORE BOTH PHYSICAL AND BUFFER
+CURSORS TO ORIGINAL POSITIONS
+AND BREAKOUTPUT
+@BOX 10.0
+RESELECT ONLINE OUTPUT
+@BOX 11.0
+END
+@BOX 1.1
+REFRESH.SCREEN: BEGIN
+@BOX 2.1
+SELECT.OUTPUT (BATCH);
+@BOX 3.1
+SET.TO.START ();
+@BOX 4.1
+OUT.LINE ();
+@BOX 5.1
+IF CLPTR = 23
+@BOX 6.1
+IF CURS.FRONT >= CURS.END
+@BOX 7.1
+OUTCH('$L);
+1 +> CLPTR;
+@BOX 8.1
+'$L => BUFF [CURS.BACK];
+1 +> CURS.FRONT;
+1 +> CURS.BACK;
+@BOX 9.1
+RESTORE.CURSOR ();
+@BOX 10.1
+SELECT.OUTPUT (ONLINE);
+@BOX 11.1
+END
+@END
+@TITLE DOC15.1.9.2(1,10)
+@COL 1S-2R-3R-4R-5F
+@FLOW 1-2-3-4-5
+@BOX 1.0
+REFRESH LINE
+@BOX 2.0
+NOTE CURSOR POSN BOTH IN BUFFER
+AND ON SCREEN
+MOVE BOTH PHYSICAL AND BUFFER
+CURSORS BACK TO START OF LINE
+@BOX 3.0
+OUTPUT LINE
+@BOX 4.0
+RESTORE BOTH PHYSICAL AND BUFFER
+CURSORS TO ORIGINAL POSITIONS
+AND BREAKOUTPUT
+@BOX 5.0
+END
+@BOX 1.1
+REFRESH.LINE: BEGIN
+@BOX 2.1
+SET.TO.START ();
+@BOX 3.1
+OUTLINE ();
+@BOX 4.1
+RESTORE.CURSOR ();
+@BOX 5.1
+END
+@END
+@TITLE DOC15.1.9.3(1,10)
+@COL 1S-2R-3R-4F
+@FLOW 1-2-3-4
+@BOX 1.0
+REFRESH FROM ABOVE
+@BOX 2.0
+MOVE PHYSICAL CURSOR VERTICALLY
+TO TOP OF SCREEN
+@BOX 3.0
+REFRESH SCREEN
+@BOX 4.0
+END
+@BOX 1.1
+REFRESH.FROM.ABOVE:
+@BOX 2.1
+0 => CLPTR;
+:: OUTPUT GENERATED BY REFRESH.SCREEN
+@BOX 3.1
+-> REFRESH.SCREEN;
+@BOX 4.1
+:: END
+@END
+@TITLE DOC15.1.9.4(1,11)
+@COL 1S-2R-3R-4R-5R-6R-7R-8T-9R-10F
+@FLOW 1-2-3-4-5-6-7-8Y-9-10
+@FLOW 8N-6
+@BOX 1.0
+REFRESH TO BELOW
+@BOX 2.0
+MOVE PHYSICAL CURSOR VERTICALLY
+TO BOTTOM OF SCREEN
+@BOX 3.0
+NOTE POSN OF BOTH PHYSICAL AND
+BUFFER CURSORS
+MOVE BOTH PHYSICAL AND BUFFER
+CURSORS BACK TO START OF LINE
+@BOX 4.0
+CALCULATE NUMBER OF LINES TO BE
+OUTPUT TO REACH THE REQUIRED LINE
+@BOX 5.0
+MOVE BUFFER CURSOR BACK BY
+REQUIRED NUMBER OF LINES
+AND OUTPUT CURRENT LINE
+@BOX 6.0
+OUTPUT NEWLINE
+@BOX 7.0
+OUTPUT LINE
+@BOX 8.0
+REQUIRED LINE REACHED?
+@BOX 9.0
+RESTORE BOTH PHYSICAL AND BUFFER
+CURSORS TO ORIGINAL POSN AND
+BREAKOUTPUT
+@BOX 10.0
+END
+@BOX 1.1
+REFRESH.TO.BELOW: BEGIN
+$IN REQ.LINE, I;
+@BOX 2.1
+CLPTR => REQ.LINE;
+23 => CLPTR;
+@BOX 3.1
+SET.TO.START ();
+@BOX 4.1
+REQ.LINE - 23 => I;
+@BOX 5.1
+FOR I + 1 DO
+   WHILE BUFF [ 1 -> CURS.BACK] => BUFF [1 -> CURS.FRONT] /= '$L DO OD
+OD
+1+>CURS.FRONT;1+>CURS.BACK;
+OUTLINE();
+@BOX 6.1
+OUTCH(BUFF[1+>CURS.FRONT-1]=>BUFF[1+>CURS.BACK-1]);
+@BOX 7.1
+OUT.LINE ();
+@BOX 8.1
+IF 1 -> I > 0
+@BOX 9.1
+RESTORE.CURSOR ();
+@BOX 10.1
+END
+@END
+
+@TITLE DOC15.1.9.5(1,11)
+@COL 1S-2R-3R-4R-5F
+@FLOW 1-2-3-4-5
+@BOX 1.0
+SET CURSOR TO START OF LINE
+@BOX 2.0
+NOTE CURSOR POSITION ON
+SCREEN AND IN BUFFER
+@BOX 3.0
+MOVE PHYSICAL CURSOR TO
+START OF LINE
+@BOX 4.0
+MOVE BUFFER CURSOR TO
+START OF LINE
+@BOX 5.0
+END
+@BOX 1.1
+$PR SET.TO.START;
+@BOX 2.1
+CLPTR =>OLD.PTR;
+CLPOS => OLD.POS;
+CURS.BACK => OLD.CB;
+@BOX 3.1
+0 =>CLPOS;
+SEND.CURS ();
+@BOX 4.1
+WHILE CURS.BACK > SOB
+   AND BUFF [CURS.BACK-1] /= '$L DO
+   BUFF [1->CURS.BACK] => BUFF [1 -> CURS.FRONT];
+OD
+@BOX 5.1
+END
+@END
+@TITLE DOC15.1.9.6(1,11)
+@COL 1S-2R-3R-4F
+@FLOW 1-2-3-4
+@BOX 1.0
+OUTPUT LINE
+@BOX 2.0
+OUTPUT CHARACTERS UNTIL
+NEWLINE OR END OF BUFFER
+@BOX 3.0
+CLEAR REST OF LINE
+@BOX 4.0
+END
+@BOX 1.1
+$PR OUTLINE;
+@BOX 2.1
+WHILE CURS.FRONT < CURS.END
+   AND BUFF [CURS.FRONT] /= '$L DO
+   OUTCH(BUFF [CURS.FRONT] => BUFF [CURS.BACK]);
+   1 +> CURS.FRONT; 1 +> CURS.BACK;
+OD
+@BOX 3.1
+CAPTION(^CLEAR);
+@BOX 4.1
+END
+@END
+@TITLE DOC15.1.9.7(1,10)
+@COL 1S-2R-3R-4R-5F
+@FLOW 1-2-3-4-5
+@BOX 1.0
+RESTORE.CURSOR
+@BOX 2.0
+MOVE BUFFER CURSOR
+BACK TO OLD POSITION
+@BOX 3.0
+MOVE PHYSICAL CURSOR
+BACK TO OLD POSITION
+@BOX 4.0
+BREAKOUTPUT
+@BOX 5.0
+END
+@BOX 1.1
+$PR RESTORE.CURSOR;
+@BOX 2.1
+WHILE CURS.BACK > OLD.CB DO
+   BUFF [1 -> CURS.BACK] => BUFF [1 -> CURS.FRONT];
+OD
+@BOX 3.1
+OLD.PTR => CLPTR;
+OLD.POS => CLPOS;
+SEND.CURS ();
+@BOX 4.1
+BREAKOUTPUT (-1);
+@BOX 5.1
+END
+@END
+

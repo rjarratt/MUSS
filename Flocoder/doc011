@@ -1,0 +1,3249 @@
+@X @~
+~V7 56 2 -5
+~D10
+~H                    MUSS
+~
+~
+~H     VOLUME        3
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~M~ODOCUMENTATION FACILITIES~
+~BThis section provides facilities for text processing,
+drawing flowcharts and automatic program generation from encoded
+flowchart descriptions.~
+~D11
+~MUNIVERSITY OF MANCHESTER
+~V9 -1
+~P
+~V9 1
+~D10
+~S1~MVolume 3  CONTENTS~
+~
+~
+~
+~
+~MDOC011  -  Descriptive Text Generation          ~
+~
+~NDOC021  -  Common Procedures for Flip and Draw~
+~
+~NDOC031  -  FLIP (Form Linear Program)~
+~
+~NDOC041  -  Flowchart Drawing~
+~
+~NDOC071  -  Lineprinter/VDU Device Driver~
+~
+~NDOC081  -  Interactive Flowchart Inspection and Editing~
+~
+~NDOC101  -  Graphics Device Driver~
+~
+~NDOC151  -  Interactive Editor/Word Processor~
+~V9 -1
+~P
+~D10
+~H                    MUSS
+~
+~
+~D10
+~H             DOC011
+~D10
+~MMANCHESTER UNIVERSITY  -  CONFIDENTIAL
+~
+~
+                                                             ISSUE 11~
+~V9 -1
+~P
+~V9 1
+~YDOC011
+~M~ODOCUMENTATION IMPLEMENTATION DESCRIPTION~
+~
+~M~OSection 1 Version 1~
+~S1~OSection 1.1 Descriptive Text Generation~
+~S1~OGeneral Description~
+~BThis section provides a set of simple word processing
+facilities.
+The main one TXT produces well formatted
+layout from an encoding that intersperses warning
+sequences with the text.~
+~S1~O2. Interfaces~
+~BThe interface assumed by this section is the MUSS library
+i.e., it requires
+commands for manipulating input and
+output streams and for character input output.~
+~S1~O2.1 Hardware Interface~
+~BVarious output devices suitable for
+document production are assumed. These
+must all have a full visual character set.
+Lineprinters and terminals are suitable but more
+sophisticated printers such as Diablo and
+Dot Matrix are also catered for. These
+must have the following additional characteristics.~
+~
+~Mvariable character size~
+~Nfractional LF~
+~Nfractional reverse LF~
+~Nunderlining~
+~S1~O2.2 Software Interface~
+~
+~
+1) TXT (INPUT.FILE,OUTPUT.FILE,OUTPUT.DEVICE)~
+~BThis procedure copies text from an input
+stream generating a layout suited to the specified
+type of output device.~
+~
+~
+2) SPELL (DICTIONARY.FILE.NAME,TXT.FILE.NAME)~
+~BThis procedure checks all words in the text file
+against all words in the dictionary file, producing a list
+of all words not found in the dictionary on the current
+file, which may be printed, edited or added to the
+dictionary as appropriate.~
+~
+~
+3) LIST.DICT(DICTIONARY.FILE,OUTPUT.FILE)~
+~BThis sorts the names in the dictionary file into
+alphabetic order putting the result into the specified
+output file.~
+~
+~
+4) LIST.INDEX(INDEX.FILE,OUTPUT.FILE)~
+~BThis lists the index in the index file onto the
+specified output file.~
+~
+~
+5) LIST.MOD(FILENAME)~
+~BThis produces all the text and charts at both levels
+for the specified file on the lineprinter.
+~S1~O3. Implementation~
+~S1~O3.1 Outline of Operation~
+~BThe basic mode of operation of TXT involves copying words
+from input text to output, starting newlines/newpages as
+necessary to avoid splitting words across lines and
+spacing the words across a line to right justify them.
+If a warning character ('@') is encountered in the
+input text, the characters which follow are decoded
+causing a modification to the basic mode of
+operation. Facilities controlled in this way
+include indentation, margin and tabulation
+settings, font changing, bolding
+underlining, centring, forced newlines/pages
+and gaps for diagrams etc. Tables and diagrams can be
+built up by this means. In addition library procedures
+are called directly when "@*" is detected, allowing
+flowcharts for example to be generated within a document.~
+~S1~O3.2 Data Structures~
+~S1~O3.2.1 TXT~
+~
+~T# 15 25
+~
+DEVNAMES~Ia vector of 32-bit words containing the names of the
+output devices.~
+~
+LSIZES~Ia vector of integers specifying the number of
+characters on a line for each device.~
+~
+PSIZES~Ia vector of integers specifying the number of
+lines/page for each device.~
+~
+SPECIAL~Ia vector of bytes indicating, for each device,
+whether it has special hardware characteristics,
+e.g. 'DS', 'VSP'.~
+~
+INITSEQ~Ian initialisation sequence for DIABLO type
+devices.~
+~
+SAN.INIT~Ian initialisation sequence for SANTEC printers.~
+~
+DEFONTZ~Ia set of 128 bytes giving the character width in
+HEPS(960/inch) for the default font used on the SANTEC.~
+~
+HDFORM~Ia vector of bytes describing the structure of the
+numbers 0 - 9 and letters A -> Z as produced by the HEADER
+facility (@H).~
+~
+BUFF~Ia vector of bytes which is used to
+buffer each line of output.~
+~
+TABLIST~Ia vector of integers indexed by character
+position in terms of the default space size specifying,
+for each output character position,the distance
+to the next tabulation stop.~
+~
+PAGEMSG~Ia byte vector used to hold the general heading
+output at the top of each new page.~
+~
+PAGEMSGZ~Ian integer holding the number of bytes in the heading~
+~
+CHAPSTR~Ia byte vector holding the current chapter heading~
+~
+CHAPTER~Ian integer holding the chapter number.~
+~
+BUFFPTR~Ian integer indexing the output buffer BUFF, specifying
+the position of the last character placed in
+the buffer.~
+~
+LPOS~Ian integer specifying the current character position on
+the output device, equivalent to BUFFPTR.~
+~
+DEVNO~Ian integer indexing the current device, as
+specified in DEVNAMES.~
+~
+ULWC,BWC,HUP~
+HDOWN,ATMWC~
+ATNWC,NFWC~
+SFWC,TWC,ATWC~ILiteral warning characters planted in the line buffer
+to cause respectively~
+##underlining on/off~
+##bolding on/off~
+##half line up~
+##half line down~
+##centring(@M)~
+##centring(@N)~
+##font definition~
+##font selection~
+##relative tabbing~
+##absolute tabbing~
+~
+~
+INSTREAM~Ian integer specifying the input stream associated
+with the input text.~
+~
+OUTSTREAM~Ian integer specifying the output stream associated
+with the output text.~
+~
+OLD.INSTREAM~Ian integer specifying the input stream
+selected prior to entering TXT.~
+~
+OLD.OUTSTREAM~Ian integer specifying the output stream
+selected prior to entering TXT.~
+~
+CONTSTR~Ian integer specifying the output stream number
+for the contents file.~
+~
+INDSTR~Ian integer specifying the output stream number for the
+index file.~
+~
+PAGE.GAP~Ian integer specifying the number of blank lines to be
+output at the start of a page.~
+~
+BGAP~Ian integer variable
+giving the number of lines to be
+output at the start of a block.~
+~
+SGAP~Ian integer variable
+giving the number of newlines to be
+output at the start of a section.~
+~
+BIND~Ian integer variable
+giving the number of spaces
+of indentation to be output at the start
+of a new paragraph.~
+~
+MARGIN~Ian integer variable
+giving the number of spaces to be
+output for the margin(in HEPS).~
+~
+RMARGIN~Ian integer specifying the number of spaces in the
+right hand margin.~
+~
+NDENT~Ian integer variable giving the number of spaces
+to be output for indentation following centring.~
+~
+LSIZE~Ian integer variable initialised from LSIZES[DEVNO]
+giving the number of characters
+in HEPS on a line.~
+~
+PSIZE~Ian integer variable initialised from PSIZES[DEVNO]
+giving number of lines on a page.~
+~
+SPEC.DEV~Ian integer variable, initialised from SPECIAL[DEVNO],
+indicating whether output device has special
+characteristics.~
+~Ibit 0 indicates variable space capability,~
+~Ibit 1 indicates underline capability,~
+~Ibit 2 indicates half line feed capability.~
+~
+HIGHLIGHT~Ian integer flag which when positive indicates
+highlighting of the current line.~
+~
+PCOUNT~Ian integer giving the page count.~
+~
+LCOUNT~Ian integer giving the number of lines output
+on the current page.~
+~
+SSW~Ian integer indicating that a section heading has
+been specified. Reset by @B.~
+~
+DATE~Ian integer which indicates whether or not
+the date should appear at the foot of each page.~
+~
+INDENT~Ian integer used to hold the current
+indentation position.~
+~
+HDCHAR~Ia byte holding the character to be used
+in generating headings.~
+~
+CH~Ia byte variable used to hold the character currently
+being processed.~
+~
+AT~Ia byte variable used to hold the character currently
+being used as the warning sequence character. (@ is the
+default).~
+~
+UP~Ia byte variable used to hold the character being used
+~X {` }\
+as the superscript character. (Default {).~
+~
+DOWN~Ia byte variable used to hold the character being used
+as the subscript character. (Default }).~
+~X {{ }}
+~
+TABCH~Ia byte variable used to hold the character being used
+as the tabulation character. (Default %).~
+~
+USER.FORM~Ian integer indicating whether the current line is user formatted (bit
+ 0) and whether it is a heading (bit 1).~
+~
+U.F.DIAG~Ian integer indicating the number of lines still
+required for outputting a user formatted diagram.~
+~
+DISPLNS~Ian integer specifying the number of lines of displaced
+space/text awaiting output. A positive value indicates displaced
+space, a negative one displaced text.~
+~
+SAVPOS1, 2, 3~I32 bit integers used to hold values of the input stream pointer
+ - used during storage & output of displaced text.~
+~
+IND.INHB~Ian integer which when set causes the first paragraph
+of each Section not to be indented.~
+~
+
+DOUBLESIDED~Ian integer specifying the format of page headings
+on facing pages.~
+##0 - left hand heading blank~
+##1 - right hand contains chapter title~
+~
+FONT~Ian integer giving the current font number~
+~
+OLD.FONT~Ian integer giving the previous font number~
+~
+SPZ~Ian integer giving the current space size in HEPS~
+~
+SPZ0~Ian integer giving the default space size in HEPS~
+~
+CHAP.FONT~Ian integer giving the font number for chapter headings.~
+~
+PRE.CH.GAP~Ian integer containing the number of blank lines to
+be output in front of the chapter title.~
+~
+POST.CH.GAP~Ian integer containing the number of blank lines to
+be output after the chapter title.~
+~
+LPT.CHPOS~Ian integer recording the current character
+position when outputting from the line buffer to the
+lineprinter.~
+~S1~O3.3 Special Notes~
+~
+~
+None.~
+~S1~O4. Compile Jobs~
+~BThe jobs presented here are compiles of the documentation software.
+The compiles for the PDP system are arranged
+differently to that for the paged machines
+(VAX, MC68000) and are in Section 4.2.
+~S14.1 Compile Job for DOC for Paged Machines.~
+~BThis job allows all the documentation software
+(TXT,SPELL,LIST.INDEX,LIST.DICT,LISTMOD,FLIP,DRAW) to
+be compiled on a paged mchine for a paged machine. The '?' symbol specified
+in some of the filenames is a substitute
+for the version number being compiled to, and will be altered by the
+actual compile jobs prior to entry. The values of the variables WORKSEG
+and TLWORKSEG are also edited in by the compile jobs prior to
+entry.~
+::BEGIN COMPDOC FOR PAGED MACHINES~
+DO 0 DOC\?LOG %200~
+LIB MTLX\~
+LIB MSLX~
+LIB L2X\~
+OPENDIR MUSMS~
+LIB DIR6\?~
+MUSL 0 BDOC\? %405 16		*FOR MC7*~
+MUSL 0 BDOC\? %705 16                        *FOR MC5*~
+MUSL 0 BDOC\? %705 16                        *FOR MC5G*~
+MUSL 0 BDOC\? %405 16                            *FOR MC3*~
+**TLSEG 0 %0 %25C0000 %F(8) 0		*FOR MC7*~
+**TLSEG 0 %0 %A40000 %F(8) 0                 *FOR MC5*~
+**TLSEG 0 %0 %A40000 %F(8) 0                 *FOR MC5G*~
+**TLSEG 0 %0 %7FEA0000 %F(8) 0                   *FOR MC3*~
+**TLSEG 1 %0  0 %F(7)D 0~
+**TLSEG 2 %0 TLWORKSEG %F(7)D 0~
+**TLSEG 3 %0 TLWORKSEG %F(7)D 0~
+**TLSEG 4 %0 TLWORKSEG %F(7)D 0~
+**TLSEG 5 %0 TLWORKSEG %F(7)D 0~
+*TLLOAD 1 5;~
+*TLLOAD 2 3;~
+*TLLOAD 3 2;~
+*TLLOAD 4 6;~
+*TLLOAD 5 7;~
+*INFORM %2400;~
+MODULE(SEGSIZE,WORKSEG,SYS14.SEG.SIZE,PWTH,LPTWTH,LPTHGT,SYS14.SEG.SHIFT);~
+$LI WORKSEG=WORKSEGVAL;~
+$LI SYS14.SEG.SHIFT = 16;              *FOR MC5G**FOR MC3*~
+$LI SYS14.SEG.SHIFT = 18;          *FOR MC7**FOR MC5*~
+$LI/INTEGER32 SYS14.SEG.SIZE = %10000;  *FOR MC5G**FOR MC3*~
+$LI/INTEGER32 SYS14.SEG.SIZE = %40000;  *FOR MC7**FOR MC5*~
+$LI LPTWTH=264,LPTHGT=114;~
+$LI PWTH=500;                          *FOR MC3*  *FOR MC5* *FOR MC5G* *FOR MC7*
+~
+$LI PWTH=264;                           *FOR MC2*~
+$LI SEGSIZE=65;      *FOR MC3**FOR MC7**FOR MC5G**FOR MC5*
+*END~
+ED MU6S:DOC021~
+(FD/::MU6 /)~
+E~
+FLIP 0 1~
+DOC02~
+DI 4 0~
+MUSL 0 0 %C00			*FOR MC7*~
+MUSL 0 0 %F00                               *FOR MC5*~
+MUSL 0 0 %F00                               *FOR MC5G*~
+MUSL 0 0 %C00                                   *FOR MC3*~
+*INFORM %2400;~
+**SELECTINPUT 4~
+ENDINPUT 4~
+ED MU6S:DOC031~
+(FD/::MU6 /)~
+E~
+FLIP 0 1~
+DOC03~
+**DI 4 0~
+MUSL 0 0 %C00			*FOR MC7*~
+MUSL 0 0 %F00                               *FOR MC5*~
+MUSL 0 0 %F00                               *FOR MC5G*~
+MUSL 0 0 %C00                                   *FOR MC3*~
+*INFORM %2400;~
+**SELECTINPUT 4~
+ENDINPUT 4~
+ED MU6S:DOC041~
+(FD/::MU6 /)~
+E~
+FLIP 0 1~
+DOC04~
+**DI 4 0~
+MUSL 0 0 %C00			*FOR MC7*~
+MUSL 0 0 %F00                               *FOR MC5*~
+MUSL 0 0 %F00                               *FOR MC5G*~
+MUSL 0 0 %C00                                   *FOR MC3*~
+*INFORM %2400;~
+**SELECTINPUT 4~
+ENDINPUT 4~
+ED MU6S:DOC071~
+(FD/::MU6 /)~
+E~
+FLIP 0 1~
+DOC07~
+**DI 4 0~
+MUSL 0 0 %C00			*FOR MC7*~
+MUSL 0 0 %F00                               *FOR MC5*~
+MUSL 0 0 %F00                               *FOR MC5G*~
+MUSL 0 0 %C00                                   *FOR MC3*~
+*INFORM %2400;~
+**SELECTINPUT 4~
+ENDINPUT 4~
+ED MU6S:DOC081~
+(FD/::MU6 /)~
+E~
+FLIP 0 1~
+DOC08~
+**DI 4 0~
+MUSL 0 0 %C00			*FOR MC7*~
+MUSL 0 0 %F00                               *FOR MC5*~
+MUSL 0 0 %F00                               *FOR MC5G*~
+MUSL 0 0 %C00                                   *FOR MC3*~
+**SELECTINPUT 4~
+ENDINPUT 4~
+ED MU6S:DOC101~
+(FD/::MU6 /)~
+E~
+FLIP 0 1~
+DOC10~
+**DI 4 0~
+MUSL 0 0 %C00			*FOR MC7*~
+MUSL 0 0 %F00                               *FOR MC5*~
+MUSL 0 0 %F00                               *FOR MC5G*~
+MUSL 0 0 %C00                                   *FOR MC3*~
+**SELECTINPUT 4~
+ENDINPUT 4~
+FLIP MU6S:DOC151 1~
+DOC15~
+**DI 4 0~
+MUSL 0 0 %C00			*FOR MC7*~
+MUSL 0 0 %F00                               *FOR MC5*~
+MUSL 0 0 %F00                               *FOR MC5G*~
+MUSL 0 0 %C00                                   *FOR MC3*~
+**SELECTINPUT 4~
+ENDINPUT 4~
+ED MU6S:DOC011~
+(FD/::MU6 /)~
+E~
+FLIP 0 1~
+DOC01~
+**DI 4 0~
+MUSL 0 0 %800			*FOR MC7*~
+MUSL 0 0 %B00                               *FOR MC5*~
+MUSL 0 0 %B00                               *FOR MC5G*~
+MUSL 0 0 %800                                   *FOR MC3*~
+**SELECTINPUT 4~
+ENDINPUT 4~
+RL DIR6\?~
+MERGEDIR DIR6\? BDOC\? DIR7\?~
+STOP~
+::END COMPDOC\~
+~S14.2 Compile Jobs for PDP11(on VAX).~
+~BThe PDP implementation of FLIP and DRAW requires that their common
+procedures INPUT.CHART and INPUT.TITLE be compiled along with FLIP as
+library procedures. This is because DRAW fills the available store on
+its own. Treating the common proc calls as library calls causes them
+to be mapped in and out of store as required.
+~X #\
+~S14.2.1 Compile of TXT for PDP11 on VAX.~
+~BThis job compiles TXT ,SPELL,LIST.INDEX,
+LIST.DICT and LIST.MOD for downloading to a PDP11. It
+produces a code file PDP30? under MUSM2S and a monitoring
+file TX2?LOG under MUSM2 where the ? is the PDP machine
+type being compiled for and is edited in prior to running.~
+::BEGIN COMPTXTPDP~
+DO 0 MUSM2:TX2?LOG %200~
+OPENDIR MUSM2S~
+LIB MUSM:MUSLJ~
+LIB MUSM:MUTLJ~
+CREATESEGMENT 57 %10000~
+CREATESEGMENT 58 %10000~
+CREATESEGMENT 59 %10000~
+LIB MUSM:MURDJ~
+LIB MUSM:FINDN11~
+CREATESEGMENT 20 %10000~
+LIBRARY MUSM:PDPDIR?~
+ED DOC011~
+(FD/::PDP MU6S:/)~
+E~
+FLIP 0 1~
+DOC01~
+DI 4 0~
+TL 4~
+TLDIRECTORY 6~
+TLSEG %4000 %2000 32~
+TLSEG %100 %1FA0 -1~
+TLSEG %6000 %8000 -2~
+TLSEG %6000 %8000 -2~
+TLLOAD 1 5~
+TLLOAD 2 2~
+TLLOAD 3 6~
+MUSL~
+*INIT 5;~
+**SELECTINPUT 4~
+ENDINPUT 4~
+CHANGESIZE 32 %4000~
+FILE PDP30? 0 32~
+COPYFILE 0 STR0*~
+STOP~
+::END COMPTXTPDP~
+~S14.2.2 Compile Job for a PDP version of FLIP(on VAX).
+~BThis job compiles FLIP,INPUT.CHART and INPUT.TITLE for a PDP producing
+a code file PDP31? under MUSM2S and a monitoring file FLP2?LOG
+under MUSM2 where the ? is the PDP machine type and is edited in
+prior to running.~
+~T\ 5
+::BEGIN COMPFLIPPDP~
+DO 0 FLP2?LOG/MUSM2 %200~
+OPENDIR MUSM2S~
+LIB MUSLJ/MUSM~
+LIB MUTLJ/MUSM~
+CREATESEGMENT 57 %10000~
+CREATESEGMENT 58 %10000~
+CREATESEGMENT 59 %10000~
+LIB MURDJ/MUSM~
+LIB FINDN11/MUSM~
+CREATESEGMENT 20 %10000~
+LIBRARY PDPDIR?/MUSM~
+ED DOC021~
+(FD/::PDP /)~
+E~
+FLIP 0 1~
+DOC02~
+**DI 4 0~
+TL 4~
+TLDIRECTORY 5~
+TLSEG %2000 %2000 32~
+TLSEG %4000 %A000 -2~
+TLSEG %100 %1FA0 -2~
+TLLOAD 1 3~
+TLLOAD 2 5~
+MUSL~
+*INIT 1;~
+**SELECTINPUT 4~
+ENDINPUT 4~
+ED DOC031/MU6S~
+(/::PDP /)~
+E~
+FLIP 0 1~
+DOC03~
+**DI 4 0~
+MUSL~
+*INIT 5;~
+**SELECTINPUT 4~
+ENDINPUT 4~
+CHANGESIZE 32 %2000~
+FILE PDP31? 0 32~
+COPYFILE 0 STR0*~
+STOP~
+::END COMPFLIPPDP~
+~S14.2.3 Compiler job for a PDP version of DRAW(on VAX)
+~BThis sequence produces a code file PDP32? under MUSM2S
+and a monitoring file DRW2?LOG under MUSM2 where the ?
+is PDP machine type and is edited in prior to running.~
+::BEGIN COMPDRAWPDP~
+DO 0 MUSM2:DRW2?LOG %200~
+OPENDIR MUSM2S~
+LIB MUSM:MUSLJ~
+LIB MUSM:MUTLJ~
+CREATESEGMENT 57 %10000~
+CREATESEGMENT 58 %10000~
+CREATESEGMENT 59 %10000~
+LIB MUSM:MURDJ~
+LIB MUSM:FINDN11~
+CREATESEGMENT 20 %10000~
+LIBRARY MUSM:PDPDIR?~
+ED MU6S:DOC021~
+C2.1~
+C/MODULE(INPUT.TITLE/~
+D/INPUT.TITLE,INPUT.CHART,/~
+C/#DOC02.1/S+2E~
+FLIP 0 1~
+DOC02~
+**DI 4 0~
+TL 4~
+TLDIRECTORY 5~
+TLSEG %8000 %2000 32~
+TLSEG %4000 %A000 -1~
+TLSEG %100 %1FA0 -1~
+TLSEG %4000 %A000 -1~
+TLLOAD 1 3~
+TLLOAD 2 5~
+TLLOAD 3 4~
+MUSL~
+*INIT 1;~
+**SELECTINPUT 4~
+ENDINPUT 4~
+ED MU6S:DOC041~
+(FD/::PDP /)~
+E~
+FLIP 0 1~
+DOC04~
+**DI 4 0~
+MUSL~
+*INIT 1;~
+**SELECTINPUT 4~
+ENDINPUT 4~
+ED MU6S:DOC071~
+(FD/::PDP /)~
+E~
+FLIP 0 1~
+DOC07~
+**DI 4 0~
+MUSL~
+*INIT 5;~
+**SELECTINPUT 4~
+ENDINPUT 4~
+CHANGESIZE 32 %8000~
+FILE PDP32? 0 32~
+COPYFILE 0 STR0*~
+STOP~
+::END COMPDRAWPDP~
+~S14.2.4 Compiler job for a PDP version of FLED(on VAX)
+~BThis sequence produces a code file PDP33? under MUSM2S
+and a monitoring file FLD2?LOG under MUSM2 where the ? is
+PDP machine type and is edited in prior to running.~
+::BEGIN COMPFLEDPDP~
+DO 0 MUSM2:FLD2?LOG %200~
+OPENDIR MUSM2S~
+LIB MUSM:MUSLJ~
+LIB MUSM:MUTLJ~
+CREATESEGMENT 57 %10000~
+CREATESEGMENT 58 %10000~
+CREATESEGMENT 59 %10000~
+LIB MUSM:MURDJ~
+LIB MUSM:FINDN11~
+CREATESEGMENT 20 %10000~
+LIBRARY MUSM:PDPDIR?~
+ED MU6S:DOC021~
+C2.1~
+C/MODULE(INPUT.TITLE/~
+D/INPUT.TITLE,INPUT.CHART,/~
+C/#DOC02.1/S+2E~
+FLIP 0 1~
+DOC02~
+**DI 4 0~
+TL 4~
+TLDIRECTORY 10~
+TLSEG %8000 %2000 32~
+TLSEG %4000 %A000 -1~
+TLSEG %100 %1FA0 -1~
+TLSEG %4000 %A000 -1~
+TLSEG %4000 %A000 -1~
+TLLOAD 1 3~
+TLLOAD 2 5~
+TLLOAD 3 4~
+TLLOAD 4 2~
+MUSL~
+*INIT 1;~
+**SELECTINPUT 4~
+ENDINPUT 4~
+ED MU6S:DOC041~
+C'#DOC04/1'S+1D/DRAW,DRAW.CHART,/~
+C\4/2\S/6.1/C+1.SF~
+YEED~
+(FD/::PDP /)~
+E~
+FLIP 0 1~
+DOC04~
+**DI 4 0~
+MUSL~
+*INIT 1;~
+**SELECTINPUT 4~
+ENDINPUT 4~
+ED MU6S:DOC071~
+C'#DOC07/1'S+3I/MODULE(PICVEC);~
+/C/$PS/S/6.1/C+1.SF~
+YEED~
+(FD\::PDP \)~
+E~
+FLIP 0 1~
+DOC07~
+**DI 4 0~
+MUSL~
+*INIT 1;~
+**SELECTINPUT 4~
+ENDINPUT 4~
+ED MU6S:DOC081~
+(FD/::PDP /)~
+E~
+FLIP 0 1~
+DOC08~
+**DI 4 0~
+MUSL~
+*INIT 5;~
+**SELECTINPUT 4~
+ENDINPUT 4~
+CHANGESIZE 32 %4000~
+FILE PDP33? 0 32~
+COPYFILE 0 STR0*~
+STOP~
+::END COMPFLEDPDP~
+~Y
+~V9 -1
+~P
+~V9 -1
+~D15
+~HFLOWCHARTS
+~
+~
+~H                DOC011
+~V9 -1
+~F
+@TITLE DOC01(1,11)
+@COL 1S-2R-3R-4R-5R-6F
+@FLOW 1-2-3-4-5-6
+@BOX 1.0
+WORD PROCESSING SECTION
+@BOX 2.0
+@BOX 3.0
+@BOX 4.0
+PROCEDURES IN MODULE
+   TXT
+   SPELL
+   LIST INDEX
+   LIST DICTIONARY
+   LIST MODULE
+@BOX 5.0
+#DOC01.1
+#DOC01.2
+#DOC01.3
+#DOC01.4
+#DOC01.5
+#DOC01.6
+@BOX 6.0
+END
+@BOX 1.1
+:: MU6 IMPLEMENTATION;
+::MU6 $PS DRAW($AD[$LO8],$AD[$LO8],$IN,$LO64);
+::PDP $LS DRAW($AD[$LO8],$AD[$LO8],$IN,$LO64);
+::MC68000 $LS DRAW($AD[$LO8],$AD[$LO8],$IN,$LO64);
+$LS CURRENT.INPUT()/$IN; $LS CURRENT.OUTPUT()/$IN;
+$LS END.INPUT($IN,$IN);$LS END.OUTPUT($IN,$IN);
+$LS DEFINE.INPUT($IN,$AD[$LO8],$IN32)/$IN;
+$LS DEFINE.OUTPUT($IN,$AD[$LO8],$IN32,$IN32)/$IN;
+$LS SELECT.INPUT($IN);
+$LS SELECT.OUTPUT($IN);
+$LS INCH()/$IN;
+$LS NEXTCH()/$IN;
+$LS INI()/ADDR;
+$LS INBACKSPACE($IN);
+$LS OUTCH($IN);
+$LS NEWLINES($IN);
+$LS SPACES($IN);
+$LS OUTI($IN32,$IN);
+$LS CAPTION($AD[$LO8]);
+$LS PPCCMD();
+$LS BREAK.OUTPUT($IN);
+$LS I.POS()/$IN32;
+$LS SET.I.POS($IN32);
+$LS ISIZE()/$IN32;
+$LS TIME.AND.DATE();
+$LS IENQ()/$IN;
+$LS OUTLINENO($IN32);
+$LS INSTR($AD[$LO8])/$IN;
+$LS MAP($IN,$IN,$IN);
+$LS CREATE.SEGMENT($IN,$AD);
+$LS RELEASE.SEGMENT($IN);
+$LS INTERCHANGE($IN,$IN);
+::MU6 $IM$LI WORKSEG;
+$AD PW0,PW1,PW2,PW3;
+MODULE(TXT,SPELL,LISTINDEX,LISTDICT,LISTMOD);
+@BOX 2.1
+@BOX 3.1
+TYPE WLISTENT IS $LO16 HASH,NPTR;
+*GLOBAL 2;
+::PDP $LO8[15000]CHLIST;$IN[3000]NLIST;$LO8[1024]FONTS;$LO8[8]FIDT;
+::MU6 $LO8[40000]CHLIST;$IN[6000]NLIST;$LO8[1024]FONTS;$LO8[8]FIDT;$LO8[360]BUFF
+;
+::MC68000 $LO8[40000]CHLIST;$IN[6000]NLIST;$LO8[1024]FONTS;$LO8[8]FIDT;
+*GLOBAL 6;
+::PDP $LO8[15000]DUMMYA;WLISTENT[2200]WLIST;
+::MU6 $LO8[40000]DUMMYA;WLISTENT[6000]WLIST;
+::MC68000 $LO8[40000]DUMMYA;WLISTENT[6000]WLIST;
+@BOX 4.1
+LSPEC TXT($AD[$LO8],$AD[$LO8],$LO64,$AD[$LO8],$AD[$LO8]);
+LSPEC SPELL($AD[$LO8],$AD[$LO8]);
+LSPEC LISTINDEX($AD[$LO8],$AD[$LO8]);
+LSPEC LISTDICT($AD[$LO8],$AD[$LO8]);
+LSPEC LISTMOD($AD[$LO8]);
+PSPEC READNAMES($AD[$LO8],$AD[$LO8],$AD[$IN])/$IN;
+PSPEC SORTNAMES($AD[$LO8],$AD[$IN]);
+@BOX 5.1
+#DOC01.1
+#DOC01.2
+#DOC01.3
+#DOC01.4
+#DOC01.5
+#DOC01.6
+@BOX 6.1
+*END
+@END
+@TITLE DOC01.1(1,11)
+@COL 6C-7R-8C-9R-13C-14R-10C-12T
+@COL 1S-2R-3R-5T-16T-17R-4T-15R
+@COL 18C-19R-21C-22R-23C-24R-25C-27R-29T-30R-31R-28F
+@ROW 6-1-18
+@FLOW 1-2-3-5
+@FLOW 6-7-16N-17-4Y-15-5
+@FLOW 18-19-5
+@FLOW 21-22-5
+@FLOW 23-24-5
+@FLOW 4N-5
+@FLOW 16Y-5
+@FLOW 8-9-16
+@FLOW 10-12N-13-14-16
+@FLOW 12Y-17
+@FLOW 25-27-29N-30-31-28
+@FLOW 29Y-31
+@BOX 1.0
+TXT(INFILE,OUTFILE,DEVICE,CONTENTS,INDEX)
+@BOX 2.0
+DECLARATIONS
+#DOC01.1.1
+@BOX 3.0
+CREATE WORK SEGMENT
+FIND DEVICE NUMBER
+INITIALISE PARAMETERS POINTERS
+TABLIST AND LINE BUFFER
+SET UP I/O STREAMS
+SEND DEVICE INITIALISATION
+SEQENCE
+@BOX 4.0
+WAS LAST CHAR A SPACE?
+@BOX 5.0
+READ CHARACTER AND BRANCH
+@BOX 6.0
+'@'
+SEQ
+@BOX 7.0
+PROCESS WARNING SEQUENCE
+#DOC01.1.2
+@BOX 8.0
+TAB
+CH
+@BOX 9.0
+COPY SPACES UP TO NEXT TAB
+POSITION TO OUTPUT BUFFER
+@BOX 10.0
+NL
+@BOX 12.0
+IS LINE FORMAT
+USER CONTROLLED
+@BOX 13.0
+SP
+@BOX 14.0
+COPY VSP CHAR TO BUFFER
+@BOX 15.0
+SKIP SPACES
+@BOX 16.0
+ROOM FOR NEXT WORD IN BUFFER?
+@BOX 17.0
+PRINT BUFFER [DOC01.1.3]
+@BOX 18.0
+ORD
+CH
+@BOX 19.0
+COPY CHAR TO BUFFER
+@BOX 21.0
+^
+@BOX 22.0
+1\2 LINE UP
+(DEVICE PERMITTING)
+@BOX 23.0
+}
+@BOX 24.0
+1\2 LINE DOWN
+(DEVICE PERMITTING)
+@BOX 25.0
+F
+@BOX 27.0
+SET USER FORMAT
+PRINT BUFFER
+@BOX 28.0
+EXIT
+@BOX 29.0
+NEWPAGE JUST OUTPUT?
+@BOX 30.0
+OUTPUT NEWPAGE
+@BOX 31.0
+RESTORE I/O STREAMS
+TO STATE ON ENTRY
+RELEASE WORK SEG
+@BOX 1.1
+PROC TXT(INFILE,OUTFILE,DEVICE,CONTENTS,INDEX);
+@BOX 2.1
+#DOC01.1.1
+@BOX 3.1
+::PDP CREATE.SEGMENT(-1,%2000);MAP(PW1=>S1,4,1);
+::PDP CREATE.SEGMENT(-1,%2000);MAP(PW1=>S2,5,1);
+::PDP CREATE.SEGMENT(-1,%2000);MAP(PW1=>S3,6,1);
+::MU6 CREATE.SEGMENT(-1,%10000);INTERCHANGE(PW1=>S1,WORKSEG);
+::MC68000 RELEASE.SEGMENT(48);RELEASE.SEGMENT(49);
+::MC68000 RELEASE.SEGMENT(50);RELEASE.SEGMENT(51);
+::MC68000 CREATE.SEGMENT(48,%4000);CREATE.SEGMENT(49,%4000);
+::MC68000 CREATE.SEGMENT(50,%4000);CREATE.SEGMENT(51,%4000);
+::MC68000 MAP(48,-1,0);MAP(49,-1,0);MAP(50,-1,0);MAP(51,-1,0);
+IF DEVICE = 0 THEN   1 => DEVNO;
+ELSE
+0 => DEVNO;
+WHILE DEVNAMES[DEVNO] /= DEVICE DO
+   IF 1 +> DEVNO > 2 THEN
+   CAPTION(%"$LDEVICE TYPE UNKNOWN");->FAIL FI OD
+FI
+IF SIZE(INFILE)=SIZE(OUTFILE) /=0 THEN
+   FOR I < SIZE(INFILE) DO
+      IF INFILE^[I] /= OUTFILE^[I],->OK;
+   OD
+   IF INFILE^[I-1] /= '* THEN
+      CAPTION(%"$LNOT ALLOWED");->FAIL;
+FI   FI
+OK:
+0 => LCOUNT => ULFLAG => LPOS => USER.FORM => HEADER.FONT
+   => MARGIN => SSW => NDENT => RMARGIN => CHAPTER
+   => SAVPOS1 => SAVPOS2 => DISPLNS => DOCTITLEZ
+   => CHTITLEZ => HIGHLIGHT => U.F.DIAG => IND.INHB
+   => PRINT.STYLE => FONT => OLD.FONT => DOUBLESIDED
+   => PREV.STYLE => POSN.LHNO => CHAP.FONT;
+80 => SPZ0;-3 => LPT.CHPOS;
+1 => PCOUNT => DATE ;
+2 => BGAP;3 => PAGE.GAP => SGAP => BIND;
+5 => PRE.CH.GAP;10 => POST.CH.GAP;
+LSIZES[DEVNO] => LSIZE;PSIZES[DEVNO] => PSIZE ;
+LSIZE/SPZ0-4=>POSNRHNO->>1=>POSNLHHEAD=>POSNRHHEAD;
+SPECIAL[DEVNO] => SPEC.DEV ;
+-1 => BUFFPTR => CONTSTR => INDSTR => INDENT;
+"#" => HDCHAR;"@" => AT ; "{" => UP ;
+"}" => DOWN ; "%" => TABCH ;
+IF DEVNO = 0 THEN -8 => BOLD; ELSE 0 => BOLD;FI
+IF DEVNO = 2 THEN
+   FOR J < 8 DO
+      FOR I < 128 DO
+         DEFONTZ[I] => FONTS[J*128+I];
+   OD OD
+ELSE
+   FOR J < 8 DO
+      FOR I < 128 DO
+         80 => FONTS[J*128+I];
+   OD OD
+FI
+FOR I < 128 DO  FONTS[I] => FONTZ[I]; OD
+FONTZ[SP] => SPZ => VSPZ;
+CURRENT.INPUT() => OLD.INSTREAM;
+CURRENT.OUTPUT() => OLD.OUTSTREAM;
+DEFINE.INPUT(-1,INFILE,%80) => INSTREAM;
+SELECT.INPUT(INSTREAM);
+DEFINE.OUTPUT(-1,OUTFILE,%200,ISIZE()<<-1) => OUTSTREAM;
+IF SIZE(CONTENTS) /= 0 THEN
+   DEFINE.OUTPUT(-1,CONTENTS,%200,0) => CONTSTR;
+FI
+IF SIZE(INDEX) /= 0 THEN
+   DEFINE.OUTPUT(-1,INDEX,%200,0) => INDSTR;
+FI
+SELECT.OUTPUT(OUTSTREAM);OUT.HDR(NULL.STR);
+IF DEVICE="DBL" THEN
+   FOR  I < 57 DO OUTCH(INITSEQ[I]) OD
+ELSE IF DEVICE = "SAN" THEN
+   CAPTION(^SAN.INIT);
+FI FI
+FOR I < 120 DO 1 => TABLIST[I]; OD
+@BOX 4.1
+IF CH /= " "
+@BOX 5.1
+INCH() => CH;
+IF CH = AT ,-> WARN.SEQ; IF CH = TABCH ,-> TAB ;
+IF CH = NL ,-> NEW.LINE ; IF CH = SP ,-> PSPACE ;
+IF CH = UP ,-> HALF.UP ; IF CH = DOWN ,-> HALF.DOWN ;
+IF CH = EOT ,-> FINISH ; -> ORD.CHAR ;
+@BOX 6.1
+WARN.SEQ :
+@BOX 7.1
+#DOC01.1.2
+@BOX 8.1
+TAB:
+@BOX 9.1
+LPOS / SPZ0 => TABINDEX;
+TWC => BUFF[1 +> BUFFPTR];
+TABINDEX => BUFF[1 +> BUFFPTR];
+TABLIST[TABINDEX] + TABINDEX * SPZ0 => LPOS;
+@BOX 10.1
+NEWLINE :
+@BOX 12.1
+IF USER.FORM /= 0
+@BOX 13.1
+PSPACE :
+@BOX 14.1
+COPYCH(VSP) ;
+@BOX 15.1
+WHILE INCH() = " " DO OD
+INBACKSPACE(1);
+@BOX 16.1
+0 => COUNT => I;
+WHILE INCH() => SYM /= SP /= NL /= TABCH
+ /= AT /= EOT DO FONTZ[SYM]+>I;1+>COUNT OD
+INBACKSPACE(COUNT+1);
+IF I + LPOS =< LSIZE
+@BOX 17.1
+OUTBUFF(0);
+@BOX 18.1
+ORD.CHAR :
+@BOX 19.1
+COPYCH(CH) ;
+@BOX 21.1
+HALF.UP :
+@BOX 22.1
+IF SPEC.DEV&4 = 4 THEN
+   HUP => BUFF [1 +> BUFFPTR] ;FI
+@BOX 23.1
+HALF.DOWN :
+@BOX 24.1
+IF SPEC.DEV&4 = 4 THEN
+   HDOWN => BUFF [1 +> BUFFPTR] ;FI
+@BOX 25.1
+FINISH :
+SF:
+@BOX 27.1
+1 => USER.FORM;OUTBUFF(0);
+@BOX 28.1
+FAIL:
+END
+@BOX 29.1
+IF LCOUNT = PAGE.GAP
+@BOX 30.1
+OUTBUFF(-1);
+@BOX 31.1
+ENDOUTPUT(OUT.STREAM,0);
+END.INPUT(INSTREAM,0);
+IF CONTSTR >= 0 THEN
+   ENDOUTPUT(CONTSTR,0) FI
+IF INDSTR >= 0 THEN
+   ENDOUTPUT(INDSTR,0) FI
+SELECT.INPUT(OLD.INSTREAM);
+SELECT.OUTPUT(OLD.OUTSTREAM);
+::PDP RELEASE.SEGMENT(S1);RELEASE.SEGMENT(S2);
+::PDP RELEASE.SEGMENT(S3);
+::MU6 INTERCHANGE(WORKSEG,S1);RELEASESEGMENT(S1);
+::MC68000 RELEASE.SEGMENT(48);RELEASE.SEGMENT(49);
+::MC68000 RELEASE.SEGMENT(50);RELEASE.SEGMENT(51);
+@END
+@TITLE DOC01.1.1(1,11)
+@COL 1S-2R-3R-4F
+@FLOW 1-2-3-4
+@BOX 1.0
+DECLARATIONS
+@BOX 2.0
+CONSTANTS AND DATAVECS
+@BOX 3.0
+VARIABLES
+@BOX 4.0
+SUBPROCS INCLUDE
+   FAULT
+   COPY CHAR TO OUTPUT BUFFER
+   OUTPUT BUFFER [DOC01.1.3]
+@BOX 1.1
+::DECLARATIONS
+@BOX 2.1
+LITERAL/LOGICAL8 SP=%20,NL=%A,EOT=%1E,BS=%88,
+HUP=%82,HDOWN=%83,VSP=%C0,UL=%DF,HTAB=9,
+ESC=%9B,ULWC=%80,NOWCS=10,BWC=%81,SFWC=%87,
+NFWC=%86,ULINE=0,BOLDING=1,RT.TO.C=8,AT.TO.C=9,
+VARSP=10,TWC=%88,ATWC=%89,NEWFONT=6,VALTYPE=6,
+ATMWC=%84,ATNWC=%85;
+$LI/$AD[$LO8] NULLSTR=;
+DATAVEC PRINT.NO($LO8)
+ULWC BWC HUP HDOWN ATMWC ATNWC NFWC SFWC TWC ATWC
+END
+DATAVEC DEVNAMES(LOGICAL32)
+"DBL" "LPT" "SAN" END
+DATAVEC LSIZES(INTEGER)
+5600 5600 5600 END
+DATAVEC PSIZES(INTEGER)
+60  60  57  END
+DATAVEC SPECIAL(LOGICAL8)
+7 0 %F END
+DATAVEC INITSEQ(LOGICAL8);
+%9B %B2 %9B %9F %8B %9B %9E %89
+%9B %89 %8F %9B %B9 %9B %89 %99
+%9B %B1 %9B %89 %A3 %9B %B1 %9B
+%89 %AD %9B %B1 %9B %89 %B7 %9B
+%B1 %9B %89 %C1 %9B %B1 %9B %89
+%CB %9B %B1 %9B %89 %D5 %9B %B1
+%9B %89 %DF %9B %B1 %9B %C2 %8D %83
+END
+DATAVEC HDFORM(LOGICAL8);
+8 %78 %8C %94 %A4 %C4 %78   6 %20 %60 %A0 %20 %20 %F0
+8 %78 %84 %8 %70 %80 %FC   8 %FC %8 %38 %4 %84 %78
+8 %18 %28 %48 %88 %FC %8   8 %FC %80 %F8 %4 %84 %78
+8 %78 %84 %80 %F8 %84 %78   8 %FC %4 %8 %10 %20 %40
+8 %78 %84 %78 %84 %84 %78   8 %78 %84 %7C %4 %4 %4
+8 %30 %48 %84 %FC %84 %84   8 %F8 %84 %F8 %84 %84 %F8
+8 %78 %84 %80 %80 %84 %78   8 %F8 %84 %84 %84 %84 %F8
+8 %FC %80 %F0 %80 %80 %FC   8 %FC %80 %F0 %80 %80 %80
+8 %78 %84 %80 %9C %84 %78   8 %84 %84 %FC %84 %84 %84
+7 %F8 %20 %20 %20 %20 %F8   8 %FC %10 %10 %10 %90 %60
+8 %84 %88 %F0 %90 %88 %84   7 %80 %80 %80 %80 %80 %F8
+8 %84 %CC %B4 %84 %84 %84   8 %84 %C4 %A4 %94 %8C %84
+8 %78 %84 %84 %84 %84 %78   8 %F8 %84 %F8 %80 %80 %80
+8 %70 %88 %88 %88 %98 %7C   8 %F8 %84 %F8 %90 %88 %84
+8 %78 %80 %78 %4 %84 %78   7 %F8 %20 %20 %20 %20 %20
+8 %84 %84 %84 %84 %84 %78   8 %84 %84 %84 %84 %48 %30
+8 %84 %84 %84 %B4 %CC %84   8 %84 %48 %30 %30 %48 %84
+7 %88 %50 %20 %20 %20 %20   8 %FC %8 %10 %20 %40 %FC
+END
+DATAVEC DEFONTZ( LOGICAL8)
+85[32]
+85 41 61 85 85 127 91 51 85 85 81 85 85 85 85 85
+85 85 85 85 85 85 85 85 85 85 85 85 64 85 64 85
+101 97 99 103 104 96 92 112 106 41 75 92 77 123 107 107
+95 107 98 95 89 106 87 127 86 83 81 48 61 48 81 94
+86 86 87 85 87 87 45 89 88 41 39 74 41 127 89 87
+87 87 61 78 45 86 69 101 65 71 69 53 41 53 86 127
+END
+DATAVEC SAN.INIT(LOGICAL8)
+ESC 'd '@ 'H 'E 'U 'K '1 '0 '4 '7 ESC 'a '@
+ESC 'C '@ 'A 'P
+END
+@BOX 3.1
+INTEGER[120] TABLIST;
+LOGICAL8[128] FONTZ;
+LOGICAL8[64] DOCTITLE,CHTITLE ;
+INTEGER BUFFPTR,LPOS,DEVNO,INSTREAM,OUTSTREAM,CONTSTR,CNT,IND.INHB,SPZ0,
+OLD.INSTREAM,OLD.OUTSTREAM,PAGE.GAP,BGAP,SGAP,BIND,INDSTR,HIGHLIGHT,TABINDEX,
+MARGIN,LSIZE,PSIZE,PCOUNT,LCOUNT,CH,SSW,DATE,INDENT,CHAPTER,SAVIND,PRINT.STYLE
+,I,J,K,COUNT,NDENT,RMARGIN,DISPLNS,USER.FORM,DOCTITLEZ,CHTITLEZ,U.F.DIAG,TEMP,
+OLD.FONT,FONT,BOLD,SPZ,S1,S2,S3,DOUBLESIDED,F,M,VSPZ,REQ.SPZ,HEADER.FONT,
+POSN.LHNO,POSN.LHHEAD,POSN.RHNO,POSN.RHHEAD,PREV.STYLE,LPT.CHPOS,
+PRE.CH.GAP,POST.CH.GAP,CHAP.FONT;
+INTEGER32 SAVPOS1,SAVPOS2,SAVPOS3;
+LOGICAL SPEC.DEV,AT,UP,DOWN,TABCH,HDCHAR,ULFLAG,SYM;
+@BOX 4.1
+PSPEC FAULT(INTEGER);
+PSPEC COPYCH(LOGICAL8);
+PSPEC OUTBUFF(INTEGER);
+PSPEC PRINT.SEQ($IN,$IN);
+PSPEC PROCESS.STYLE($IN);
+PROC FAULT(N) ;
+NEWLINES(0)
+FOR 8 DO OUTCH("*") OD
+OUTI(N,5) ;
+END
+
+PROC COPYCH(CHAR) ;
+CHAR => BUFF [1 +> BUFFPTR] ;
+IF CHAR /= VSP THEN
+   FONTZ[CHAR] +> LPOS;
+ELSE
+   SPZ +> LPOS;
+FI
+END
+#DOC01.1.3
+#DOC01.1.4
+#DOC01.1.4.1
+@END
+@TITLE DOC01.1.2(1,11)
+@COL 3C-4R-11N-30C-31R-16N-40R-41N
+@COL 5C-6R-12N-21C-22R-17N-42R-43N
+@COL 1S-2T-7C-8R-13N-23C-24R-18N-44R-45N
+@COL 9C-10R-14N-25C-26R-27N-46R-47N
+@COL 19C-20R-15N-28N-29F
+@ROW 3-5-7-9-19
+@ROW 11-12-13-14-15
+@ROW 16-17-18-27-28
+@ROW 40-42-44-46-29
+@ROW 41-43-45-47
+@FLOW 1-2
+@FLOW 3-4-11-12-13-14-15-28-29
+@FLOW 5-6-12
+@FLOW 7-8-13
+@FLOW 9-10-14
+@FLOW 19-20-15
+@FLOW 30-31-16-17-18-27-28
+@FLOW 21-22-17
+@FLOW 23-24-18
+@FLOW 25-26-27
+@FLOW 40-41-43-45-47-29
+@FLOW 42-43
+@FLOW 44-45
+@FLOW 46-47
+@BOX 1.0
+PROCESS WARNING SEQUENCE
+@BOX 2.0
+SWITCH ON CHAR
+@BOX 3.0
+NL
+@BOX 4.0
+SET USER FORMAT BIT
+COPY SP TO BUFFER
+OUTPUT BUFFER
+@BOX 5.0
+J
+@BOX 6.0
+PLACE NEXT WORD
+ON INDEX FILE
+@BOX 7.0
+"@"
+@BOX 8.0
+COPY @ TO BUFFER
+INCREMENT LPTR
+@BOX 9.0
+B
+@BOX 10.0
+SET USER FORMAT BIT
+OUTPUT BUFFER FOLLOWED
+BY BGAP BLANK LINES.
+OUTPUT SPACES FOR BLOCK
+INDENTATION UNLESS FOLLOWING
+A SECTION HEADING
+RESET SECTION FLAG
+@BOX 19.0
+I
+@BOX 20.0
+CONVERT ALL VSP TO SP
+PRIOR TO THIS POSITION IN BUFFER
+SET INDENT TO NEXT TAB STOP
+SPACE FILL UP TO NEXT TAB STOP
+@BOX 21.0
+G
+@BOX 22.0
+PLANT BOLDING WARNING
+CHAR
+ALTER FONT SIZE
+
+@BOX 23.0
+W
+@BOX 24.0
+READ LOGICAL FONT NO
+STORE CHAR SIZES IN
+CURRENT FONT VECTOR
+
+@BOX 25.0
+L
+@BOX 26.0
+READ LOGICAL FONT NO
+READ FONT IDENTIFIER
+READ AND STORE 128
+CHAR SIZES
+
+@BOX 29.0
+END
+@BOX 30.0
+(O)
+@BOX 31.0
+PLANT UNDERLINE
+WARNING CHAR
+@BOX 40.0
+PROCESS V,X,Y,*
+[DOC01.1.2.1]
+@BOX 42.0
+PROCESS M,N,T,H
+[DOC01.1.2.2]
+@BOX 44.0
+PROCESS
+Q,D,A,Z,P,E
+[DOC01.1.2.3]
+@BOX 46.0
+PROCESS SECTION
+HEADINGS S1,S2,S3
+[DOC01.1.2.4]
+@BOX 1.1
+::PROCESS WARNING SEQ.
+@BOX 2.1
+INCH() => CH
+IF CH = NL ,-> NEWL ;
+IF CH = "*" ,-> STAR ;
+IF CH = AT ,-> WARN;
+IF CH<'0 OR CH>'Z,->SWIG;
+SWITCH CH-"0" \ SDD,SDD,SDD,
+SDD,SDD,SDD,SDD,SDD,SWIG,SWIG,
+SWIG,SWIG,SWIG,SWIG,SWIG,SWIG,
+SWIG,SA,SB,SWIG,
+SD,SE,SF,SG,SH,SI,
+SJ,SK,SL,SM,SN,SO,
+SPP,SQ,SR,SS,ST,SU,SV,
+SWIG,SX,SY,SZ ;
+@BOX 3.1
+NEWL:
+@BOX 4.1
+1 => USER.FORM;
+IF BUFFPTR >= 0 THEN
+   OUTBUFF(0);
+ELSE
+   OUTBUFF(1);
+FI
+@BOX 5.1
+SJ:
+@BOX 6.1
+IF INDSTR >= 0 THEN
+   SELECT.OUTPUT(INDSTR);
+   IPOS() => SAVPOS3;
+   0 => CNT;
+   WHILE INCH()=>CH >='A =<'Z OR CH >='a =<'z OR CH ='. DO
+      1 +> CNT;
+      OUTCH(CH) OD
+   OUTCH('%);
+   IF CHAPTER > 0 THEN
+         OUTI(CHAPTER,0);OUTCH('-);
+   FI
+   OUTI(PCOUNT,0);OUTCH('$L);
+   SETIPOS(SAVPOS3);
+   SELECT.OUTPUT(OUTSTREAM);
+FI
+@BOX 7.1
+WARN :
+@BOX 8.1
+AT => BUFF [1 +> BUFFPTR] ;
+FONTZ[AT] +> LPOS ;
+@BOX 9.1
+SB:
+@BOX 10.1
+1 => USER.FORM ;
+DISPLNS => TEMP;
+IF LCOUNT /= PAGEGAP OR LPOS /= 0 THEN
+   OUTBUFF(BGAP);
+ELSE
+   0 => USER.FORM;
+FI
+IF DISPLNS /= TEMP = 0 THEN
+   2 -> SAVPOS2;
+ELSE
+   IF SSW = 0 THEN
+   $FO BIND $DO COPYCH(SP) $OD
+   ELSE 0 => SSW FI
+FI
+@BOX 19.1
+SI:
+@BOX 20.1
+FOR I < BUFFPTR+1 DO
+IF BUFF[I]=VSP THEN
+   SP=>BUFF[I] FI
+OD
+LPOS / SPZ0 => INDENT;
+-> TAB;
+@BOX 21.1
+SG:
+@BOX 22.1
+BWC => BUFF[1+>BUFFPTR];
+0 -:> BOLD;
+FOR I < 128 DO
+   BOLD +> FONTZ[I];
+OD
+@BOX 23.1
+SDD:
+@BOX 24.1
+IF CH = '0 THEN
+   OLD.FONT => FONT;
+ELSE
+   FONT => OLD.FONT;
+   CH - '1 => FONT;
+FI
+FOR I < 128 DO
+   FONTS[FONT*128+I] => FONTZ[I];
+OD
+FONTZ[SP] => SPZ;
+SFWC => BUFF[1+>BUFFPTR];
+FONT => BUFF[1+>BUFFPTR];
+@BOX 25.1
+SL:
+@BOX 26.1
+INI() -1 => J;
+INSTR(^FIDT);
+IF INI() => K /= 0 THEN
+   FOR I < 128 DO
+      K => FONTS[J*128+I];
+   OD
+ELSE
+   FOR I < 128 DO
+      INI() => FONTS[J*128+I];
+   OD
+FI
+IF DEVNO /= 2 THEN
+   FOR I < 128 DO
+      80 => FONTS[J*128+I];
+   OD
+FI
+INCH();
+PRINT.SEQ(NEWFONT,J);
+@BOX 29.1
+SWIG:
+::END
+@BOX 30.1
+SO:
+@BOX 31.1
+ULWC => BUFF[1+>BUFFPTR];
+@BOX 40.1
+#DOC01.1.2.1
+@BOX 42.1
+#DOC01.1.2.2
+@BOX 44.1
+#DOC01.1.2.3
+@BOX 46.1
+#DOC01.1.2.4
+@END
+@TITLE DOC01.1.2.1(1,11)
+@COL 1C-2R-13N
+@COL 3C-4R-5N
+@COL 6C-7R-8N
+@COL 9C-10R-11N-12F
+@ROW 13-5-8-11
+@FLOW 1-2-13-5-8-11-12
+@FLOW 3-4-5
+@FLOW 6-7-8
+@FLOW 9-10-11
+@BOX 1.0
+V
+@BOX 2.0
+RESET
+PARAMETERS
+@BOX 3.0
+X
+@BOX 4.0
+RESET WARNING
+CHARACTERS
+@BOX 6.0
+Y
+@BOX 7.0
+ALTER PAGE
+HEADING
+@BOX 9.0
+*
+@BOX 10.0
+CALL LIBRARY
+PROCEDURE
+@BOX 12.0
+END
+@BOX 1.1
+SV:
+@BOX 2.1
+WHILE NEXTCH() /= NL DO
+   INI() => I;
+   IF I < 15 THEN
+   INI() => J;
+   ALTERNATIVE I-1 FROM
+   MARGIN - (J*SPZ0=>MARGIN) +> LSIZE;
+   RMARGIN - (J*SPZ0=>RMARGIN) +> LSIZE;
+   J => BGAP ;
+   BEGIN
+      IF J < 0 THEN
+         1 => IND.INHB;
+         0 -:> J;
+      ELSE
+         0 => IND.INHB;
+      FI
+      J => BIND;
+   END
+   J => SGAP ;
+   J => PAGE.GAP ;
+   J => PSIZE ;
+   BEGIN J => CHAPTER;1=>PCOUNT END
+   J => PCOUNT;
+   J=>DOUBLESIDED;
+   J - 1 => HEADER.FONT;
+   J -1 => CHAP.FONT;
+   J => PRE.CH.GAP;
+   J => POST.CH.GAP;
+   END
+   ELSE
+SELECT.OUTPUT(OLD.OUT.STREAM);
+CAPTION(%"@V FAULTY AT");
+OUTLINENO(IPOS());
+->SF;
+   FI
+OD
+INCH();
+@BOX 3.1
+SX:
+@BOX 4.1
+WHILE NEXTCH() /= '$L DO
+   WHILE INCH()=>I=HTAB OR I=" " DO OD
+   IF I = '$L, ->ND1
+   WHILE INCH()=>J=HTAB OR J=" " DO OD
+   IF I = '@ THEN J=> AT
+   ELSE IF I = '% THEN J=>TABCH
+   ELSE IF I = '{ THEN J => UP
+   ELSE J => DOWN
+   FI FI FI
+OD
+INCH();
+ND1:
+
+@BOX 6.1
+SY:
+@BOX 7.1
+FOR DOCTITLEZ < 64 DO
+   IF INCH() => DOCTITLE[DOCTITLEZ]
+      => CHTITLE[DOCTITLEZ] = NL, -> OUT
+OD
+WHILE INCH() /= NL DO OD
+OUT:
+DOCTITLEZ => CHTITLEZ;
+MARGIN/SPZ0 => POSN.LHNO;
+MARGIN+LSIZE/SPZ0-4 => POSN.RHNO;
+MARGIN<<-1 + LSIZE/SPZ0 - DOCTITLEZ->>1=>
+   POSN.LHHEAD => POSN.RHHEAD;
+@BOX 9.1
+STAR:
+@BOX 10.1
+PPC.CMD();
+@BOX 12.1
+::END
+@END
+@TITLE DOC01.1.2.2(1,11)
+@COL 1C-2R-3C-4R-7N-8F
+@COL 5C-6R-10N
+@COL 11C-12R-13N
+@COL 14C-15R-16N
+@ROW 7-10-13-16
+@FLOW 1-2-7
+@FLOW 3-4-7-8
+@FLOW 5-6-10-7
+@FLOW 11-12-13-10
+@FLOW 14-15-16-13
+@BOX 1.0
+M
+@BOX 2.0
+CALCULATE INDENTATION
+REQUIRED FOR CENTRING THE
+REST OF THE LINE
+N
+@BOX 3.0
+
+@BOX 4.0
+COPY SPS TO BUFFER TO
+GIVE INDENTATION
+SET USER FORMAT BIT
+@BOX 5.0
+T
+@BOX 6.0
+SET TABULATION
+CHARACTER AND
+STOP POSITIONS
+@BOX 8.0
+END
+@BOX 11.0
+H
+@BOX 12.0
+SET HEADING BIT
+IN USERFORM
+@BOX 14.0
+K
+@BOX 15.0
+INC THE
+HIGHLIGHT BIT
+@BOX 1.1
+SM:
+@BOX 2.1
+ATMWC => BUFF[1+>BUFFPTR];
+1 !> USER.FORM;
+@BOX 3.1
+SN:
+@BOX 4.1
+ATNWC => BUFF[1 +> BUFFPTR];
+1 !> USER.FORM ;
+@BOX 5.1
+ST:
+@BOX 6.1
+OUTBUFF(0);
+0-1 => J ;
+INCH() => TABCH
+WHILE NEXTCH() /= NL DO
+   INI() => I
+   WHILE J < I-1 DO
+      1 +> J -: I => TABLIST[J]
+   OD
+OD
+INCH();
+WHILE J < SIZE(^TABLIST)-1 DO 1 =>TABLIST[1+>J]
+OD
+@BOX 8.1
+::END
+@BOX 11.1
+SH:
+@BOX 12.1
+2 => USER.FORM;
+@BOX 14.1
+SK:
+@BOX 15.1
+1 +> HIGHLIGHT;
+@END
+@TITLE DOC01.1.2.3(1,11)
+@COL 1C-2R-14N-3C-4R-18N
+@COL 5C-6R-15N-7C-8R-19N
+@COL 9C-10R-16N-11C-12R-20N
+@COL 22C-23R-17N-21N-24R-13F
+@ROW 14-15-16-17
+@ROW 18-19-20-21
+@FLOW 1-2-14-15-16-17-21-24-13
+@FLOW 5-6-15
+@FLOW 9-10-16
+@FLOW 22-23-17
+@FLOW 3-4-18-19-20-21
+@FLOW 7-8-19
+@FLOW 11-12-20
+@BOX 1.0
+Q
+@BOX 2.0
+FORCE NEW PAGE IF
+INSUFFICIENT SPACE
+@BOX 3.0
+Z
+@BOX 4.0
+SET USER FORMAT BIT
+OUTPUT BUFFER
+END DISPLACED TXT
+@BOX 5.0
+D
+@BOX 6.0
+SET USER FORMAT BIT
+LEAVE SPACE
+@BOX 7.0
+P
+@BOX 8.0
+SET USER FORMAT BIT
+FORCE NEWPAGE
+@BOX 9.0
+A
+@BOX 10.0
+SET USER FORMAT BIT
+OUTPUT BUFFER
+START DISPLACED TXT
+@BOX 11.0
+E
+@BOX 12.0
+SET USER FORMAT BIT
+OUTPUT BUFFER
+LEAVE DISPLACED SPACE
+@BOX 24.0
+IGNORE FOLLOWING
+NL OR SPACE
+@BOX 13.0
+END
+@BOX 22.0
+U
+@BOX23.0
+SAME AS FOR Q
+THEN SET USER FORMAT DIAGRAM
+LINE COUNT
+@BOX 1.1
+SQ:
+@BOX 2.1
+IF INI() > PSIZE - LCOUNT THEN
+   1 => USERFORM;
+   OUTBUFF(-1);
+FI
+
+@BOX 3.1
+SZ:
+@BOX 4.1
+1 => USER.FORM ;
+OUTBUFF (0) ;
+IF SAVPOS2 >= 0 THEN
+SAVIND => INDENT;
+OUT.BUFF (BGAP);
+SET.I.POS (SAVPOS2) ;
+FI
+0 => SAVPOS2=>DISPLNS;
+@BOX 5.1
+SD:
+@BOX 6.1
+1 => USERFORM;
+IF INI() => I > PSIZE - LCOUNT -1 THEN
+   OUTBUFF(-1) FI
+OUTBUFF(I) ;
+@BOX 7.1
+SPP:
+@BOX 8.1
+1 => USER.FORM ;
+IF DISPLNS /= 0 THEN
+   OUTBUFF(-1);
+FI
+OUTBUFF(-1) ;
+@BOX 9.1
+SA:
+@BOX 10.1
+1 => USERFORM;
+IF DISPLNS = 0 AND SAVPOS2 = 0 THEN
+   0 - INI() => DISPLNS;INCH();
+   IF DISPLNS-BGAP > LCOUNT-PSIZE THEN
+      0 => DISPLNS;
+      -1 => SAVPOS2;
+      OUTBUFF(BGAP);
+   ELSE
+   I.POS () => SAVPOS1 ;
+   WHILE INCH() /= AT
+      OR NEXTCH () /= "Z" DO
+   OD
+   INCH();
+   FI
+ELSE
+   INBACKSPACE(2);
+   OUTBUFF(-1);
+FI
+@BOX 11.1
+SE:
+@BOX 12.1
+1 => USERFORM;
+IF DISPLNS = 0 AND SAVPOS2 = 0 THEN
+   IF INI () => DISPLNS<PSIZE-LCOUNT THEN
+      OUTBUFF(DISPLNS);
+      0 => DISPLNS
+   FI
+   INCH();
+ELSE
+   INBACKSPACE(2);
+   OUTBUFF(-1);
+FI
+@BOX 22.1
+SU:
+@BOX 23.1
+IF INI()=>TEMP>PSIZE-LCOUNT THEN
+   1 => USERFORM;
+   OUTBUFF(-1);
+FI
+1 => USERFORM;
+TEMP => U.F.DIAG;
+@BOX 24.1
+IF INCH() /= '$L /= " " THEN
+   INBACKSPACE(1);
+FI
+@BOX 13.1
+::END
+@END
+@TITLE DOC01.1.2.4(1,11)
+@COL 5C-6R-7R-8R-9R-10R
+@COL 1S-3R-11T-2R-4F
+@COL 12R
+@ROW 2-12
+@FLOW 5-6-7-8-9-10-4
+@FLOW 1-3-11N-2-4
+@FLOW 11Y-12-4
+@BOX 1.0
+SECTION HEADINGS
+S1,S2 AND S3
+@BOX 2.0
+IF NEXT CH IS 1,2, OR 3
+OUTPUT REMAINDER OF LINE
+TO CONTENTS FILE
+PLANT BOLD WARNING CHAR
+SET USER FORMAT BIT
+@BOX 3.0
+SET USER FORMAT BIT
+SET SECTION FLAG
+OUTPUT BUFFER FOLLOWED BY
+SGAP BLANK LINES OR
+SGAP + BGAP +2 LINES IF
+THIS WILL CAUSE A NEWPAGE
+@BOX 11.0
+DISPLACED TEXT BEING
+PROCESSED?
+@BOX 12.0
+REMEMBER TO RESTART AT
+START OF LINE
+@BOX 4.0
+END
+@BOX 5.0
+CHAPTER HEADING (R)
+@BOX 6.0
+OUTPUT NEWPAGE
+@BOX 7.0
+READ IN NO AND STRING
+SET CHAPTER NO AND PAGE 1
+@BOX 8.0
+UPDATE CONTENTS FILE
+@BOX 9.0
+OUTPUT CHAPTER HEADING
+IN BOLD LETTERS
+@BOX 10.0
+ADJUST PAGE LAYOUT VARIABLES
+@BOX 1.1
+SS:
+@BOX 2.1
+IF NEXTCH()=> CH = '1
+OR CH='2 OR CH='3 THEN
+   INCH();
+   IF CONTSTR >= 0 THEN
+      SELECT.OUTPUT(CONTSTR);
+      IF CH < '3 THEN
+         OUTCH('@);OUTCH('$L);
+      FI
+      0 => CNT;
+      IF CH > '1 THEN
+         SPACES(4);
+         4 => CNT;
+      FI
+      IPOS() => SAVPOS3;
+      WHILE INCH()=>CH /= '$L/='@ DO
+         1+>CNT;
+         OUTCH(CH) OD
+      OUTCH('%);
+      OUTI(PCOUNT,0);OUTCH('@);OUTCH(NL);
+      SETIPOS(SAVPOS3);
+      SELECTOUTPUT(OUTSTREAM);
+   FI
+FI
+BWC => BUFF[1+>BUFFPTR];
+1 => USER.FORM;
+@BOX 3.1
+1 => USERFORM;
+OUTBUFF(0);
+IND.INHB => SSW;1=>USERFORM;
+DISPLNS => TEMP;
+IF LCOUNT + SGAP +BGAP + 2 > PSIZE THEN
+   OUTBUFF(SGAP+BGAP+2);
+ELSE OUTBUFF(SGAP); FI
+@BOX 11.1
+IF DISPLNS /= TEMP = 0
+@BOX 12.1
+2 -> SAVPOS2;
+@BOX 4.1
+::END
+@BOX 5.1
+SR:
+@BOX 6.1
+OUTBUFF(-1);
+@BOX 7.1
+WHILE INCH() < %21 DO OD
+INBACKSPACE(1);
+-1=>I;
+WHILE INCH()=>CHTITLE[1+>I] /= '$L/='@ DO OD
+IF CHTITLE[I] = '@ THEN
+   INBACKSPACE(1);
+FI
+I => CHTITLEZ;
+MARGIN<<-1 + LSIZE/SPZ0 - CHTITLEZ->>1 =>
+   POSN.RHHEAD;
+@BOX 8.1
+IF CONTSTR >= 0 THEN
+   SELECTOUTPUT(CONTSTR);
+   CAPTION(%"@$L");
+   IF CHAPTER > 0 THEN
+      OUTI(CHAPTER,0);OUTCH('.);SPACES(2);
+   FI
+   FOR J < I DO OUTCH(CHTITLE[J]) OD
+   CAPTION(%"@$L");
+   SELECTOUTPUT(OUT.STREAM);
+FI
+@BOX 9.1
+NEWLINES(PRE.CH.GAP);
+PREV.STYLE -= 1 & 1 => PRINT.STYLE;
+PRINT.SEQ(ULINE,0);
+PRINT.SEQ(BOLDING,0);
+PRINT.SEQ(7,CHAP.FONT);
+PRINT.SEQ(AT.TO.C,0);
+IF CHAPTER > 0 THEN
+   OUTI(CHAPTER,0);OUTCH('.);SPACES(2);
+FI
+FOR J < I DO
+   OUTCH(CHTITLE[J]);
+OD
+PRINT.SEQ(7,FONT);
+NEWLINES(POST.CH.GAP);
+PRE.CH.GAP + POST.CH.GAP +> LCOUNT;
+@BOX 10.1
+IND.INHB => SSW; 1 => USERFORM;
+@END
+@TITLE DOC01.1.3(1,11)
+@COL 14R
+@COL 1S-2R-3T-4R-5T-15T-16R-6T-7R-8R-9R-13R-10R-11R-12F
+@FLOW 1-2-3N-4-5N-15N-6N-8-9-13-10-11-12
+@FLOW 3Y-10
+@FLOW 5Y-14-9
+@FLOW 6Y-7-9
+@FLOW 15Y-16-9
+@ROW 14-7
+@BOX 1.0
+OUTPUT BUFFER(N)
+@BOX 2.0
+REMOVE TRAILING SPACES
+@BOX 3.0
+IS THE BUFFER EMPTY?
+@BOX 4.0
+COUNT VSP SPACES
+@BOX 5.0
+IS THE BUFFER SPACE FREE
+OR USER FORMATTED
+@BOX 15.0
+AUTOMATIC TEXT JUSTIFICATION?
+@BOX 16.0
+JUSTIFY TEXT[DOC01.1.3.6]
+@BOX 6.0
+IS DEVICE VARIABLE SPACE TYPE?
+@BOX 7.0
+COMPUTE SPACE SIZE AND RIGHT JUSTIFY
+BY USING SPACES OF APPROPRIATE SIZE
+SPACES OF APPROPRIATE SIZE
+[DOC01.1.3.2]
+@BOX 8.0
+RIGHT JUSTIFY BY INSERTING
+EXTRA SPACES
+[DOC01.1.3.1]
+@BOX 9.0
+CREATE MARGIN AND
+PRINT THE BUFFER
+[DOC01.1.3.4]
+@BOX 13.0
+OUTPUT NEWLINE
+INC LINE COUNT
+@BOX 10.0
+OUTPUT N BLANK LINES
+AND INC LINE COUNT
+[DOC01.1.3.3]
+@BOX 11.0
+RESET BUFFPTR
+REMEMBER IF UNDERLINE AND BOLD ARE
+SET AND TURN THEM OFF
+IF USER FORMAT BIT SET RESET INDENT
+RESET USER FORMAT BIT IF NOT IN
+USER FORMATTED DIAGRAM
+RESET LPOS
+SPACE FILL BUFFER TO INDENT POSITION
+@BOX 12.0
+EXIT
+@BOX 14.0
+CONVERT VSP
+TO SPACES
+@BOX 1.1
+PROC OUTBUFF(N);
+$IN J,K,PTR,SYM,COUNT;
+PSPEC SPACE.FILL(INTEGER);
+PSPEC VAR.SPACE.FILL(INTEGER);
+PSPEC JUSTIFY.TEXT(INTEGER);
+#DOC01.1.3.1
+#DOC01.1.3.2
+#DOC01.1.3.6
+@BOX 2.1
+WHILE BUFFPTR >= 0 AND BUFF[BUFFPTR] = VSP DO
+1 -> BUFFPTR;
+SPZ -> LPOS;
+OD
+@BOX 3.1
+IF BUFFPTR < 0
+@BOX 4.1
+0 => COUNT ;
+FOR I < BUFFPTR + 1 DO
+   IF BUFF[I] = VSP THEN
+      1 +> COUNT
+   ELSE
+   IF BUFF[I]='. AND BUFF[I+1]=VSP
+     AND BUFF[I+2]=VSP THEN
+      SP=>BUFF[I+1]=>BUFF[I+2];
+FI FI
+OD
+@BOX 5.1
+IF COUNT = 0 OR USER.FORM /= 0
+@BOX 15.1
+IF SPEC.DEV & 8 = 0
+@BOX 16.1
+JUSTIFY.TEXT(COUNT);
+@BOX 6.1
+IF SPEC.DEV&1 = 0
+@BOX 7.1
+VAR.SPACE.FILL(COUNT);
+@BOX 8.1
+SPACE.FILL(COUNT);
+@BOX 9.1
+#DOC01.1.3.4
+@BOX 13.1
+NEWLINES(1);
+1 +> LCOUNT;
+@BOX 10.1
+#DOC01.1.3.3
+@BOX 11.1
+-1 => BUFFPTR;
+PRINT.STYLE => PREV.STYLE;
+IF USER.FORM /= 0 THEN
+   0=>PREV.STYLE;
+   -1 => INDENT;
+FI
+3 => PRINT.STYLE;
+PRINT.SEQ(ULINE,0);
+PRINT.SEQ(BOLDING,0);
+IF 1 -> U.F.DIAG =< 0 THEN
+   0 => USER.FORM;
+FI
+0 => LPOS;-3 => LPT.CHPOS;
+IF INDENT >= 0 THEN
+   TABLIST [INDENT] + INDENT * SPZ0 => LPOS;
+   TWC => BUFF[1+>BUFFPTR];
+   INDENT => BUFF[1+>BUFFPTR];
+FI
+@BOX 12.1
+END
+@BOX 14.1
+FOR K < BUFFPTR + 1 DO
+IF BUFF[K] = VSP THEN
+SP => BUFF[K]
+FI OD
+@END
+@TITLE DOC01.1.3.1(1,11)
+@COL 1S-2R-3R-4T-5R-6R-7F
+@FLOW 1-2-3-4=1-5-6-7
+@FLOW 4=0-6
+@BOX 1.0
+RIGHT JUSTIFY BY INSERTING SPACES
+@BOX 2.0
+THE NUMBER OF VSP SPACES IS N
+THE NUMBER OF SPACES REQUIRED(X)
+= LINE SIZE - CHARS IN BUFF
+FORM A QUOTIENT(Q) AND
+A REMAINDER(A) OF X/N
+@BOX 3.0
+LET M1 = THE NUMBER OF SPACES
+TO BECOME SP1 SPACES EACH
+LET M2 = THE NUMBER OF SPACES
+TO BECOME SP2 SPACES EACH
+M1 = N - REM; M2 = REM
+SP1=Q+1  ;  SP2=Q+2
+@BOX 4.0
+TEST RANDOM BIT
+@BOX 5.0
+INTERCHANGE
+SP1 WITH SP2
+AND M1 WITH M2
+@BOX 6.0
+CHANGE THE FIRST M1 SPACES TO SIZE SP1
+CHANGE THE NEXT M2 SPACES TO SIZE SP2
+@BOX 7.0
+EXIT
+@BOX 1.1
+PROC SPACE.FILL(N);
+INTEGER COUNT,Q,R,M1,M2,SP1,SP2,SP.SIZE,PTR,I,K,NEW.PTR,NO.SPS,X;
+@BOX 2.1
+LSIZE - LPOS/SPZ => X;
+X/N => Q;
+Q*N -: X => R;
+@BOX 3.1
+Q + 1 => SP1 + 1 => SP2;
+R => M2 -: N => M1;
+@BOX 4.1
+IF LCOUNT & 1 = 0 OR M2 = 0
+@BOX 5.1
+SP1 => SP.SIZE;
+SP2 => SP1;
+SP.SIZE => SP2;
+M1 => NO.SPS;
+M2 => M1;
+NO.SPS => M2;
+@BOX 6.1
+1 +> BUFFPTR + X => PTR - 1 => NEWPTR;
+$WH 1 -> BUFFPTR > 0 DO
+$IF BUFF[BUFFPTR] /= VSP $TH
+   BUFF[BUFFPTR] => BUFF[1 -> PTR]
+$EL
+$FO SP1 DO SP => BUFF[1 -> PTR] OD
+$IF 1 -> M1 = 0 $TH SP2 => SP1 $FI
+$FI   OD
+NEWPTR => BUFFPTR;
+@BOX 7.1
+END
+@END
+@TITLE DOC01.1.3.2(1,11)
+@COL 1S-2R-3R-4T-5R-6T-7R-8R-9T-10F
+@FLOW 1-2-3-4Y-5-6Y-7-8-9Y-10
+@FLOW 9N-4
+@FLOW 4N-8
+@FLOW 6N-8
+@BOX 1.0
+JUSTIFY BY CHANGING SPACE SIZE
+@BOX 2.0
+THE NUMBER OF VSP SPACES IS N
+THE NUMBER SPACES REQUIRED X
+FORM A QUOTIENT(Q)
+AND A REMAINDER(R)
+VSP SIZE(Z) = 10 + Q
+N-R(COUNT) VSPS SHOULD BE SIZE Z
+AND R VSPS SHOULD BE SIZE Z+1
+@BOX 3.0
+SET PTR TO SCAN BUFFER
+@BOX 4.0
+IS BUFF[PTR] =VSP?
+@BOX 5.0
+BUFF[PTR]=VSP OF SIZE Z
+COUNT=COUNT-1
+@BOX 6.0
+IS COUNT=0?
+@BOX 7.0
+Z = Z + 1
+@BOX 8.0
+PTR=PTR+1
+@BOX 9.0
+IS THE PTR AT END OF BUFFER?
+@BOX 10.0
+EXIT
+@BOX 1.1
+PROC VAR.SPACE.FILL(N);
+$IN Q,R,PTR,VSPCH,X,COUNT ;
+@BOX 2.1
+LSIZE - LPOS + 1/SPZ => X;
+10 * X/N => Q;
+10 * X => R ;
+N * Q -> R ;
+IF 10 +> Q > %3C THEN %3C => Q FI
+%C0 + Q => VSPCH;
+N-R => COUNT;
+@BOX 3.1
+0 => PTR;
+@BOX 4.1
+IF BUFF[PTR] /= VSP
+@BOX 5.1
+VSPCH => BUFF[PTR];
+1 -> COUNT;
+@BOX 6.1
+IF COUNT /= 0
+@BOX 7.1
+1 +> VSPCH ;
+@BOX 8.1
+1 +> PTR;
+@BOX 9.1
+IF PTR /= BUFFPTR + 1
+@BOX 10.1
+END
+@END
+@TITLE DOC01.1.3.3(1,11)
+@COL 1S-2T-4T-5R-6R-7R-8R-9T-10R-11F
+@COL 12R
+@ROW 5-12
+@FLOW 1-2N-4Y-5-6-7-8-9Y-10-11
+@FLOW 2Y-5
+@FLOW 4N-12-11
+@FLOW 12
+@FLOW 9N-11
+@BOX 1.0
+OUTPUT N BLANK LINES
+@BOX 2.0
+IS FORCE NEW PAGE SET
+@BOX 4.0
+END OF PAGE?
+@BOX 5.0
+MOVE TO FOOT OF PAGE
+OUTPUT DATE
+@BOX 6.0
+THROW NEW PAGE
+@BOX 7.0
+RESET LINECOUNT AND USER
+FORMAT DIAGRAM COUNT
+@BOX 8.0
+INC PAGE NUMBER
+IF REQUIRED
+OUTPUT PAGE HEADING
+@BOX 9.0
+ANY DISPLACED
+SPACE/TXT
+@BOX 10.0
+OUTPUT DISPLACED
+SPACE/TXT
+@BOX 11.0
+END
+@BOX 12.0
+ADD N TO LINECOUNT
+OUTPUT N NEWLINES
+@BOX 1.1
+::OUTPUT N BLANK LINES
+BEGIN
+$IN I;
+@BOX 2.1
+IF N < 0
+@BOX 4.1
+IF LCOUNT + N < PSIZE
+@BOX 5.1
+NEWLINES(PSIZE-LCOUNT);
+@BOX 6.1
+OUTCH("$P");
+@BOX 7.1
+PAGE.GAP => LCOUNT;
+0 => U.F.DIAG;
+@BOX 8.1
+IF PCOUNT > 0 THEN
+   1 +> PCOUNT;
+   PRINT.SEQ(AT.TO.C,POSN.LHNO);
+   PRINT.SEQ(7,HEADER.FONT);
+   IF PCOUNT & 1 = 0 AND DOUBLESIDED = 1 THEN
+      OUTI(PCOUNT,0);
+      PRINT.SEQ(AT.TO.C,POSN.LHHEAD);
+      FOR I < DOCTITLEZ DO
+         OUTCH(DOCTITLE [I]);
+      OD
+  ELSE
+     PRINT.SEQ(AT.TO.C,POSN.RHHEAD);
+        FOR I < CHTITLEZ DO
+           OUTCH (CHTITLE [I]);
+           1 +> LPT.CHPOS;
+        OD
+     PRINT.SEQ(AT.TO.C,POSN.RHNO);
+     OUTI(PCOUNT,3);
+  FI
+  PRINT.SEQ(7,FONT);
+FI
+NEWLINES(PAGE.GAP) ;
+@BOX 9.1
+IF DISPLNS = 0
+@BOX 10.1
+IF LCOUNT /= PAGE.GAP THEN
+NEWLINES(BGAP);BGAP +> LCOUNT;
+FI
+IF DISPLNS > 0 THEN
+   DISPLNS => I ;
+   0 => DISPLNS ;
+   OUTBUFF (I) ;
+ELSE
+   INDENT => SAVIND;
+   I.POS () => SAVPOS2 ;
+   SET.I.POS (SAVPOS1) ;
+   0 => DISPLNS ;
+FI
+@BOX 11.1
+END
+@BOX 12.1
+N +> LCOUNT;
+IF N /= 0 THEN
+   NEWLINES(N);
+FI
+@END
+
+@TITLE DOC01.1.3.4(1,11)
+@COL 1S-2T-3R-4F
+@COL 5R
+@ROW 3-5
+@FLOW 1-2N-3-4
+@FLOW 2Y-5-4
+@BOX 1.0
+PRINT BUFFER
+@BOX 2.0
+IS HEADING BIT SET
+IN USERFORM?
+@BOX 3.0
+OUTPUT BUFFER ACCORDING
+TO DEVICE TYPE AND MARK
+IF HIGHLIGHT BIT IS SET
+@BOX 4.0
+END
+@BOX 5.0
+GENERATE HEADING OUTPUT
+@BOX 1.1
+::PRINT BUFFER CONTENTS
+@BOX 2.1
+IF USERFORM > 1
+@BOX 3.1
+IF HIGHLIGHT /= 0 THEN
+   CAPTION(%"!");
+   1 &> HIGHLIGHT;
+   1 +> LPT.CHPOS;
+FI
+PRINT.SEQ(AT.TO.C,MARGIN/SPZ0);
+ALTERNATIVE DEVNO FROM
+::DBL
+BEGIN
+PREV.STYLE -= 3 => PRINT.STYLE;
+PRINT.SEQ(ULINE,0);
+PRINT.SEQ(BOLDING,0);
+FOR I < BUFFPTR + 1 DO
+   BUFF[I] => CH;
+   IF CH < %80 THEN
+      OUTCH(CH);
+      PROCESS.STYLE(CH);
+   ELSE
+   IF CH & %C0 = %C0 THEN
+      PRINT.SEQ(VARSP,CH+1&%BF);
+      OUTCH(SP);
+      PROCESS.STYLE(SP);
+      PRINT.SEQ(VARSP,%B);
+      PROCESS.STYLE(SP);
+   ELSE
+   FOR J < NO.WCS DO
+      IF PRINT.NO[J]=CH THEN
+         IF J < VALTYPE THEN
+            PRINT.SEQ(J,0);
+         ELSE
+            PRINT.SEQ(J,BUFF[1+>I]);
+         FI
+      -> OUT;
+      FI
+   OD
+FI FI
+OUT:
+OD
+END
+::LPT
+BEGIN
+FOR I < BUFFPTR + 1 DO
+   IF BUFF[I] => CH < %80 THEN
+      OUTCH (BUFF [I]);
+      1+>LPT.CHPOS;
+   ELSE
+      IF %80 ->CH < NO.WCS THEN
+         IF CH < VAL.TYPE THEN
+            PRINT.SEQ(CH,0);
+         ELSE
+            PRINT.SEQ(CH,BUFF[1+>I]);
+         FI
+      FI
+   FI
+OD
+-3 => LPT.CHPOS;
+END
+::SANTEC
+BEGIN
+PREV.STYLE -= 3 => PRINT.STYLE;
+PRINT.SEQ(ULINE,0);
+PRINT.SEQ(BOLDING,0);
+FOR I < BUFFPTR + 1 DO
+   BUFF[I] => CH;
+   IF CH < %80 THEN
+      IF CH = SP AND VSPZ/=SPZ THEN
+         PRINT.SEQ(VARSP,SPZ=>VSPZ);
+      FI
+      OUTCH(CH);
+   ELSE
+   IF CH & %C0 = %C0 THEN
+      IF CH & 1 + REQ.SPZ => CH /= VSPZ THEN
+         PRINT.SEQ(VARSP,CH=>VSPZ);
+      FI
+      OUTCH(SP);
+   ELSE
+   FOR J < NO.WCS DO
+      IF PRINT.NO[J] = CH THEN
+         IF J < VALTYPE THEN
+            PRINT.SEQ(J,0);
+         ELSE
+            PRINT.SEQ(J,BUFF[1+>I]);
+         FI
+      ->OUT;
+      FI
+   OD
+   FI FI
+OUT:
+OD
+PRINT.SEQ(VARSP,SPZ0=>VSPZ);
+END
+
+END
+@BOX 4.1
+::END
+@BOX 5.1
+FOR J < 6 DO
+   FOR I < BUFFPTR + 1 DO
+      IF BUFF[I] = " " THEN OUTCH(" ");
+      ELSE
+      BUFF[I] - "0" * 7 => PTR;
+      IF BUFF[I] >"9" THEN
+         BUFF[I] - "7" * 7 => PTR;
+      FI
+      HDFORM[PTR + J + 1] => SYM;
+      FOR K < HDFORM[PTR] DO
+         IF SYM & %80 = 0 THEN
+            OUTCH(" ");
+            ELSE OUTCH(HDCHAR);
+         FI
+         SYM <<- 1 => SYM;
+      OD
+      FI
+   OD
+NEWLINES(1);
+OD
+6 +> LCOUNT;
+@END
+
+@TITLE DOC01.1.4(1,11)
+@COL 1S-2T-8N-3R-4F
+@COL 5T-6R
+@COL 7R
+@ROW 8-5
+@ROW 3-6-7
+@FLOW 1-2SANTEC-8-3-4
+@FLOW 2DIABLO/LPT-5DIABLO-6-4
+@FLOW 5LPT-7-4
+@BOX 1.0
+PRINT.SEQ(NO,VAL)
+@BOX 2.0
+DEVICE TYPE?
+@BOX 3.0
+TAKE SEPARATE ACTION FOR
+EACH FORM OF PRINT SEQUENCE
+   0 - UNDERLINING ON/OFF
+   1 - BOLDING ON/OFF
+   2 - HALF LINE UP
+   3 - HALF LINE DOWN
+   4 - AT M CENTREING
+   5 - AT N CENTREING
+   6 - DEFINE FONT
+   7 - SELECT FONT
+   8 - RELATIVE TABBING
+   9 - ABSOLUTE TABBING
+   10- VARIABLE SPACE
+@BOX 4.0
+END
+@BOX 5.0
+DIABL0?
+@BOX 6.0
+TAKE SEPARATE ACTION FOR
+EACH PRINT SEQUENCE NUMBER
+   0 - UNDERLINING ON/OFF
+   1 - BOLDING ON/OFF
+   2 - HALF LINE UP
+   3 - HALF LINE DOWN
+   4 - AT M CENTREING
+   5 - AT N CENTREING
+   6 - DEFINE FONT
+   7 - SELECT FONT
+   8 - RELATIVE TABBING
+   9 - ABSOLUTE TABBING
+   10- VARIABLE SPACING
+@BOX 7.0
+TAKE SEPARATE ACTION FOR
+EACH PRINT SEQ NUMBER
+   0 - IGNORED
+   1 - IGNORED
+   2 - IGNORED
+   3 - IGNORED
+   4 - AT M
+   5 - AT N
+   6 - IGNORED
+   7 - IGNORED
+   8 - REL TAB
+   9 - ABS TAB
+@BOX 1.1
+PROC PRINT.SEQ(NO,VAL)
+DATAVEC SES0A($LO8)
+ESC 'u 'g
+END
+DATAVEC SES0B($LO8)
+ESC 'u '@
+END
+DATAVEC SES1A($LO8)
+ESC 'b 'f
+END
+DATAVEC SES1B($LO8)
+ESC 'b '@
+END
+DATAVEC SES7($LO8)
+ESC 'a
+END
+DATAVEC SES6($LO8)
+ESC 'd
+END
+DATAVEC SES10($LO8)
+ESC 'w
+END
+DATAVEC SES2($LO8)
+ESC 'D
+END
+DATAVEC SES3($LO8)
+ESC 'U
+END
+DATAVEC ESC.SEQ($AD[$LO8])
+SES0A SES0B SES1A SES1B
+END
+DATAVEC DES2($LO8)
+ESC %9E %84 ESC %8A ESC %9E %89
+END
+DATAVEC DES3($LO8)
+ESC %9E %84 %8A ESC %9E %89
+END
+@BOX 2.1
+IF DEVNO /= 2
+@BOX 3.1
+ALTERNATIVE NO FROM
+BEGIN
+   CAPTION(ESC.SEQ[NO<<-1+(PRINT.STYLE->>NO&1)]);
+   1<<-NO -=> PRINT.STYLE;
+END
+BEGIN
+   CAPTION(ESC.SEQ[NO<<-1+(PRINT.STYLE->>NO&1)]);
+   1<<-NO -=> PRINT.STYLE;
+END
+BEGIN
+   CAPTION(^SES2);
+END
+BEGIN
+   CAPTION(^SES3);
+END
+BEGIN   ::AT M
+   LSIZE - LPOS ->> 1/SPZ0 => NDENT;
+   PRINT.SEQ(AT.TO.C,NDENT);
+END
+PRINT.SEQ(AT.TO.C,NDENT);
+BEGIN
+   CAPTION(^SES6);
+   OUTCH(VAL+'@);
+   FOR M<8 DO
+      OUTCH(FIDT[M]);
+   OD
+END
+BEGIN
+   CAPTION(^SES7);
+   OUTCH(VAL+'@);
+END
+BEGIN
+   TABLIST[VAL] + VAL + 3 => F;
+   OUTCH(ESC);OUTCH('h);
+   OUTCH(F->>6&%3F+'@);
+   OUTCH(F&%3F+'@);
+END
+BEGIN
+   OUTCH(ESC);OUTCH('h);
+   OUTCH(VAL+3->>6&%3F+'@);
+   OUTCH(VAL+3&%3F+'@);
+END
+BEGIN
+   CAPTION(^SES10);
+   OUTCH('@);
+   OUTCH('A);
+   OUTCH(',);
+   OUTCH(VAL->>6&%3F+'@);
+   OUTCH(VAL&%3F+'@);
+   OUTCH('.);
+END
+END
+@BOX 5.1
+IF DEVNO = 1
+@BOX 6.1
+ALTERNATIVE NO FROM
+1 -=> PRINT.STYLE;    ::UNDERLINING
+2 -=> PRINT.STYLE;    ::BOLDING
+CAPTION(^DES2);       ::HALF LINE UP
+CAPTION(^DES3);       ::HALF LINE DOWN
+BEGIN                 ::AT M
+   LSIZE-LPOS->>1/SPZ0=>NDENT;
+   PRINT.SEQ(AT.TO.C,NDENT);
+END
+PRINT.SEQ(AT.TO.C,NDENT);  ::AT N
+BEGIN
+   ::FONT ASSIGNMENT IGNORED
+END
+BEGIN
+   ::FONT SELECTION IGNORED
+END
+BEGIN                   ::REL TAB
+   OUTCH(ESC);OUTCH(%89);
+   OUTCH(TABLIST[VAL]+VAL+18!%80);
+END
+BEGIN                   ::ABS TAB
+   OUTCH(ESC);OUTCH(%89);OUTCH(VAL+18!%80);
+END
+BEGIN                 ::VARIABLE SPACE
+   OUTCH(ESC);OUTCH(%9F);OUTCH(VAL!%80);
+END
+END
+@BOX 4.1
+END
+@BOX 7.1
+ALTERNATIVE NO FROM
+BEGIN
+   ::IGNORED
+END
+BEGIN
+   ::IGNORED
+END
+BEGIN
+   ::IGNORED
+END
+BEGIN
+   ::IGNORED
+END
+BEGIN   ::AT M
+   LSIZE-LPOS->>1/SPZ0=>NDENT;
+   PRINT.SEQ(AT.TO.C,NDENT);
+END
+PRINT.SEQ(AT.TO.C,NDENT);
+BEGIN
+   ::IGNORED
+END
+BEGIN
+   ::IGNORED
+END
+BEGIN   ::REL TAB
+   SPACES(TABLIST[VAL]+VAL-LPT.CHPOS);
+   VAL+TABLIST[VAL]=>LPT.CHPOS;
+END
+BEGIN   ::ABS TAB
+   SPACES(VAL-LPT.CHPOS);
+   VAL=>LPT.CHPOS;
+END
+END
+@END
+@TITLE DOC01.1.4.1(1,11)
+@COL 1S-2R-3F
+@FLOW 1-2-3
+@BOX 1.0
+PROCESS STYLE - DIABLO ONLY
+@BOX 2.0
+PRINT IN STYLE SPECIFIED
+@BOX 3.0
+END
+@BOX 1.1
+PROC PROCESS.STYLE(CH);
+$IN TEMP,NO;
+@BOX 2.1
+PRINT.STYLE => TEMP;
+0 => NO;
+WHILE TEMP /= 0 DO
+   IF TEMP & 1 /= 0 THEN
+      ALTERNATIVE NO FROM
+      BEGIN
+         OUTCH(BS);OUTCH(UL);
+      END
+      BEGIN
+         OUTCH(BS);OUTCH(ESC);
+         OUTCH(%9F);OUTCH(%8C);
+         OUTCH(CH);OUTCH(ESC);
+         OUTCH(%9F);OUTCH(%8B);
+      END
+      END
+   FI
+   TEMP->>1=>TEMP;
+   1+>NO;
+OD
+@BOX 3.1
+END
+@END
+@TITLE DOC01.1.3.6(1,11)
+@COL 1S-2R-3R-4T-5R-6T-7R-8R-9T-10F
+@FLOW 1-2-3-4Y-5-6Y-7-8-9Y-10
+@FLOW 9N-4
+@FLOW 4N-8
+@FLOW 6N-8
+@BOX 1.0
+JUSTIFY BY CHANGING SPACE SIZE
+@BOX 2.0
+THE NUMBER OF VSP SPACES IS N
+THE NUMBER SPACES REQUIRED X(HEPS/8)
+FORM A QUOTIENT(Q)
+AND A REMAINDER(R)
+VSP SIZE(Z) = Q
+N-R(COUNT) VSPS SHOULD BE SIZE Z
+AND R VSPS SHOULD BE SIZE Z+1
+@BOX 3.0
+SET PTR TO SCAN BUFFER
+@BOX 4.0
+IS BUFF[PTR] =VSP?
+@BOX 5.0
+BUFF[PTR]=VSP OF SIZE Z
+COUNT=COUNT-1
+@BOX 6.0
+IS COUNT=0?
+@BOX 7.0
+Z = Z + 1
+@BOX 8.0
+PTR=PTR+1
+@BOX 9.0
+IS THE PTR AT END OF BUFFER?
+@BOX 10.0
+EXIT
+@BOX 1.1
+PROC JUSTIFY.TEXT(N);
+$IN Q,R,PTR,VSPCH,X,COUNT ;
+@BOX 2.1
+LSIZE - LPOS => X;
+X/N => Q;
+X => R;
+N*Q -> R;
+Q + SPZ => REQ.SPZ;
+%C0 => VSPCH;
+N-R => COUNT;
+@BOX 3.1
+0 => PTR;
+@BOX 4.1
+IF BUFF[PTR] /= VSP
+@BOX 5.1
+VSPCH => BUFF[PTR];
+1 -> COUNT;
+@BOX 6.1
+IF COUNT /= 0
+@BOX 7.1
+1 +> VSPCH ;
+@BOX 8.1
+1 +> PTR;
+@BOX 9.1
+IF PTR /= BUFFPTR + 1
+@BOX 10.1
+END
+@END
+@TITLE DOC01.2(1,8)
+@COL 1S-2R-3R-4R-5T-6T-7R-8T-9T-10R-11T-12R-13F
+@FLOW 1-2-3-4-5OK-6Y-7-8Y-9ADDED-10-11N-12-13
+@FLOW 5NO MORE-13
+@FLOW 6N-5
+@FLOW 8N-5
+@FLOW 9EXISTS-5
+@FLOW 11Y-5
+@BOX 1.0
+SPELL
+@BOX 2.0
+READ DICTIONARY FILE
+@BOX 3.0
+SELECT CURRENT FILE AS OUTPUT
+@BOX 4.0
+SELECT TXT INPUT
+@BOX 5.0
+SCAN FOR ALPHABETIC
+@BOX 6.0
+WAS PREVIOUS CH A WORD SEPARATOR?
+@BOX 7.0
+READ CHS UNTIL NON-ALPHABETIC
+@BOX 8.0
+IS CURRENT CH A SEPARATOR?
+@BOX 9.0
+ADD NAME TO DICTIONARY
+@BOX 10.0
+PRINT NEWNAME
+@BOX 11.0
+ROOM FOR MORE NAMES?
+@BOX 12.0
+CAPTION - RUN OUT OF SPACE FOR NAMES
+@BOX 13.0
+END
+@BOX 1.1
+PROC SPELL(DICT,TXT);
+$IN I,CH,SYM,CURIN,CUROUT,OUT,DICTIN,TXTIN,PREVSYM,LASTCH,LASTW;
+$LI/$AD[$LO8] CURFILE= ;
+$IN S1,S2,S3;
+::PDP CREATE.SEGMENT(-1,%2000);MAP(PW1=>S1,4,1);
+::PDP CREATE.SEGMENT(-1,%2000);MAP(PW1=>S2,5,1);
+::PDP CREATE.SEGMENT(-1,%2000);MAP(PW1=>S3,6,1);
+::MU6 CREATE.SEGMENT(-1,%10000);INTERCHANGE(PW1=>S1,WORKSEG);
+::MC68000 RELEASE.SEGMENT(48);RELEASE.SEGMENT(49);
+::MC68000 RELEASE.SEGMENT(50);RELEASE.SEGMENT(51);
+::MC68000 CREATE.SEGMENT(48,%4000);CREATE.SEGMENT(49,%4000);
+::MC68000 CREATE.SEGMENT(50,%4000);CREATE.SEGMENT(51,%4000);
+::MC68000 MAP(48,-1,0);MAP(49,-1,0);MAP(50,-1,0);MAP(51,-1,0);
+::PDP $LI CHLISTZ=15000,WLISTZ=2200;
+::MU6 $LI CHLISTZ=40000,WLISTZ=6000;
+::MC68000 $LI CHLISTZ=40000,WLISTZ=6000;
+-1 => LASTCH => LASTW;
+$PS ADDN()/$IN;
+#DOC01.2.1
+@BOX 2.1
+CURRENT.INPUT()=>CUR.IN;
+SELECT.INPUT(DEFINE.INPUT(-1,DICT,0)=>DICTIN);
+NEXT.WORD:
+WHILE IENQ() & %C = 0 AND [INCH()=>SYM<'A OR SYM >'z OR SYM >'Z<'a]
+   DO OD
+IF IENQ() & %C = 0 THEN
+   LAST.CH=>I;
+   WHILE SYM >='A =<'Z OR SYM >='a =<'z DO
+      SYM => CHLIST[1+>I];
+      INCH() => SYM;
+   OD
+   0 => CHLIST[1+>I];
+   ADDN();
+   ->NEXT.WORD;
+FI
+@BOX 3.1
+CURRENT.OUTPUT() => CUROUT;
+SELECTOUTPUT(DEFINEOUTPUT(-1,CURFILE,0,0)=>OUT);
+@BOX 4.1
+SELECTINPUT(DEFINEINPUT(-1,TXT,0)=>TXTIN);
+'$L => PREV.SYM;
+@BOX 5.1
+WHILE IENQ() & %C = 0 AND [INCH() => SYM<'A OR SYM >'z OR SYM >'Z<'a] DO
+   SYM => PREV.SYM;
+OD
+IF IENQ() & %C /= 0
+@BOX 6.1
+IF PREV.SYM /= '$L /= " "
+@BOX 7.1
+SYM=>CHLIST[LAST.CH+1=>I];
+WHILE INCH()=>SYM >='A =<'Z OR SYM >='a =<'z DO
+   SYM => CHLIST[1+>I];
+OD
+0 => CHLIST[1+>I];
+@BOX 8.1
+IF SYM=>PREVSYM /='$L /= " "
+@BOX 9.1
+LAST.CH => I;
+IF ADDN() = 0
+@BOX 10.1
+WHILE CHLIST[1+>I]=>SYM /= 0 DO OUTCH(SYM) OD
+NEWLINES(1);
+@BOX 11.1
+IF LASTCH < CHLISTZ AND LASTW < WLISTZ
+@BOX 12.1
+SELECTOUTPUT(CUROUT);
+CAPTION(%"DICTIONARY CHARACTER LIST FULL");
+NEWLINES(1);
+@BOX 13.1
+SELECTOUTPUT(CUROUT);
+SELECTINPUT(CURIN);
+END.OUTPUT(OUT,0);
+ENDINPUT(DICTIN,0);
+ENDINPUT(TXTIN,0);
+::PDP RELEASE.SEGMENT(S1);RELEASE.SEGMENT(S2);
+::PDP RELEASE.SEGMENT(S3);
+::MU6 INTERCHANGE(WORKSEG,S1);RELEASESEGMENT(S1);
+::MC68000 RELEASE.SEGMENT(48);RELEASE.SEGMENT(49);
+::MC68000 RELEASE.SEGMENT(50);RELEASE.SEGMENT(51);
+END
+@END
+@TITLE DOC01.2.1(1,6)
+@COL 1S-2R-3R-4T-5T-6R-7T-8T-9R-10F
+@COL 11R-12R
+@ROW 5-11
+@FLOW 1-2-3-4N-5Y-6-7Y-8Y-9-10
+@FLOW 4Y-11-12-10
+@FLOW 5N-4
+@FLOW 7N-4
+@FLOW 8N-7
+@BOX1.0
+ADDN
+@BOX2.0
+DECLARATIONS
+@BOX3.0
+COMPUTE HASH
+SET NLIST PTR
+@BOX4.0
+COMPARED ALL NAMES
+IN NLIST?
+@BOX5.0
+ARE HASHS THE SAME?
+@BOX6.0
+SET POINTERS FOR
+NAME COMPARISON
+@BOX7.0
+NEXT CHARACTERS
+THE SAME?
+@BOX8.0
+ALL NAME COMPARED?
+@BOX9.0
+RETURN NLIST PTR
+AS INTID
+@BOX10.0
+EXIT
+@BOX11.0
+MAKE NEW NLIST
+ENTRY AT LASTN POSITION
+@BOX12.0
+RETURN NEW NAME
+INDEX AS INTID
+@BOX1.1
+$PR ADDN;
+@BOX2.1
+$IN I,J,K,L,HASH1,N;
+@BOX3.1
+LASTCH => I + 1 => K;
+0 => HASH1;
+$WH CHLIST[1+>I] => J /= 0 DO
+IF J >= 'a THEN
+J-'a+'A => J => CHLIST[I] FI
+J & %1F + HASH1 & %FF <<- 1 => HASH1 OD
+I - LASTCH - 1 => N + (HASH1 <<- 7) => HASH1;
+1 + LASTW => I;
+@BOX4.1
+IF 1 -> I < 0
+@BOX5.1
+IF HASH OF WLIST[I] /= HASH1
+@BOX6.1
+NPTR OF WLIST[I] => J;
+0 => L;
+@BOX7.1
+IF CHLIST[J+L]&%7F /= CHLIST[K+L]&%7F
+@BOX8.1
+IF 1 +> L /= N
+@BOX9.1
+0 => ADDN;
+@BOX10.1
+END
+@BOX11.1
+1 +> LASTW;
+LASTCH + 1 => NPTR OF WLIST[LASTW];
+HASH1 => HASH OF WLIST[LASTW];
+N +> LASTCH;
+@BOX12.1
+-1 => ADDN;
+@END
+@TITLE DOC01.3(1,8)
+@COL 8R
+@COL 1S-6R-2T-3R-4R-7R-5F
+@ROW 8-3
+@FLOW 1-6-2OK-3-4-7-5
+@FLOW 2FAIL-8-5
+@BOX 1.0
+LIST INDEX(INDEX,OUTFILE)
+@BOX 6.0
+SELECT OUTPUT OUTFILE
+@BOX 2.0
+READ NAMES FROM INDEX
+[DOC01.5.1]
+@BOX 3.0
+SORT NAMES
+[DOC01.5.2]
+@BOX 4.0
+PRINT NAMES
+@BOX 7.0
+RESELECT ORIGINAL OUTPUT
+@BOX 5.0
+END
+@BOX 8.0
+SELECT ORIGINAL OUTPUT
+MONITOR - INDEX TOO BIG
+@BOX 1.1
+PROC LIST.INDEX(INDEX,OUTFILE);
+$IN I,J,SYM,OLDOUT,NEWOUT;
+$IN S1,S2,S3;
+::PDP CREATE.SEGMENT(-1,%2000);MAP(PW1=>S1,4,1);
+::PDP CREATE.SEGMENT(-1,%2000);MAP(PW1=>S2,5,1);
+::PDP CREATE.SEGMENT(-1,%2000);MAP(PW1=>S3,6,1);
+::MU6 CREATESEGMENT(-1,%10000);INTERCHANGE(PW1=>S1,WORKSEG);
+::MC68000 RELEASE.SEGMENT(48);RELEASE.SEGMENT(49);
+::MC68000 RELEASE.SEGMENT(50);RELEASE.SEGMENT(51);
+::MC68000 CREATE.SEGMENT(48,%4000);CREATE.SEGMENT(49,%4000);
+::MC68000 CREATE.SEGMENT(50,%4000);CREATE.SEGMENT(51,%4000);
+::MC68000 MAP(48,-1,0);MAP(49,-1,0);MAP(50,-1,0);MAP(51,-1,0);
+@BOX 6.1
+CURRENT.OUTPUT()=>OLD.OUT;
+SELECTOUTPUT(DEFINEOUTPUT(-1,OUTFILE,0,0)=>NEWOUT);
+@BOX 2.1
+IF READ.NAMES(INDEX,^CHLIST,^NLIST) < 0
+@BOX 3.1
+SORT.NAMES(^CHLIST,^NLIST);
+@BOX 4.1
+-1 => I;
+WHILE NLIST[1+>I]=>J /= 0 DO
+   NEWLINES(1);
+   WHILE CHLIST[1+>J-1] => SYM /= 0 DO
+      OUTCH(SYM);
+   OD
+   WHILE CHLIST[1+>J-1] => SYM >= %20 DO
+      OUTCH(SYM);
+   OD
+OD
+@BOX 7.1
+SELECTOUTPUT(OLDOUT);
+ENDOUTPUT(NEWOUT,0);
+@BOX 5.1
+::PDP RELEASE.SEGMENT(S1);
+::PDP RELEASE.SEGMENT(S2);RELEASE.SEGMENT(S3);
+::MU6 INTERCHANGE(WORKSEG,S1);RELEASE.SEGMENT(S1);
+::MC68000 RELEASE.SEGMENT(48);RELEASE.SEGMENT(49);
+::MC68000 RELEASE.SEGMENT(50);RELEASE.SEGMENT(51);
+END
+@BOX 8.1
+ENDOUTPUT(NEWOUT,-1);
+SELECTOUTPUT(OLDOUT);
+CAPTION(%"$LINDEX TOO BIG");
+@END
+@TITLE DOC01.4(1,8)
+@COL 8R
+@COL 1S-6R-2T-3R-4R-7R-5F
+@ROW 8-3
+@FLOW 1-6-2OK-3-4-7-5
+@FLOW 2FAIL-8-5
+@BOX 1.0
+LIST DICT(DICT,OUTFILE)
+@BOX 6.0
+SELECT OUTPUT OUTFILE
+@BOX 2.0
+READ NAMES FROM DICT
+[DOC01.5.1]
+@BOX 3.0
+SORT NAMES
+[DOC01.5.2]
+@BOX 4.0
+PRINT NAMES
+@BOX 7.0
+RESELECT ORIGINAL OUTPUT
+@BOX 5.0
+END
+@BOX 8.0
+SELECT ORIGINAL OUTPUT
+MONITOR - INDEX TOO BIG
+@BOX 1.1
+PROC LIST.DICT(DICT,OUTFILE);
+$IN I,J,K,M,SYM,COUNT,CUR.LET,OLDOUT,NEWOUT;
+$IN S1,S2,S3;
+::PDP CREATE.SEGMENT(-1,%2000);MAP(PW1=>S1,4,1);
+::PDP CREATE.SEGMENT(-1,%2000);MAP(PW1=>S2,5,1);
+::PDP CREATE.SEGMENT(-1,%2000);MAP(PW1=>S3,6,1);
+::MU6 CREATESEGMENT(-1,%10000);INTERCHANGE(PW1=>S1,WORKSEG);
+::MC68000 RELEASE.SEGMENT(48);RELEASE.SEGMENT(49);
+::MC68000 RELEASE.SEGMENT(50);RELEASE.SEGMENT(51);
+::MC68000 CREATE.SEGMENT(48,%4000);CREATE.SEGMENT(49,%4000);
+::MC68000 CREATE.SEGMENT(50,%4000);CREATE.SEGMENT(51,%4000);
+::MC68000 MAP(48,-1,0);MAP(49,-1,0);MAP(50,-1,0);MAP(51,-1,0);
+@BOX 6.1
+CURRENTOUTPUT()=>OLDOUT;
+SELECTOUTPUT(DEFINEOUTPUT(-1,OUTFILE,0,0)=>NEWOUT);
+@BOX 2.1
+IF READ.NAMES(DICT,^CHLIST,^NLIST) < 0
+@BOX 3.1
+SORT.NAMES(^CHLIST,^NLIST);
+@BOX 4.1
+18 => K;
+-1 => I => CUR.LET;
+WHILE NLIST[1+>I] => J /= 0 DO
+   IF CHLIST[J] /= CUR.LET THEN
+      CHLIST[J] => CURLET;
+      NEWLINES(1);-1 => COUNT;
+   FI
+   IF 1 +> COUNT & 3 = 0  THEN NEWLINES(1) FI
+   J + K => M;
+   WHILE CHLIST[1+>J-1] => SYM /= 0 DO
+      OUTCH(SYM);
+   OD
+   FOR M-J+1 DO OUTCH(" ") OD
+OD
+@BOX 7.1
+SELECTOUTPUT(OLDOUT);
+ENDOUTPUT(NEWOUT,0);
+@BOX 5.1
+::PDP RELEASE.SEGMENT(S1);RELEASE.SEGMENT(S2);
+::PDP RELEASE.SEGMENT(S3);
+::MU6 INTERCHANGE(WORKSEG,S1);RELEASE.SEGMENT(S1);
+::MC68000 RELEASE.SEGMENT(48);RELEASE.SEGMENT(49);
+::MC68000 RELEASE.SEGMENT(50);RELEASE.SEGMENT(51);
+END
+@BOX 8.1
+ENDOUTPUT(NEWOUT,-1);
+SELECTOUTPUT(OLDOUT);
+CAPTION(%"$LINDEX TOO BIG");
+@END
+@TITLE DOC01.5(1,7)
+@COL 1S-2R-3F
+@FLOW 1-2-3
+@BOX 1.0
+COMMON PROCS
+@BOX 2.0
+READ NAMES [DOC01.5.1]
+SORT NAMES [DOC01.5.2]
+@BOX 3.0
+END
+@BOX 1.1
+::COMMON PROCS
+@BOX 2.1
+#DOC01.5.1
+#DOC01.5.2
+@BOX 3.1
+::END
+@END
+@TITLE DOC01.5.1(1,8)
+@COL 1S-2R-3T-4R-5T-7T-8R
+@COL 6F
+@ROW 7-6
+@FLOW 1-2-3OK-4-5OK-7Y-3EOF-6
+@FLOW 5EOF-6
+@FLOW 7N-8-6
+@BOX 1.0
+READ NAMES
+@BOX 2.0
+INITIALISE POINTERS
+SELECT FNAME AS INPUT
+@BOX 3.0
+READ AND STORE UNTIL
+START OF NAME
+@BOX 4.0
+MAKE ENTRY IN NAME LIST
+@BOX 5.0
+READ AND STORE NAME
+@BOX 6.0
+SELECT ORIGINAL INPUT
+END
+@BOX 7.0
+ROOM FOR MORE NAMES?
+@BOX 8.0
+SET RESULT FAULTY
+@BOX 1.1
+PROC READ.NAMES(FNAME,CHLIST,NLIST);
+$IN I,J,CURIN,NEWIN,SYM;
+::PDP $LI CHLISTZ=15000,NLISTZ=3000;
+::MU6 $LI CHLISTZ=40000,NLISTZ=6000;
+::MC68000 $LI CHLISTZ=40000,NLISTZ=6000;
+@BOX 2.1
+0 => READ.NAMES;
+-1 => I;
+1 => J;
+CURRENTINPUT() => CURIN;
+SELECTINPUT(DEFINEINPUT(-1,FNAME,0)=>NEWIN);
+@BOX 3.1
+WHILE IENQ()&%C = 0 AND [INCH()=>CHLIST^[1+>J] < 'A
+   OR CHLIST^[J] > 'Z] DO OD
+IF IENQ()&%C /= 0
+@BOX 4.1
+J => NLIST^[1+>I];
+@BOX 5.1
+WHILE IENQ()&%C = 0 AND [INCH()=>SYM = '. OR
+SYM >='@ =<'Z OR SYM >='a =<'z] DO
+   SYM => CHLIST^[1+>J];
+OD
+0 => CHLIST^[1+>J];
+SYM => CHLIST^[1+>J];
+IF IENQ()&%C /= 0
+@BOX 6.1
+SELECTINPUT(CURIN);
+ENDINPUT(NEWIN,0);
+END
+@BOX 7.1
+IF J < CHLISTZ AND I < NLISTZ
+@BOX 8.1
+-1 => READ.NAMES;
+@END
+@TITLE DOC01.5.2(1,8)
+@COL 1S-2R-3T-4R-5T-6T-7F
+@FLOW 1-2-3OUT OF ORDER-4-5OK-3OK-5NONE-6N-7
+@FLOW 6Y-2
+@BOX 1.0
+SORT NAMES
+@BOX 2.0
+SET POINTER TO START OF NAME LIST
+SET INTERCHANGE COUNT ZERO
+@BOX 3.0
+COMPARE NAME WITH
+NEXT NAME
+@BOX 4.0
+INTERCHANGE NAME LIST ENTRIES
+INCREMENT COUNT
+@BOX 5.0
+SELECT NEXT NAME
+@BOX 6.0
+ANY INTERCHANGES?
+@BOX 7.0
+END
+@BOX 1.1
+PROC SORT.NAMES(CHLIST,NLIST);
+$IN I,COUNT,K,N,SYMA,SYMB;
+@BOX 2.1
+0 => I => COUNT;
+@BOX 3.1
+NLIST^[I]-1 => K;
+NLIST^[I+1]-1 => N;
+NEXT.NAME:
+WHILE CHLIST^[1+>K]=>SYMA = '. OR SYMA = '@ DO OD
+WHILE CHLIST^[1+>N]=>SYMB = '. OR SYMB = '@ DO OD
+IF SYMA = 0 @>>
+IF SYMA = SYMB,-> NEXTNAME;
+IF SYMA < SYMB @>>
+@BOX 4.1
+INTERCHANGE:
+NLIST^[I] => K;
+NLIST^[I+1] => NLIST^[I];
+K => NLIST^[I+1];
+1 +> COUNT;
+@BOX 5.1
+
+IF NLIST^[1+>I+1] /= 0
+@BOX 6.1
+IF COUNT /= 0
+@BOX 7.1
+END
+@END
+@TITLE DOC01.6(1,11)
+@COL 1S-2R-3R-4R-5R-6F
+@FLOW 1-2-3-4-5-6
+@BOX 1.0
+LIST MODULE(MODULE)
+@BOX 2.0
+REMEMBER CURRENT I/O STREAMS
+DEFINE AN INPUT STREAM TO THE MODULE
+DEFINE AN OUTPUT STREAM TO THE LINEPRINTER
+@BOX 3.0
+TXT MODULE TO LINEPRINTER
+@BOX 4.0
+CREATE DRAW COMMAND STREAM ON CURRENT FILE
+DRAW FILE AT BOTH LEVELS TO THE LINEPRINTER
+@BOX 5.0
+END I/O
+SELECT ORIGNAL I/O
+@BOX 6.0
+END
+@BOX 1.1
+PROC LISTMOD(FILE);
+$IN OLDIN,OLDOUT,NEWIN,NEWOUT,TSTR;
+$LI/$AD[$LO8] NULL= ;
+$LO8[5] ISTR,OSTR;
+$DA LPTSTR($LO8)
+'L 'P 'T '*
+END
+@BOX 2.1
+'S => ISTR[0] => OSTR[0];
+'T => ISTR[1] => OSTR[1];
+'R => ISTR[2] => OSTR[2];
+'* => ISTR[4] => OSTR[4];
+CURRENTOUTPUT()=>OLDOUT;
+CURRENTINPUT()=>OLDIN;
+DEFINEOUTPUT(-1,^LPTSTR,0,0)=>NEWOUT!'0=>OSTR[3];
+DEFINEINPUT(-1,FILE,0)=>NEWIN!'0=>ISTR[3];
+SELECTOUTPUT(DEFINEOUTPUT(-1,NULL,0,0)=>TSTR);
+CAPTION(%"ALL$L@");
+ENDOUTPUT(TSTR,0);
+DEFINEINPUT(-1,NULL,0)=>TSTR;
+SELECTOUTPUT(OLDOUT);
+@BOX 3.1
+TXT(^ISTR,^OSTR,"LPT",NULL,NULL);
+@BOX 4.1
+SELECTINPUT(TSTR);
+DRAW(^ISTR,^OSTR,-1,0);
+@BOX 5.1
+ENDOUTPUT(NEWOUT,0);
+ENDINPUT(NEWIN,0);
+ENDINPUT(TSTR,0);
+SELECTOUTPUT(OLDIN);
+SELECTINPUT(OLDIN);
+@BOX 6.1
+END
+@END
+

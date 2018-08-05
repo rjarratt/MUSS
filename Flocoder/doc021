@@ -1,0 +1,1111 @@
+@X @~
+~V7 56 2 -5
+~D10
+~H                    MUSS
+~
+~
+~D10
+~H             DOC021
+~D10
+~MMANCHESTER UNIVERSITY  -  CONFIDENTIAL
+~
+~
+                                                             ISSUE 11~
+~V9 -1
+~P
+~V9 1
+~YDOC021
+~S1~M~ODOCUMENTATION IMPLEMENTATION DESCRIPTION~
+~
+~M~OSection 2 Version 1~
+~S2~OSection 2.1 Documentation Common Procedures~
+~S2~O1. General Description~
+~BThis section contains a set of procedures
+which allow a file of flowchart descriptions to be reduced
+to a tabular form suitable for further analysis by
+the other Flocoder procedures such as FLIP and DRAW.
+These are described in the USER MANUAL Chapter 6.
+The complete implementation of these facilities is
+divided into 8 modules. The others are:~
+~T# 10
+~
+DOC031 -~Iimplements FLIP.~
+DOC041 -~Iimplements the conversion from flocoder input to a
+series of calls on low level device independent primitives.~
+DOC051 -~Iimplements the above primitives on a Benson Plotter.~
+DOC061 -~Iimplements the above primitives on a Diablo.~
+DOC071 -~Iimplements the above primitives on a lineprinter/VDU.~
+DOC081 -~Iimplements the interactive flowchart inspection and editing
+commands.~
+DOC091 -~Iimplements the primitives on a Genisco display.~
+~S1~OInterfaces
+~
+~OProcedures~
+   INPUT.TITLE~
+   INPUT.CHART~
+~OInterface Types~
+   BOXSPECS~
+~OInterface Data Structures~
+   BOXTAB~
+   COLTAB~
+   BTB~
+   BOXLIMIT~
+   ROWLIMIT~
+   COLIMIT~
+   PASCAL.SW~
+~OInterface Literals~
+   CRWC,EOBWC,EOCWC,PWC,PW0,PW1~
+~S1~O2.1 Hardware Interface
+~BNone.
+~S1~O2.2 Software Interface
+~S11) INPUT.TITLE(TITLE.BUFFER,SEARCH)/TITLE.HASH
+~BThis procedure reads a title from the current input
+stream and stores it in TITLE.BUFFER. If the SEARCH parameter is
+zero the input pointer is assumed to be pointing to the
+character before the first in the title, and the result returned
+is a hash of the title. If the SEARCH parameter is set the
+following effects are obtained.~
+~T# 8
+~
+~OSEARCH~
+  1  -~ICharacters are read from the input stream until the
+next title line is encountered. The title is read into the title buffer
+and a hash of the title is given as the result.~
+  2  -~ICharacters are copied from the input stream to the current
+output stream until the next title line is encountered. The title
+is read into the title buffer and the value of the input pointer
+at the start of the title line is returned as the result.~
+~S12) INPUT.CHART(TRANSLATION.LEVEL1,TRANSLATION.LEVEL2)/START.BOX
+~BThis procedure forms a tabular representation of the
+flowchart description on the current
+input stream at both the required translation levels and returns
+the start box number as a result, unless there are
+faults in which case the result is negative. A negative
+TRANSLATION.LEVEL is ignored.
+~S1~O3. Implementation
+~S1~O3.1 Outline of Operation
+~BINPUT.TITLE provides the means for identifying the next
+chart to be processed on the current input stream.
+If the SEARCH parameter is set it reads to the
+next "@@T" otherwise it assumes the input pointer
+is set to the character before the title.
+The title is assumed
+to finish with a newline whether or not it has the
+version and generation numbers following it in round
+brackets. All of these characters are planted in the
+TITLE.BUFFER, but the TITLE.HASH stops at the character
+preceding the left round bracket.
+~BA rough guide to the construction of the
+hash will help in fault diagnosis. It is
+a 32 bit right justified translation of the title
+in which numbers remain unchanged expressed
+in 4 bits, alphabetic characters appear as ISO in 8 bits,
+point becomes A in hex and anything else is B in hex.
+~BINPUT.CHART forms a COLUMN TABLE and BOX TABLE and
+stores the text associated with each box at the
+specified levels in the BOX TEXT BUFFER.
+These structures are described later. The number of boxes
+rows and columns are stored in 3 integer variables BOXLIMIT,
+ROWLIMIT and COLIMIT.
+The main body of
+the procedure consists of a sequence which deals with
+the flowchart description a statement at a time
+organising calls to individual subroutines
+for COL, ROW, FLOW and BOX statements. Faults
+encountered in a statement are monitored and the
+faulty line output before control is returned
+to deal with the next statement.
+A chart with faults will return a negative result.
+~S2~O3.2 Data Structures~
+~
+~T# 15
+~
+BOXTAB~IThe BOX TABLE. It defines the content and
+position etc. of each box on a chart. Its
+fields are as follows:~
+~T# 15 27
+~
+#COL.LINK~Ian integer giving the number of the
+next box below in the column. Zero
+means last box.~
+~
+#COL~Ian integer giving the number of the
+column that this box is in.~
+~
+#PLANTED~Ian integer marker used in forming the
+CODELIST (see FLIP - DOC031) to indicate
+that this box has been dealt with.~
+~
+#ROW.LINK~Ian integer giving the number of the next
+box on the right in the same row
+as this one. Zero means last in row.~
+~
+#LAB.COUNT~Ian integer giving the number of jumps
+to this box.~
+~
+#PFLOW.LINK~Ian integer giving the number of the
+next box in the primary flow sequence.
+Zero means last box in flow.~
+~
+#SFLOW.LINK~Ian integer giving the number of the
+next box in the secondary flow sequence.
+Zero means last box in secondary flow.~
+~
+#TEXT.PTR~Ian integer pointing to the start of the
+box text held in the BOX TEXT BUFFER
+at the first specified TRANSLATION LEVEL.~
+~
+#BOXHT~Ian integer giving the box height in
+terms of number of lines of text within it, for the
+first level.~
+~
+#BOXWTH~Ian integer giving the box width as the number
+of characters in the longest line of text at the first level.~
+~
+#TEXTPTR1~Ian integer pointing to the start
+of the box text held in the BOX TEXT
+BUFFER at the second specified
+TRANSLATION LEVEL.~
+~
+#BOXHT1~Ian integer specifying the box height as the
+no. of lines of text at the second LEVEL.~
+~
+#BOXWTH1~Ian integer giving box width as the number of
+characters in the longest line of text at the second LEVEL.~
+~
+#PFLOW.TEXT~Ian integer indexing the BOX TEXT
+BUFFER pointing to the start of any
+caption associated with the primary
+flow out of this box. Zero means
+there is no caption.~
+~
+#SFLOW.TEXT~Ian integer indexing the BOX
+TEXT BUFFER pointing to the start
+of any caption associated with
+the secondary flow out of this box.
+Zero means no caption.~
+~
+#INFLOW~Ian integer giving the number of
+flow lines into this box.~
+~
+#T~Ia character representing the box
+type i.e., T,R,C,F,A,N,S.~
+~
+#YCOORD~Ian integer giving the Y coordinate
+of the box (Used by DRAW).~
+~
+#HT~Ian integer giving the box height
+(recalculated by DRAW from BOXHT).~
+~
+#YFIXED~Ia flag used in DRAW to assist with
+positioning boxes in rows.~
+~T# 15
+~
+COLTAB~Ia table indexed by column number giving
+the number of the box at the top of
+each column.~
+~
+BTB~IThe BOX TEXT BUFFER is
+a character vector containing the text
+associated with each box at the specified
+translation level.
+The text is punctuated by several special characters
+for controlling the subsequent processing of the text. These are:-~
+~
+#CRWC        chart cross reference warning character~
+~
+#EOBWC       end of box warning character~
+~
+#EOCWC       end of chart warning character~
+~
+PWC~IPascal labels warning character. This operates
+like CRWC in that it cross-references a specific chart
+but in this case refers to all the labels generated by that
+chart rather than its box text. Used in generating label
+declarations in Pascal-type languages.~
+~
+BOXLIMIT~Ian integer recording the highest box number.~
+~
+ROWLIMIT~Ian integer recording the number of row statements.~
+~
+COLIMIT~Ian integer recording the number of columns.~
+~
+TEXTLIM~Ian integer giving the upper limit for text in the
+BOX TEXT BUFFER.~
+~
+CRTBUFF~Ia vector used for temporary storage of the chart title
+in processing a cross-reference.~
+~
+TYPES~Ia datavec of characters - one for each box type.~
+PASCAL.SW~Ian integer which gets set non zero by the
+@P statement - used by FLIP for generating Pascal labels.~
+~Y
+~V9 -1
+~P
+~V9 -1
+~D15
+~HFLOWCHARTS
+~
+~
+~H               DOC021
+~V9 -1
+~F
+@TITLE DOC02(1,11)
+@COL 1S-2R-3R-4R-5R-6F
+@FLOW 1-2-3-4-5-6
+@BOX 1.0
+COMMON PROCS AND DATA FOR FLIP AND DRAW
+@BOX 2.0
+@BOX 3.0
+@BOX 4.0
+PROCEDURES IN MODULE
+   INPUT.TITLE [DOC02.1]
+   INPUT.CHART[DOC02.2]
+@BOX 5.0
+#DOC02.1
+#DOC02.2
+@BOX 6.0
+END
+@BOX 1.1
+$LS INCH()/$IN;
+$LS OUTCH($IN);
+$LS NEXTCH()/$IN;
+$LS CAPTION($AD[$LO8]);
+$LS INBACKSPACE($IN);
+$LS OUTI($IN32,$IN);
+$LS NEWLINES($IN);
+$LS OUTLINENO($IN32);
+$LS INLINE($AD[$LO8])/$IN;
+$LS OUTLINE($AD[$LO8],$IN);
+$LS IPOS()/$IN32;
+$LS IENQ()/$IN;
+MODULE(INPUT.TITLE,INPUT.CHART,BOXSPECS,BOXTAB,BTBPTR,
+COLTAB,BTB,ROWLIMIT,BOXLIMIT,COLIMIT,PASCAL.SW,CRWC,EOBWC,PWC,EOCWC,PW0,PW1);
+*GLOBAL 3;
+TYPE BOXSPECS IS $IN COL.LINK,ROW.LINK,PFLOW.LINK,YCOORD
+$IN SFLOWLINK,TEXT.PTR,PFLOW.TEXT,SFLOW.TEXT,HT,TEXTPTR1
+$LO8 T,BOXHT,BOXWTH,COL,INFLOW,LAB.COUNT,PLANTED,YFIXED,BOXHT1,BOXWTH1;
+BOXSPECS[64] BOXTAB;$IN[8] COLTAB;
+$LO8[8192]BTB;
+$LI/$LO8 PWC=251,CRWC=255,EOBWC=254,EOCWC=253;
+$LI/$AD[$LO8] CURFILE= ;
+$IN BOXLIMIT,ROWLIMIT,COLIMIT,BTBPTR;
+*GLOBAL 5;
+$AD PW0,PW1;
+*GLOBAL 0;
+@BOX 2.1
+@BOX 3.1
+@BOX 4.1
+::MU6 PSPEC INPUT.CHART($IN,$IN,$IN)/$IN;
+::MU6 PSPEC INPUT.TITLE($AD[$LO8],$IN)/$IN32;
+::PDP $LS INPUT.CHART($IN,$IN,$IN)/$IN;
+::PDP $LS INPUT.TITLE($AD[$LO8],$IN)/$IN32;
+#DOC02.1
+#DOC02.2
+@BOX 6.1
+*END
+@END
+@TITLE DOC02.1(1,9)
+@COL 18T-19R-20R
+@COL 1S-2T-17T-3T-4R-5R-6R-7T-8R-9R-10R-11T-12T-13R-14R-23T-15R-16F
+@COL 21T-22R-24R
+@ROW 18-3
+@ROW 8-21
+@ROW 15-24
+@FLOW 1-2Y-17N-3OK-4-5-6-7Y-8-9-10-11N-12N-13-9
+@FLOW 17Y-18OK-19-4
+@FLOW 18FAIL-20
+@FLOW 2N-5
+@FLOW 7N-21N-22-6
+@FLOW 21Y-14-23N-15-16
+@FLOW 11Y-23
+@FLOW 12Y-14
+@FLOW 3FAIL-20-16
+@FLOW 23Y-24-16
+@BOX 1.0
+INPUT.TITLE (TITLE.POS,SEARCH FLAG)
+@BOX 2.0
+SEARCH REQUIRED?
+@BOX 3.0
+FIND '@T'
+@BOX 4.0
+SKIP TO START OF TITLE PROPER
+SET PW0 = 0
+@BOX 5.0
+PREPARE TO STORE TITLE
+SET HASH = 0
+SKIP BLANKS
+@BOX 6.0
+STORE SYM
+@BOX 7.0
+IS IT A DECIMAL DIGIT
+@BOX 8.0
+REDUCE TO 4 BITS
+@BOX 9.0
+HASH <- 4 + NEW 4 BITS
+@BOX 10.0
+READ & STORE NEXT SYM
+@BOX 11.0
+IS IT NL?
+@BOX 12.0
+IS IT (?
+@BOX 13.0
+REDUCE TO 4 BITS
+@BOX 14.0
+READ & STORE UNTIL NL
+@BOX 15.0
+STORE TITLE HASH AS RESULT
+@BOX 16.0
+END
+@BOX 17.0
+COPYING SPECIFIED?
+@BOX 18.0
+COPY TO '@T'
+@BOX 19.0
+STORE VALUE OF INPUT
+POINTER AT START OF CHART
+@BOX 20.0
+SET RESULT ZERO
+@BOX 21.0
+IS IT NL OR "("
+@BOX 22.0
+PACK SYM
+INTO RESULT
+READ NEXT SYM
+@BOX 23.0
+COPYING SPECIFIED?
+@BOX 24.0
+STORE INPUT POINTER
+AS RESULT
+@BOX 1.1
+PROC INPUT.TITLE(TADDR,SEARCH);
+$IN SYM,TPTR;
+$LO32 THASH,INP;
+@BOX 2.1
+IF SEARCH = 0
+@BOX 3.1
+LOOP: IF IENQ() & %C /= 0 @>>
+IF INCH() = '@ AND INCH() = 'T,-> NEXT;
+-> LOOP;
+NEXT:
+@BOX 4.1
+WHILE INCH() => SYM /= %20 DO
+OD
+0 => PW0;
+@BOX 5.1
+0 => THASH => TPTR;
+WHILE INCH()=>SYM < %21 DO OD
+@BOX 6.1
+SYM => TADDR^[TPTR]; 1 +> TPTR;
+@BOX 7.1
+IF SYM > '9 OR SYM < '0
+@BOX 8.1
+'0 -> SYM;
+@BOX 9.1
+THASH <<- 4 + SYM => THASH;
+@BOX 10.1
+INCH() => SYM => TADDR^[TPTR]; 1 +> TPTR;
+@BOX 11.1
+IF SYM = '$L
+@BOX 12.1
+IF SYM = '(
+@BOX 13.1
+IF SYM =< '9 AND SYM >= '0 THEN
+   '0 -> SYM;
+ELSE
+   IF SYM = '. THEN
+      %A => SYM;
+   ELSE
+      %B => SYM;
+   FI
+FI
+@BOX 14.1
+WHILE SYM /= '$L DO
+INCH() => SYM => TADDR^[TPTR];
+1 +> TPTR;
+OD
+@BOX 15.1
+THASH => INPUT.TITLE;
+@BOX 17.1
+IF SEARCH = 2
+@BOX 18.1
+BACK:
+IF IENQ() & %C /=0 @>>
+IF INCH() => SYM /= '@ THEN
+   OUTCH(SYM);->BACK;
+FI
+IF INCH() => SYM /= 'T THEN
+   OUTCH('@);OUTCH(SYM);->BACK;
+FI
+@BOX 19.1
+I.POS() -2 => INP;
+@BOX 20.1
+0 => INPUT.TITLE;
+@BOX 21.1
+IF SYM = '$L OR SYM = '(
+@BOX 22.1
+THASH <<- 8 + SYM => THASH;
+INCH() => SYM;
+@BOX 23.1
+IF SEARCH = 2
+@BOX 24.1
+INP => INPUT.TITLE;
+@BOX 16.1
+END
+@END
+@TITLE DOC02.2(1,9)
+@COL 14R-15C
+@COL 1S-2R-9R-3R-4C-5T-6R-7F
+@ROW 14-6
+@FLOW 1-2-9-3-4-5N-6-7
+@FLOW 5Y-14-15
+@BOX 1.0
+INPUT.CHART(FIRST.LEVEL,SECOND.LEVEL,MODE)
+@BOX 2.0
+SET STARTBOX = 1
+INITIALISE BOX TABLE
+COL TABLE AND
+PTR TO BOX TEXT BUFFER
+RESET FAULTS FLAG
+SET LIMIT TO BOX TEXT BUFFER
+@BOX 3.0
+SKIP PAST 1ST @
+@BOX 4.0
+NEXT
+ST
+@BOX 5.0
+IS NEXT SYM = 'E'?
+@BOX 6.0
+SKIP TO 1ST DECIMAL DIGIT
+OR PAST NEXT @
+@BOX 7.0
+SWITCH ON ST TYPE
+AND RETURN TO NEXT ST
+COL,ROW[DOC02.2.1]
+FLOW [DOC02.2.2]
+BOX [DOC02.2.3]
+BOX NO [DOC02.2.4]
+LEV NO [DOC02.2.5]
+BOX TYPE [DOC02.2.6]
+FAULT PRINTING [DOC02.2.7]
+@BOX 9.0
+SET FAULT RETURN
+@BOX 14.0
+SKIP PAST NEXT NL
+STORE NO OF COLS IN PW3
+RESULT=START BOX(NO FAULTS)
+RESULT NEGATIVE (FAULTS)
+@BOX 15.0
+RETURN
+@BOX 1.1
+PROC INPUT.CHART(PLEVEL,PLEVEL1,FMODE);
+::MU6 $LA FRETURN;
+$IN START,PSYM,I,SYM,STAT.TYPE,FCAP;
+$IN CURBOX,B.TYPE,PREV.BOX,SFL,TEXT,HT,LWTH;
+$IN WTH,PSTART,NO.PS,LEV,FAULTS,TEXTLIM;
+$IN BOXNO,COLNO;
+INTEGER32 TITLE;
+$LO8[32] CRTBUFF;
+$DA TYPES($LO8);
+0 'N 'A 'S 'R 'T 'F 'C
+END
+PSPEC BXNO()/$IN; PSPEC BOX.TYPE()/$IN;
+PSPEC LEVNO()/$IN;
+PSPEC FAULT.PRINT($IN,$IN);
+@BOX 2.1
+1 => START;193 => BTB.PTR;-1 => PSYM;
+FOR BOXNO < 64 DO
+   0 => COL.LINK OF BOXTAB[BOXNO]
+   => ROW.LINK OF BOXTAB[BOXNO]
+   => PFLOW.LINK OF BOXTAB[BOXNO]
+   => SFLOW.LINK OF BOXTAB[BOXNO]
+   => TEXT.PTR OF BOXTAB[BOXNO]
+   => PFLOW.TEXT OF BOXTAB[BOXNO]
+   => SFLOW.TEXT OF BOXTAB[BOXNO];
+   0 => T OF BOXTAB[BOXNO] => BOXHT OF BOXTAB[BOXNO]
+   => BOXWTH OF BOXTAB[BOXNO]
+   => COL OF BOXTAB[BOXNO]
+   => INFLOW OF BOXTAB[BOXNO]
+   => LAB.COUNT OF BOXTAB[BOXNO]
+   => PLANTED OF BOXTAB[BOXNO];
+   0 => TEXTPTR1 OF BOXTAB[BOXNO]
+   => BOXHT1 OF BOXTAB[BOXNO]
+   => BOXWTH1 OF BOXTAB[BOXNO];
+OD
+0 => BOXLIMIT => ROWLIMIT => COLNO => FAULTS;
+FOR I < 8 DO
+   0 => COLTAB[I];
+OD
+8191 => TEXTLIM;
+@BOX 3.1
+WHILE INCH() => SYM /= '@ DO
+OD
+@BOX 4.1
+NEXT.ST:
+@BOX 5.1
+IF INCH() => STAT.TYPE = 'E
+@BOX 6.1
+WHILE INCH() => SYM > '9 OR SYM < '0
+   AND SYM /= '@ DO
+OD
+@BOX 7.1
+INBACKSPACE(1);
+IF STAT.TYPE = 'B THEN
+#DOC02.2.3
+ELSE IF STAT.TYPE = 'F THEN
+#DOC02.2.2
+ELSE IF STAT.TYPE = 'C THEN
+#DOC02.2.1
+ELSE IF STAT.TYPE = 'R,->ROW.ST;
+FAULT.PRINT(0,0);
+FI FI FI
+->NEXT.ST;
+#DOC02.2.4
+#DOC02.2.5
+#DOC02.2.6
+#DOC02.2.7
+END
+@BOX 9.1
+::MU6 FL: FL=>FRETURN;
+::PDP FRETURN>:
+@BOX 14.1
+WHILE INCH() => SYM /= '$L DO
+OD
+COLNO => COLIMIT;
+IF FAULTS /= 0 THEN
+   -1 => START;
+FI
+START => INPUT.CHART;
+@BOX 15.1
+EXIT;
+@END
+
+@TITLE DOC02.2.1(1,8)
+@COL 1S-2C-3R-4R-15R-5T-6R
+@COL 7A-8C-9R-10T-11R-12T-13C-14F
+@ROW 1-7
+@FLOW 1-2-3-4-15-5Y-6
+@FLOW 7-8-9-10Y-11-10
+@FLOW 6-4
+@FLOW 10N-12N-13
+@FLOW 5N-12
+@FLOW 12Y-14
+
+@BOX 1.0
+COL STATEMENT
+@BOX 2.0
+C
+@BOX 3.0
+READ BOX NO
+NOTE IN COL TABLE & CUR.BOX
+@BOX 4.0
+NOTE MAX BOXNO SO FAR
+NOTE COL NO IN BOX TABLE
+READ BOX TYPE
+STORE IN TYPE ENTRY FOR CUR.BOX
+IN BOX TABLE
+@BOX 5.0
+NEXT NON-BLANK SYM '-'?
+@BOX 6.0
+READ BOX NO
+NOTE IN COL ENTRY
+FOR CUR.BOX IN BOX TABLE
+ALSO IN CUR.BOX
+@BOX 7.0
+ROW STATEMENT
+@BOX 8.0
+R
+@BOX 9.0
+INC ROW SWITCH
+READ BOX NO
+NOTE IN CUR.BOX
+@BOX 10.0
+IS NEXT NON-BLANK SYM "-"?
+@BOX 11.0
+READ BOX NO
+STORE IN ROW ENTRY
+FOR CUR.BOX IN BOX TABLE
+ALSO IN CUR.BOX
+@BOX 12.0
+IS THE SYM = "@"?
+@BOX 13.0
+FAULT - ILLEGAL
+   STATEMENT
+@BOX 14.0
+NEXT
+ST
+@BOX 15.0
+IF TYPE = S NOTE
+NO AS START BOX
+@BOX 1.1
+:: COLUMN STATEMENT
+@BOX 2.1
+COL.ST:
+@BOX 3.1
+BXNO() => CURBOX => COLTAB[COLNO];
+1 +> COLNO;
+@BOX 4.1
+IF CURBOX > BOXLIMIT THEN
+   CURBOX => BOXLIMIT;
+FI
+COLNO - 1 => COL OF BOXTAB[CURBOX];
+BOXTYPE() => T OF BOXTAB[CURBOX] => B.TYPE;
+@BOX 5.1
+WHILE INCH () => SYM < %21 DO
+OD
+IF SYM /= '-
+@BOX 6.1
+BXNO() => COL.LINK OF BOXTAB[CURBOX] => CURBOX;
+@BOX 7.1
+:: ROW STATEMENT
+@BOX 8.1
+ROW.ST:
+@BOX 9.1
+1 +> ROWLIMIT;
+BXNO() => CURBOX;
+@BOX 10.1
+WHILE INCH() => SYM < %21 DO
+OD
+IF SYM /= '-
+@BOX 11.1
+BXNO() => ROW.LINK OF BOXTAB[CURBOX] => CURBOX;
+@BOX 12.1
+IF SYM = '@
+@BOX 13.1
+FAULTPRINT(0,0);
+@BOX 14.1
+-> NEXT.ST;
+@BOX 15.1
+IF B.TYPE = 3 THEN
+CURBOX => START;
+FI
+@END
+
+@TITLE DOC02.2.2(1,8)
+@COL 1S-2C-3R-17R-5T-4R-6R-7T-8T-15T-16R-9T-10R-11R-12R
+@COL 13F-14R
+@ROW 6-13
+@ROW 11-14
+@FLOW 1-2-3-17-5N-4-6-7N-8Y-15Y-9Y-10-11-12
+@FLOW 5Y-13
+@FLOW 9N-14-12
+@FLOW 12-17
+@FLOW 7Y-12
+@FLOW 8N-11
+@FLOW 15N-16-11
+
+@BOX 1.0
+FLOW STATEMENT
+@BOX 2.0
+F
+@BOX 3.0
+READ BOX NO AND NOTE AS "PREVBOX"
+@BOX 17.0
+MONITOR FAULT IF
+PREVBOX UNDEFINED
+@BOX 4.0
+COPY FLOWCAP TO BOX TEXT BUFFER
+@BOX 5.0
+IS NEXT NON-BLANK SYM = "@"?
+@BOX 6.0
+READ BOX NO AND NOTE AS "CURBOX"
+@BOX 7.0
+IS PFLOW OF PREVBOX TO CURBOX?
+@BOX 8.0
+HAS PREVBOX ANY PFLOW?
+@BOX 15.0
+IS PREVBOX A TEST BOX?
+@BOX 16.0
+FAULT - TOO
+MANY FLOWS
+@BOX 9.0
+IS CURBOX NEXT IN COL TO PREVBOX?
+@BOX 10.0
+MOVE PFLOW AND PFLOWCAP
+OF PREVBOX TO
+SFLOW AND SFLOWCAP
+DECREMENT INFLOW OF BOX
+TO WHICH THIS FLOW GOES
+@BOX 11.0
+SET PFLOW OF PREVBOX TO CURBOX
+SET PFLOWCAP OF PREVBOX
+INCREMENT INFLOW OF CURBOX
+@BOX 12.0
+SET PREVBOX = CURBOX
+@BOX 13.0
+NEXT
+ST
+@BOX 14.0
+SET SFLOW OF PREVBOX TO CURBOX
+SET SFLOWCAP OF PREVBOX
+@BOX 1.1
+:: FLOW STATEMENT
+@BOX 2.1
+FLOW.ST: BEGIN
+@BOX 3.1
+BXNO() => PREV.BOX;
+@BOX 5.1
+WHILE INCH() => SYM < %21 DO
+OD
+IF SYM = '@
+@BOX 4.1
+0 => FCAP;
+IF SYM /= '- THEN
+   SYM => BTB[BTBPTR=>FCAP];
+   1 +> BTBPTR;
+   WHILE INCH() => BTB[1+>BTBPTR-1] /= '- DO OD
+FI
+@BOX 6.1
+BXNO() => CURBOX;
+@BOX 7.1
+IF PFLOW.LINK OF BOXTAB[PREV.BOX] = CURBOX
+@BOX 8.1
+IF PFLOW.LINK OF BOXTAB[PREV.BOX] = 0
+@BOX 15.1
+IF T OF BOXTAB[PREV.BOX] = 5
+@BOX 16.1
+FAULTPRINT(2,PREV.BOX);
+@BOX 9.1
+IF COL.LINK OF BOXTAB[PREV.BOX] /= CURBOX
+@BOX 10.1
+PFLOW.TEXT OF BOXTAB[PREV.BOX] => SFLOWTEXT OF
+   BOXTAB[PREV.BOX];
+PFLOW.LINK OF BOXTAB[PREV.BOX] => SFLOWLINK OF
+  BOXTAB[PREV.BOX] => SFL;
+1 -> INFLOW OF BOXTAB[SFL];
+@BOX 11.1
+CURBOX => PFLOW.LINK OF BOXTAB[PREV.BOX];
+FCAP => PFLOW.TEXT OF BOXTAB[PREV.BOX];
+1 +> INFLOW OF BOXTAB[CURBOX];
+@BOX 12.1
+CURBOX => PREV.BOX;
+@BOX 13.1
+END
+@BOX 14.1
+CURBOX => SFLOW.LINK OF BOXTAB[PREV.BOX];
+FCAP => SFLOW.TEXT OF BOXTAB[PREV.BOX];
+@BOX 17.1
+IF T OF BOXTAB[PREVBOX] = 0 THEN
+FAULTPRINT(1,PREV.BOX);
+FI
+@END
+
+@TITLE DOC02.2.3(1,10)
+@COL 15R
+@COL 1S-3R-4T-5R-6R-7R-21T-8T-9R-10R-11T-12R
+@COL 16R-19R-13T-14R-20F
+@ROW 15-8
+@ROW 5-16
+@FLOW 1-3-4Y-5-6-7-21N-8N-9-10-11N-12-6
+@FLOW 4N-16-20
+@FLOW 11Y-6
+@FLOW 21Y-15-9
+@FLOW 8Y-19-13Y-14-20
+@FLOW 13N-20
+@BOX 1.0
+BOX STATEMENT
+@BOX 3.0
+READ AND NOTE BOXNO
+READ AND NOTE LEVNO
+@BOX 4.0
+IS THE LEVNO = EITHER
+OF THE SPECIFIED LEVELS?
+@BOX 5.0
+STORE NEWLINE IN BOX TEXT BUFFER
+SET TEXT POINTER FOR BOX IN BOXTAB
+INIT HEIGHT AND WIDTH
+@BOX 6.0
+INIT LINE WIDTH
+@BOX 7.0
+READ CHS AND STORE IN
+BOX TEXT BUFFER UNTIL NON-BLANK
+@BOX 21.0
+IS CH = # AND MODE = FLIPMODE?
+@BOX 8.0
+IS CH '@'?
+@BOX 9.0
+READ REST OF LINE AND STORE
+IN BOX TEXT BUFFER
+@BOX 10.0
+INCREMENT HEIGHT
+@BOX 11.0
+IS LINE WIDTH =< WIDTH
+@BOX 12.0
+SET WIDTH TO
+LINE WIDTH
+@BOX 15.0
+INPUT CHT TITLE()
+CHANGE "#" TO "CRWC"
+AND STORE T.HASH
+BACKSPACE TO START OF LINE
+@BOX 16.0
+SKIP PAST NEXT @
+@BOX 19.0
+CHANGE "@" TO "END OF BOXWC"
+STORE HEIGHT AND WIDTH
+FOR BOX IN BOX TABLE
+ACCORDING TO LEVEL
+@BOX 13.0
+BOX TEXT BUFFER OVERFLOW?
+@BOX 14.0
+MONITOR - CHART TEXT TOO BIG
+@BOX 20.0
+NEXT
+ST
+@BOX 1.1
+BOXST: BEGIN
+@BOX 3.1
+BXNO() => CURBOX; LEVNO() => LEV;
+@BOX 4.1
+IF LEV /= PLEVEL /= PLEVEL1
+@BOX 5.1
+BTBPTR => TEXT -1 => BTBPTR;
+0 => WTH => HT;
+@BOX 6.1
+BTBPTR+1 => LWTH;
+@BOX 7.1
+WHILE INCH()=>BTB[1+>BTBPTR]=>SYM < %21 DO
+   IF SYM = '$L THEN 1+> HT FI
+OD
+@BOX 21.1
+IF SYM = '# AND FMODE /= 0
+@BOX 8.1
+IF SYM = '@
+@BOX 9.1
+WHILE INCH()=>BTB[1+>BTBPTR] /= '$L DO OD
+@BOX 10.1
+1 +> HT;
+@BOX 11.1
+IF BTBPTR - LWTH < WTH
+@BOX 12.1
+BTBPTR - LWTH => WTH;
+@BOX 15.1
+LWTH + 1 => BTBPTR;
+IF NEXTCH()=': THEN
+   INCH();PWC=>BTB[BTBPTR-1];
+ELSE
+   CRWC=>BTB[BTBPTR-1];
+FI
+INPUT.TITLE(^CRTBUFF,0)=>TITLE;
+TITLE  ->> 24 => BTB[BTBPTR];
+TITLE ->>16 => BTB[1+>BTBPTR];
+TITLE->>8 => BTB[1+>BTBPTR];
+TITLE => BTB[1+>BTBPTR];
+INBACKSPACE(-1);
+@BOX 16.1
+WHILE INCH()=>SYM /= '@ DO
+   WHILE SYM /= '$L /= '$P DO INCH()=>SYM OD
+OD
+@BOX 19.1
+EOBWC => BTB[LWTH+1=>BTBPTR-1];
+IF LEV = PLEVEL THEN
+HT => BOXHT OF BOXTAB[CURBOX];
+WTH => BOXWTH OF BOXTAB[CURBOX];
+TEXT => TEXT.PTR OF BOXTAB[CURBOX];
+ELSE
+HT => BOXHT1 OF BOXTAB[CURBOX];
+WTH => BOXWTH1 OF BOXTAB[CURBOX];
+TEXT => TEXTPTR1 OF BOXTAB[CURBOX];
+FI
+@BOX 13.1
+IF BTBPTR < TEXTLIM
+@BOX 14.1
+FAULTPRINT(3,0);
+@BOX 20.1
+END
+@END
+
+@TITLE DOC02.2.4(1,7)
+@COL 8R
+@COL 1S-2T-3R-4T-5R-6T-7F
+@COL 9C
+@ROW 8-5
+@ROW 7-9
+@FLOW 1-2Y-3-4Y-5-6N-7
+@FLOW 2N-9
+@FLOW 6Y-9
+@FLOW 4N-8-6
+
+@BOX 1.0
+BOXNO()
+@BOX 2.0
+IS 1ST NON-BLANK SYM A DD?
+@BOX 3.0
+RESULT = VALUE OF DD
+@BOX 4.0
+IS THE NEXT SYM A DD?
+@BOX 5.0
+RESULT = RESULT * 10 + VAL OF DD
+@BOX 6.0
+IS RESULT OUT OF RANGE (1-63)?
+@BOX 7.0
+RETURN
+@BOX 8.0
+BACKSPACE
+INPUT PTR
+@BOX 9.0
+MONITOR ILLEGAL
+STATEMENT
+@BOX 1.1
+PROC BXNO;
+$IN RESULT,SYM;
+@BOX 2.1
+WHILE INCH() => SYM < %21 DO
+OD
+IF SYM < '0 OR SYM > '9
+@BOX 3.1
+SYM - '0 => RESULT;
+@BOX 4.1
+IF INCH() => SYM < '0 OR SYM > '9
+@BOX 5.1
+RESULT * 10 + SYM - '0 => RESULT;
+@BOX 6.1
+IF RESULT < 1 OR RESULT > 63
+@BOX 7.1
+RESULT => BXNO;
+END
+@BOX 8.1
+IN.BACKSPACE(1);
+@BOX 9.1
+FAULT.PRINT(0,0);
+@END
+
+@TITLE DOC02.2.5(1,8)
+@COL 1S-2R-3T-7T-6R-4T-5F
+@COL 8R
+@ROW 5-8
+@FLOW 1-2-3Y-7Y-6-4Y-5
+@FLOW 3N-4N-8-5
+@FLOW 7N-8
+@BOX 1.0
+LEVNO()
+@BOX 2.0
+RESULT = 0
+@BOX 3.0
+IS NEXT SYM "."
+@BOX 4.0
+NEXT SYM NEWLINE?
+@BOX 5.0
+RETURN
+@BOX 6.0
+RESULT = VALUE
+OF NEXT SYM
+@BOX 7.0
+IS NEXT SYM A DD?
+@BOX 8.0
+MONITOR ILLEGAL STATEMENT
+@BOX 1.1
+PROC LEVNO;
+$IN RESULT,SYM;
+@BOX 2.1
+0 => RESULT;
+@BOX 3.1
+IF INCH() => SYM /= '.
+@BOX 4.1
+IF SYM /= '$L
+@BOX 5.1
+RESULT => LEVNO;
+END;
+@BOX 6.1
+SYM - '0 => RESULT;
+INCH() => SYM;
+@BOX 7.1
+IF INCH() => SYM < '0 OR SYM > '9
+@BOX 8.1
+FAULT.PRINT(0,0);
+@END
+
+@TITLE DOC02.2.6(1,8)
+@COL 1S-2R-3T-4C
+@COL 5F
+@ROW 4-5
+@FLOW 1-2-3N-4
+@FLOW 3Y-5
+
+@BOX 1.0
+BOXTYPE()
+@BOX 2.0
+READ NEXT NON-BLANK SYM
+NOTE AS RESULT
+@BOX 3.0
+IS IT = R,T,S,F,A,N,C?
+@BOX 4.0
+MONITOR ILLEGAL
+STATEMENT
+
+@BOX 5.0
+RETURN
+@BOX 1.1
+PROC BOXTYPE;
+$IN SYM,I;
+@BOX 2.1
+WHILE INCH() => SYM < %21 DO
+OD
+@BOX 3.1
+FOR I < 8 DO
+   IF SYM = TYPES[I]@>>
+OD
+@BOX 4.1
+FAULT.PRINT(0,0);
+@BOX 5.1
+I => BOXTYPE;
+END;
+@END
+
+@TITLE DOC02.2.7(1,8)
+@COL 1S-2R-3R-4R-5F
+@FLOW 1-2-3-4-5
+@BOX 1.0
+FAULT PRINT(FAULT,NO)
+@BOX 2.0
+SET FAULTS FLAG
+PRINT FAULT CAPTION
+@BOX 3.0
+PRINT NO IF +VE
+@BOX 4.0
+PRINT LINE NO AND LINE
+@BOX 5.0
+NEXT.ST
+END
+@BOX 1.1
+PROC FAULT.PRINT(FAULT,NO);
+$LO8[80] LINE.BUFF;
+$AD[$LO8] LINE.STR;
+$DA F0($LO8);
+"ILLEGAL STATEMENT"
+END
+$DA F1($LO8);
+"UNDEFINED BOX IN FLOW  "
+END
+$DA F2($LO8);
+"TOO MANY FLOWS FROM BOX  "
+END
+$DA F3($LO8);
+"CHART TEXT TOO BIG  "
+END
+$DA FSTR($AD[$LO8])
+F0
+F1
+F2
+F3
+END
+$IN I;
+@BOX 2.1
+1 => FAULTS;
+CAPTION(FSTR[FAULT]);
+@BOX 3.1
+IF NO > 0 THEN
+   OUTI(NO,3);
+FI
+@BOX 4.1
+NEWLINES(1);
+INBACKSPACE(-1);
+OUTLINENO(I.POS());
+INLINE(^LINEBUFF)=>I;
+PART(^LINE.BUFF,0,I-1)=>LINE.STR;
+OUTLINE(LINE.STR,65);
+@BOX 5.1
+->FRETURN;
+END
+@END
+
