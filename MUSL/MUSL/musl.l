@@ -123,6 +123,7 @@ WITHIN                       { return T_WITHIN; }
 {INTEGER}                    { yylval.unsignedval = atoi(yytext); return T_NUMBER;}
 
 ::.*\n                       { yylineno++; }
+^\*.*\n                      { yylineno++; /* filter out directives for now */}
 \n                           { yylineno++; }
 . ;
 
