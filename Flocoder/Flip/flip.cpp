@@ -129,8 +129,6 @@ static int flow_contains_test_box = 0;
 
 static int check_box_number(int number);
 static BOX *get_box(CHART_TABLE_ENTRY *chart_table_entry, int number);
-static BOX *get_next_box(CHART_TABLE_ENTRY *chart_table_entry, BOX *box);
-static BOX *get_next_true_branch_box(CHART_TABLE_ENTRY *chart_table_entry, BOX *box);
 static int get_box_number(CHART_TABLE_ENTRY *chart_table_entry, BOX *box);
 static void print_chart_structure(CHART_TABLE_ENTRY *chart_table_entry);
 static void output_box_line(char *name, void *value);
@@ -364,28 +362,6 @@ static BOX *get_box(CHART_TABLE_ENTRY *chart_table_entry, int number)
     }
 
     return result;
-}
-
-static BOX *get_next_box(CHART_TABLE_ENTRY *chart_table_entry, BOX *box)
-{
-    BOX *next = NULL;
-    if (box->next_pflow_box_number != 0)
-    {
-        next = get_box(chart_table_entry, box->next_pflow_box_number);
-    }
-
-    return next;
-}
-
-static BOX *get_next_true_branch_box(CHART_TABLE_ENTRY *chart_table_entry, BOX *box)
-{
-    BOX *next = NULL;
-    if (box->next_pflow_box_number != 0)
-    {
-        next = get_box(chart_table_entry, box->next_sflow_box_number);
-    }
-
-    return next;
 }
 
 static int get_box_number(CHART_TABLE_ENTRY *chart_table_entry, BOX *box)
