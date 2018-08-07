@@ -141,7 +141,7 @@ WITHIN                       { return T_WITHIN; }
 \-\>                         { return T_GOTO_OR_SUBSTORE; }
 \;                           { }
 
-\".*\"                       { yylval.stringval = _strdup(yytext); return T_MULTI_CHAR_CONST; }
+\"[^\"]*\"                   { yylval.stringval = _strdup(yytext); return T_MULTI_CHAR_CONST; }
 \%\".*\"                     { yylval.stringval = _strdup(&yytext[1]); return T_CH_STRING; }
 \'\$L                        { yylval.charval = '\n'; return T_CHAR_CONST; }
 \'\$P                        { yylval.charval = '\f'; return T_CHAR_CONST; }
