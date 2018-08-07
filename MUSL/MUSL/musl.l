@@ -45,11 +45,15 @@ BEGIN                        { return T_BEGIN; }
 DATAVEC                      { return T_DATAVEC; }
 DO                           { return T_DO; }
 ELSE                         { return T_ELSE; }
+$EL                          { return T_ELSE; }
 \*END                        { return T_MODULEEND; }
 END                          { return T_END; }
 FI                           { return T_FI; }
+$FI                          { return T_FI; }
 FOR                          { return T_FOR; }
+$FO                          { return T_FOR; }
 IF                           { return T_IF; }
+$IF                          { return T_IF; }
 IMPORT                       { return T_IMPORT; }
 \$IM                         { return T_IMPORT; }
 INTEGER                      { return T_INTEGER; }
@@ -94,8 +98,10 @@ $RE32                        { return T_REAL32; }
 $RE64                        { return T_REAL64; }
 $RE128                       { return T_REAL128; }
 THEN                         { return T_THEN; }
+$TH                          { return T_THEN; }
 TYPE                         { return T_TYPE; }
 WHILE                        { return T_WHILE; }
+$WH                          { return T_WHILE; }
 WITHIN                       { return T_WITHIN; }
 
 ;                            { return T_SEP; }
