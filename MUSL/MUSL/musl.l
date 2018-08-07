@@ -98,6 +98,8 @@ $RE                          { return T_REAL; }
 $RE32                        { return T_REAL32; }
 $RE64                        { return T_REAL64; }
 $RE128                       { return T_REAL128; }
+SWITCH                       { return T_SWITCH; }
+$SW                          { return T_SWITCH; }
 THEN                         { return T_THEN; }
 $TH                          { return T_THEN; }
 TYPE                         { return T_TYPE; }
@@ -123,6 +125,7 @@ WITHIN                       { return T_WITHIN; }
 \-                           { return T_MINUS; }
 \*                           { return T_STAR; }
 \/                           { return T_SLASH; }
+\\                           { return T_FSLASH; }
 \&                           { return T_AMPERSAND; }
 \!                           { return T_EXCLAMATION; }
 \-\=                         { return T_XOR; }

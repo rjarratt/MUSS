@@ -60,6 +60,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_REAL32
 %token T_REAL64
 %token T_REAL128
+%token T_SWITCH
 %token T_THEN
 %token T_TYPE
 %token T_VSTORE
@@ -84,6 +85,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_MINUS
 %token T_STAR
 %token T_SLASH
+%token T_FSLASH
 %token T_AMPERSAND
 %token T_EXCLAMATION
 %token T_XOR
@@ -274,7 +276,7 @@ label_dec: T_NAME T_COLON;
 
 comp_st: computation | if_st | while_st| for_st;
 
-control_st: go_st;
+control_st: go_st | switch_st;
 
 computation: opr_opd_seq;
 opr_opd_seq: operand | operand operator opr_opd_seq;
@@ -316,6 +318,8 @@ if_st: T_IF condition action
 while_st: T_WHILE condition T_DO statements T_OD
 for_st: T_FOR computation T_DO statements T_OD | T_FOR T_NAME T_LT computation T_DO statements T_OD 
 go_st: T_GOTO_OR_SUBSTORE T_NAME;
+switch_st: T_SWITCH computation T_FSLASH nlist;
+nlist: nlist T_COMMA T_NAME | T_NAME;
 
 action: T_COMMA go_st | T_THEN statements else_cl T_FI;
 else_cl: T_ELSE statements | ;
