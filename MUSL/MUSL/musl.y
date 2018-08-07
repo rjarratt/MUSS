@@ -108,6 +108,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token <stringval> T_MULTI_CHAR_CONST
 %token <stringval> T_CH_STRING
 %token <unsignedval> T_NUMBER
+%token <unsignedval> T_HEXNUMBER
 
 %right T_ADDR T_L_PAREN
 
@@ -243,7 +244,7 @@ scalar_type:
 vector_pointer: T_ADDR T_L_PAREN;
 
 const: dec_integer | char_const | T_MULTI_CHAR_CONST | T_CH_STRING; /* see 9.3.5 for the rest */
-dec_integer: T_NUMBER | T_PLUS T_NUMBER | T_MINUS T_NUMBER;
+dec_integer: T_NUMBER | T_PLUS T_NUMBER | T_MINUS T_NUMBER | T_HEXNUMBER;
 char_const: T_CHAR_CONST;
 
 logical: T_LOGICAL | T_LOGICAL8  | T_LOGICAL16  | T_LOGICAL32 | T_LOGICAL64;

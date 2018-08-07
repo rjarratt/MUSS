@@ -34,6 +34,7 @@ in this Software without prior written authorization from Robert Jarratt.
 
 NAME             [A-Z][A-Z0-9\.]*
 INTEGER          [0-9]+
+HEXINTEGER       [0-9ABCDEFabcdef]+
 
 %%
 
@@ -144,6 +145,7 @@ WITHIN                       { return T_WITHIN; }
 \'.                          { yylval.charval = yytext[1]; return T_CHAR_CONST; }
 {NAME}                       { yylval.nameval = _strdup(yytext); return is_type(yytext) ? T_TYPE_NAME : T_NAME; }
 {INTEGER}                    { yylval.unsignedval = atoi(yytext); return T_NUMBER;}
+\%{HEXINTEGER}               { sscanf(yytext, "%x", &yylval.unsignedval); return T_HEXNUMBER;}
 
 ::.*\n                       { yylineno++; }
 ^\*.*\n                      { yylineno++; /* filter out directives for now */}
