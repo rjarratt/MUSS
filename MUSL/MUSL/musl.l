@@ -43,6 +43,7 @@ AND                          { return T_AND; }
 \$AD                         { return T_ADDR; }
 BEGIN                        { return T_BEGIN; }
 DATAVEC                      { return T_DATAVEC; }
+$DA                          { return T_DATAVEC; }
 DO                           { return T_DO; }
 ELSE                         { return T_ELSE; }
 $EL                          { return T_ELSE; }
@@ -134,7 +135,7 @@ WITHIN                       { return T_WITHIN; }
 \!\>                         { return T_ORSTORE; }
 \-\=\>                       { return T_XORSTORE; }
 \=\>                         { return T_ASSIGN; }
-\-\:->                       { return T_RSUBSTORE; }
+\-\:>                        { return T_RSUBSTORE; }
 \/\:\>                       { return T_RDIVSTORE; }
 \<\<\-                       { return T_LLSHIFT; }
 \-\>\>                       { return T_RLSHIFT; }
