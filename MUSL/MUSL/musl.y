@@ -36,11 +36,19 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_FOR
 %token T_IMPORT
 %token T_INTEGER
+%token T_INTEGER8
+%token T_INTEGER16
+%token T_INTEGER32
+%token T_INTEGER64
 %token T_IF
 %token T_IS
 %token T_LABEL
 %token T_LITERAL
 %token T_LOGICAL
+%token T_LOGICAL8
+%token T_LOGICAL16
+%token T_LOGICAL32
+%token T_LOGICAL64
 %token T_LSPEC
 %token T_MODULE
 %token T_OD
@@ -49,6 +57,9 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_PROC
 %token T_PSPEC
 %token T_REAL
+%token T_REAL32
+%token T_REAL64
+%token T_REAL128
 %token T_THEN
 %token T_TYPE
 %token T_VSTORE
@@ -148,9 +159,9 @@ pspec:
 t_list: t_list T_COMMA scalar_type | scalar_type | ;
 
 lit_dec:
-/*    T_LITERAL integer_lits
+    T_LITERAL integer_lits
     |
-    T_LITERAL real_lits
+/*    T_LITERAL real_lits
     |
     T_LITERAL aggregate_lits
     |*/
@@ -158,6 +169,12 @@ lit_dec:
 
 pointer_lit: T_SLASH T_ADDR T_L_PAREN any_type T_R_PAREN T_NAME T_EQUALS;
 any_type: type; /* any_type is not defined in the manual */
+
+integer_lits: T_SLASH integer_type integer_list | integer_list;
+integer_type: integer | logical;
+integer_list: integer_list T_COMMA integer_list_item | integer_list_item;
+integer_list_item: T_NAME T_EQUALS value;
+value: const | const const_op value;
 
 data_vec: T_DATAVEC T_NAME T_L_BRACK scalar_type T_R_BRACK separator literals separator T_END;
 literals: literals literal_item | literal_item;
@@ -229,14 +246,16 @@ const: dec_integer | char_const | T_MULTI_CHAR_CONST | T_CH_STRING; /* see 9.3.5
 dec_integer: T_NUMBER | T_PLUS T_NUMBER | T_MINUS T_NUMBER;
 char_const: T_CHAR_CONST;
 
-numeric_type:
-    T_INTEGER size
-    |
-    T_REAL size
-    |
-    T_LOGICAL size;
+logical: T_LOGICAL | T_LOGICAL8  | T_LOGICAL16  | T_LOGICAL32 | T_LOGICAL64;
+integer: T_INTEGER | T_INTEGER8 | T_INTEGER16 | T_INTEGER32 | T_INTEGER64;
+real: T_REAL | T_REAL32 | T_REAL64 | T_REAL128;
 
-size: T_NUMBER |;
+numeric_type:
+    integer
+    |
+    real
+    |
+    logical;
 
 statements: statements statement separator | statement separator | ;
 

@@ -34,7 +34,7 @@
 # define YY_YY_MUSL_TAB_H_INCLUDED
 /* Enabling traces.  */
 #ifndef YYDEBUG
-# define YYDEBUG 1
+# define YYDEBUG 0
 #endif
 #if YYDEBUG
 extern int yydebug;
@@ -58,65 +58,76 @@ extern int yydebug;
      T_FOR = 267,
      T_IMPORT = 268,
      T_INTEGER = 269,
-     T_IF = 270,
-     T_IS = 271,
-     T_LABEL = 272,
-     T_LITERAL = 273,
-     T_LOGICAL = 274,
-     T_LSPEC = 275,
-     T_MODULE = 276,
-     T_OD = 277,
-     T_OF = 278,
-     T_OR = 279,
-     T_PROC = 280,
-     T_PSPEC = 281,
-     T_REAL = 282,
-     T_THEN = 283,
-     T_TYPE = 284,
-     T_VSTORE = 285,
-     T_WHILE = 286,
-     T_WITHIN = 287,
-     T_SEP = 288,
-     T_EQUALS = 289,
-     T_NOT_EQUALS = 290,
-     T_LT = 291,
-     T_GT = 292,
-     T_LE = 293,
-     T_GE = 294,
-     T_COMMA = 295,
-     T_COLON = 296,
-     T_CIRCUMFLEX = 297,
-     T_L_BRACK = 298,
-     T_R_BRACK = 299,
-     T_L_PAREN = 300,
-     T_R_PAREN = 301,
-     T_PLUS = 302,
-     T_MINUS = 303,
-     T_STAR = 304,
-     T_SLASH = 305,
-     T_AMPERSAND = 306,
-     T_EXCLAMATION = 307,
-     T_XOR = 308,
-     T_RSUB = 309,
-     T_RDIV = 310,
-     T_ADDSTORE = 311,
-     T_MULSTORE = 312,
-     T_DIVSTORE = 313,
-     T_ANDSTORE = 314,
-     T_ORSTORE = 315,
-     T_XORSTORE = 316,
-     T_ASSIGN = 317,
-     T_RSUBSTORE = 318,
-     T_RDIVSTORE = 319,
-     T_LLSHIFT = 320,
-     T_RLSHIFT = 321,
-     T_GOTO_OR_SUBSTORE = 322,
-     T_TYPE_NAME = 323,
-     T_NAME = 324,
-     T_CHAR_CONST = 325,
-     T_MULTI_CHAR_CONST = 326,
-     T_CH_STRING = 327,
-     T_NUMBER = 328
+     T_INTEGER8 = 270,
+     T_INTEGER16 = 271,
+     T_INTEGER32 = 272,
+     T_INTEGER64 = 273,
+     T_IF = 274,
+     T_IS = 275,
+     T_LABEL = 276,
+     T_LITERAL = 277,
+     T_LOGICAL = 278,
+     T_LOGICAL8 = 279,
+     T_LOGICAL16 = 280,
+     T_LOGICAL32 = 281,
+     T_LOGICAL64 = 282,
+     T_LSPEC = 283,
+     T_MODULE = 284,
+     T_OD = 285,
+     T_OF = 286,
+     T_OR = 287,
+     T_PROC = 288,
+     T_PSPEC = 289,
+     T_REAL = 290,
+     T_REAL32 = 291,
+     T_REAL64 = 292,
+     T_REAL128 = 293,
+     T_THEN = 294,
+     T_TYPE = 295,
+     T_VSTORE = 296,
+     T_WHILE = 297,
+     T_WITHIN = 298,
+     T_SEP = 299,
+     T_EQUALS = 300,
+     T_NOT_EQUALS = 301,
+     T_LT = 302,
+     T_GT = 303,
+     T_LE = 304,
+     T_GE = 305,
+     T_COMMA = 306,
+     T_COLON = 307,
+     T_CIRCUMFLEX = 308,
+     T_L_BRACK = 309,
+     T_R_BRACK = 310,
+     T_L_PAREN = 311,
+     T_R_PAREN = 312,
+     T_PLUS = 313,
+     T_MINUS = 314,
+     T_STAR = 315,
+     T_SLASH = 316,
+     T_AMPERSAND = 317,
+     T_EXCLAMATION = 318,
+     T_XOR = 319,
+     T_RSUB = 320,
+     T_RDIV = 321,
+     T_ADDSTORE = 322,
+     T_MULSTORE = 323,
+     T_DIVSTORE = 324,
+     T_ANDSTORE = 325,
+     T_ORSTORE = 326,
+     T_XORSTORE = 327,
+     T_ASSIGN = 328,
+     T_RSUBSTORE = 329,
+     T_RDIVSTORE = 330,
+     T_LLSHIFT = 331,
+     T_RLSHIFT = 332,
+     T_GOTO_OR_SUBSTORE = 333,
+     T_TYPE_NAME = 334,
+     T_NAME = 335,
+     T_CHAR_CONST = 336,
+     T_MULTI_CHAR_CONST = 337,
+     T_CH_STRING = 338,
+     T_NUMBER = 339
    };
 #endif
 
@@ -125,7 +136,7 @@ extern int yydebug;
 typedef union YYSTYPE
 {
 /* Line 2058 of yacc.c  */
-#line 115 "musl.y"
+#line 126 "musl.y"
 
     char charval;
     char *stringval;
@@ -134,7 +145,7 @@ typedef union YYSTYPE
 
 
 /* Line 2058 of yacc.c  */
-#line 138 "musl.tab.h"
+#line 149 "musl.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

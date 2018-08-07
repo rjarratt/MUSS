@@ -32,7 +32,7 @@ in this Software without prior written authorization from Robert Jarratt.
 
 %}
 
-NAME             [A-Z][A-Z0-9\.\/]*
+NAME             [A-Z][A-Z0-9\.]*
 INTEGER          [0-9]+
 
 %%
@@ -52,13 +52,29 @@ IF                           { return T_IF; }
 IMPORT                       { return T_IMPORT; }
 \$IM                         { return T_IMPORT; }
 INTEGER                      { return T_INTEGER; }
+INTEGER8                     { return T_INTEGER8; }
+INTEGER16                    { return T_INTEGER16; }
+INTEGER32                    { return T_INTEGER32; }
+INTEGER64                    { return T_INTEGER64; }
 $IN                          { return T_INTEGER; }
+$IN8                         { return T_INTEGER8; }
+$IN16                        { return T_INTEGER16; }
+$IN32                        { return T_INTEGER32; }
+$IN64                        { return T_INTEGER64; }
 IS                           { return T_IS; }
 LABEL                        { return T_LABEL; }
 LOGICAL                      { return T_LOGICAL; }
+LOGICAL8                     { return T_LOGICAL8; }
+LOGICAL16                    { return T_LOGICAL16; }
+LOGICAL32                    { return T_LOGICAL32; }
+LOGICAL64                    { return T_LOGICAL64; }
+$LO                          { return T_LOGICAL; }
+$LO8                         { return T_LOGICAL8; }
+$LO16                        { return T_LOGICAL16; }
+$LO32                        { return T_LOGICAL32; }
+$LO64                        { return T_LOGICAL64; }
 LITERAL                      { return T_LITERAL; }
 \$LI                         { return T_LITERAL; }
-\$LO                         { return T_LOGICAL; }
 LSPEC                        { return T_LSPEC; }
 \$LS                         { return T_LSPEC; }
 MODULE                       { return T_MODULE; }
@@ -69,6 +85,13 @@ PROC                         { return T_PROC; }
 PSPEC                        { return T_PSPEC; }
 \$PS                         { return T_PSPEC; }
 REAL                         { return T_REAL; }
+REAL32                       { return T_REAL32; }
+REAL64                       { return T_REAL64; }
+REAL128                      { return T_REAL128; }
+$RE                          { return T_REAL; }
+$RE32                        { return T_REAL32; }
+$RE64                        { return T_REAL64; }
+$RE128                       { return T_REAL128; }
 THEN                         { return T_THEN; }
 TYPE                         { return T_TYPE; }
 WHILE                        { return T_WHILE; }
@@ -119,7 +142,7 @@ WITHIN                       { return T_WITHIN; }
 \'\$\"                       { yylval.charval = '\"'; return T_CHAR_CONST; }
 \'\$\$                       { yylval.charval = '$'; return T_CHAR_CONST; }
 \'.                          { yylval.charval = yytext[1]; return T_CHAR_CONST; }
-{NAME}                       { yylval.nameval = _strdup(yytext); return is_type(yytext) ? T_TYPE_NAME : T_NAME; }
+{NAME}                       { yylval.nameval = _strdup(yytext); printf("******NAME %s*********", yytext);return is_type(yytext) ? T_TYPE_NAME : T_NAME; }
 {INTEGER}                    { yylval.unsignedval = atoi(yytext); return T_NUMBER;}
 
 ::.*\n                       { yylineno++; }
