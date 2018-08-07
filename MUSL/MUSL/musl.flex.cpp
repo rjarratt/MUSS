@@ -1489,7 +1489,7 @@ YY_RULE_SETUP
 case 104:
 YY_RULE_SETUP
 #line 145 "musl.l"
-{ yylval.nameval = _strdup(yytext); printf("******NAME %s*********", yytext);return is_type(yytext) ? T_TYPE_NAME : T_NAME; }
+{ yylval.nameval = _strdup(yytext); return is_type(yytext) ? T_TYPE_NAME : T_NAME; }
 	YY_BREAK
 case 105:
 YY_RULE_SETUP

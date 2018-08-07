@@ -142,7 +142,7 @@ WITHIN                       { return T_WITHIN; }
 \'\$\"                       { yylval.charval = '\"'; return T_CHAR_CONST; }
 \'\$\$                       { yylval.charval = '$'; return T_CHAR_CONST; }
 \'.                          { yylval.charval = yytext[1]; return T_CHAR_CONST; }
-{NAME}                       { yylval.nameval = _strdup(yytext); printf("******NAME %s*********", yytext);return is_type(yytext) ? T_TYPE_NAME : T_NAME; }
+{NAME}                       { yylval.nameval = _strdup(yytext); return is_type(yytext) ? T_TYPE_NAME : T_NAME; }
 {INTEGER}                    { yylval.unsignedval = atoi(yytext); return T_NUMBER;}
 
 ::.*\n                       { yylineno++; }
