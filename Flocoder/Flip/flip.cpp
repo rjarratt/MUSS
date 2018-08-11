@@ -387,7 +387,13 @@ static void output_box(CHART_TABLE_ENTRY *chart_table_entry, BOX * box)
     if (box->type == Test)
     {
         /* This next line isn't really right because it assumes the next sflow is the destination, it might not be of course, the normal OrderBoxes routine plants the relative jump, may need to improve code here */
-        sprintf(conditional_goto, conditional_goto_format, get_box(chart_table_entry, box->next_sflow_box_number)->label_number);
+        BOX *secondary = get_box(chart_table_entry, box->next_sflow_box_number);
+        /* there are some Test boxes that don't actually have a primary or a secondary flow, this is because the branches are actually coded into the body of the box itself, so it is just to ensure the box is drawn correctly.
+        Box 5 of Chart DOC01.1 in doc011 is an example of this */
+        if (secondary != NULL)
+        {
+            sprintf(conditional_goto, conditional_goto_format, secondary->label_number);
+        }
     }
     conditional_already_substituted = 0;
 
