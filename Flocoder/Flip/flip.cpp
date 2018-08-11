@@ -489,7 +489,7 @@ static void order_boxes(char *name, void *value)
     CHART_TABLE_ENTRY *chart_table_entry = (CHART_TABLE_ENTRY *)value;
     BOX *finish_box = NULL;
     int k = 1;
-    BOX *current_box = get_box(chart_table_entry, chart_table_entry->start_box_number);
+    BOX *current_box = get_box(chart_table_entry, 1);
 
     chart_table_entry->code_list_count = 0;
 
