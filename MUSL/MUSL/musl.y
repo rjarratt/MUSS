@@ -246,7 +246,7 @@ scalar_type:
 vector_pointer: T_ADDR T_L_PAREN;
 
 const: dec_integer | char_const | T_MULTI_CHAR_CONST | T_CH_STRING | T_NAME; /* see 9.3.5 for the rest. T_NAME not documented */
-dec_integer: T_NUMBER | T_PLUS T_NUMBER | T_MINUS T_NUMBER | T_HEXNUMBER;
+dec_integer: T_NUMBER | T_PLUS T_NUMBER | T_MINUS T_NUMBER | T_HEXNUMBER | T_HEXNUMBER T_L_BRACK T_NUMBER T_R_BRACK;
 char_const: T_CHAR_CONST;
 
 logical: T_LOGICAL | T_LOGICAL8  | T_LOGICAL16  | T_LOGICAL32 | T_LOGICAL64;
