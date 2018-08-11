@@ -126,6 +126,7 @@ static TABLE chart_table;
 static int last_box_number = -1;
 static int last_label_number = -1;
 static int flow_contains_test_box = 0;
+static int last_line_was_truncated = 0;
 
 static int check_box_number(int number);
 static BOX *get_box(CHART_TABLE_ENTRY *chart_table_entry, int number);
@@ -397,6 +398,7 @@ static void output_box(CHART_TABLE_ENTRY *chart_table_entry, BOX * box)
     }
     conditional_already_substituted = 0;
 
+    last_line_was_truncated = 0;
     process_table_entries(&box->lines, output_box_line);
 }
 
@@ -671,7 +673,17 @@ static void output_box_line(char *name, void *value)
         }
         else
         {
-            fprintf(output, "\n%s", entry->line);
+            if (last_line_was_truncated)
+            {
+                /* append to last line */
+                fprintf(output, "%s", entry->line);
+            }
+            else
+            {
+                fprintf(output, "\n%s", entry->line);
+            }
+
+            last_line_was_truncated = strlen(entry->line) == 80;
         }
     }
 }
