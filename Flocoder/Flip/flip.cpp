@@ -205,13 +205,15 @@ void end_box(void)
 void process_line(char *line)
 {
     LINE_TABLE_ENTRY *entry;
+    size_t leading_spaces = 0;
     if (in_selected_box)
     {
         entry = (LINE_TABLE_ENTRY *)malloc(sizeof(LINE_TABLE_ENTRY));
-        if (line[0] == '#')
+        leading_spaces = strspn(line, " ");
+        if (line[leading_spaces] == '#')
         {
             entry->line_type = CrossReference;
-            entry->line = &line[1];
+            entry->line = &line[leading_spaces + 1];
         }
         else
         {
