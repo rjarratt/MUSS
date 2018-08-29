@@ -1556,7 +1556,7 @@ YY_RULE_SETUP
 case 114:
 YY_RULE_SETUP
 #line 156 "musl.l"
-{ yylval.nameval = _strdup(yytext); return is_type(yytext) ? T_TYPE_NAME : T_NAME; }
+{ remove_periods(yytext); yylval.nameval = _strdup(yytext); return is_type(yytext) ? T_TYPE_NAME : (is_pspec(yytext) ? T_PSPEC_NAME : T_NAME ); }
 	YY_BREAK
 case 115:
 YY_RULE_SETUP

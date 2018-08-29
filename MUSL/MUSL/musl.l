@@ -153,7 +153,7 @@ WITHIN                       { return T_WITHIN; }
 \'\$\"                       { yylval.charval = '\"'; return T_CHAR_CONST; }
 \'\$\$                       { yylval.charval = '$'; return T_CHAR_CONST; }
 \'.                          { yylval.charval = yytext[1]; return T_CHAR_CONST; }
-{NAME}                       { yylval.nameval = _strdup(yytext); return is_type(yytext) ? T_TYPE_NAME : T_NAME; }
+{NAME}                       { remove_periods(yytext); yylval.nameval = _strdup(yytext); return is_type(yytext) ? T_TYPE_NAME : (is_pspec(yytext) ? T_PSPEC_NAME : T_NAME ); }
 {INTEGER}                    { yylval.unsignedval = atoi(yytext); return T_NUMBER;}
 \%{HEXINTEGER}               { sscanf(yytext, "%x", &yylval.unsignedval); return T_HEXNUMBER;}
 

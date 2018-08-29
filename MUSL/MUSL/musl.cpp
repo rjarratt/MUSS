@@ -50,6 +50,7 @@ extern int yyparse(void);
 extern int yydebug;
 
 TABLE type_table;
+TABLE pspec_table;
 
 static int enable_lex_trace = 0;
 static int enable_yacc_trace = 0;
@@ -89,16 +90,48 @@ void yacc_trace(const char *msg, ...)
     va_end(ap);
 }
 
+void remove_periods(char *name)
+{
+    char *ptr = name;
+    char *next = name;
+    int done = 0;
+    do
+    {
+        done = *next == '\0';
+        if (*next == '.')
+        {
+            next++;
+        }
+        else
+        {
+            *ptr++ = *next++;
+        }
+    } while (!done);
+}
+
 void new_type(char *name)
 {
-//    printf("new_type %s\n", name);
+    //printf("new_type %s\n", name);
     add_table_entry(&type_table, name, name);
 }
 
 int is_type(char *name)
 {
     void *entry = find_table_entry(&type_table, name);
-//    printf("is_type %s=%d\n", name, entry != NULL);
+    //printf("is_type %s=%d\n", name, entry != NULL);
+    return entry != NULL;
+}
+
+void new_pspec(char *name)
+{
+    printf("new_pspec %s\n", name);
+    add_table_entry(&pspec_table, name, name);
+}
+
+int is_pspec(char *name)
+{
+    void *entry = find_table_entry(&pspec_table, name);
+    //printf("is_pspec %s=%d\n", name, entry != NULL);
     return entry != NULL;
 }
 

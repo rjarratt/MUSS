@@ -125,12 +125,13 @@ extern int yydebug;
      T_RLSHIFT = 334,
      T_GOTO_OR_SUBSTORE = 335,
      T_TYPE_NAME = 336,
-     T_NAME = 337,
-     T_CHAR_CONST = 338,
-     T_MULTI_CHAR_CONST = 339,
-     T_CH_STRING = 340,
-     T_NUMBER = 341,
-     T_HEXNUMBER = 342
+     T_PSPEC_NAME = 337,
+     T_NAME = 338,
+     T_CHAR_CONST = 339,
+     T_MULTI_CHAR_CONST = 340,
+     T_CH_STRING = 341,
+     T_NUMBER = 342,
+     T_HEXNUMBER = 343
    };
 #endif
 
@@ -139,7 +140,7 @@ extern int yydebug;
 typedef union YYSTYPE
 {
 /* Line 2058 of yacc.c  */
-#line 129 "musl.y"
+#line 130 "musl.y"
 
     char charval;
     char *stringval;
@@ -148,7 +149,7 @@ typedef union YYSTYPE
 
 
 /* Line 2058 of yacc.c  */
-#line 152 "musl.tab.h"
+#line 153 "musl.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

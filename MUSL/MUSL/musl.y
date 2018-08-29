@@ -105,6 +105,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_GOTO_OR_SUBSTORE
 
 %token <nameval> T_TYPE_NAME
+%token <nameval> T_PSPEC_NAME
 %token <nameval> T_NAME
 %token <charval> T_CHAR_CONST
 %token <stringval> T_MULTI_CHAR_CONST
@@ -145,9 +146,9 @@ import: proc_dec | type_dec | var_dec | import_dec;
 exports: T_L_BRACK name_list T_R_BRACK /*| ; removed optionality as it creates a shift/reduce conflict with computation statements */
 
 proc_dec:
-    proc_dec_spec T_NAME
+    proc_dec_spec T_NAME { new_pspec($2); }
     |
-    proc_dec_spec T_NAME pspec
+    proc_dec_spec T_NAME pspec { new_pspec($2); }
     |
     proc_dec_spec T_NAME T_EQUALS T_NAME;
 proc_dec_spec:
@@ -232,8 +233,8 @@ scalar_type:
     |
     /*T_ADDR numeric_type  This part of the rule excluded because of a shift-reduce conflict
     |*/
-/*    T_ADDR T_NAME    This part of the rule is excluded as it creates an ambiguity in variable declarations of type ADDR. I think it is meant that T_NAME is the name of a TYPE
-    |*/ 
+    T_ADDR T_PSPEC_NAME
+    | 
     vector_pointer numeric_type T_R_PAREN
     |
     vector_pointer T_TYPE_NAME T_R_PAREN
@@ -269,8 +270,9 @@ declarative_statement: label_dec | var_dec | proc_dec | lit_dec | data_vec | typ
 
 imperative_statement: comp_st | control_st;
 
+proc_name: T_NAME | T_PSPEC_NAME;
 proc_defn: proc_heading separator statements T_END;
-proc_heading: T_PROC T_NAME | T_PROC T_NAME T_L_BRACK T_R_BRACK | T_PROC T_NAME T_L_BRACK name_list T_R_BRACK
+proc_heading: T_PROC proc_name { new_pspec($2); } | T_PROC proc_name T_L_BRACK T_R_BRACK { new_pspec($2); } | T_PROC proc_name T_L_BRACK name_list T_R_BRACK { new_pspec($2); } 
 
 label_dec: T_NAME T_COLON;
 
@@ -293,7 +295,7 @@ operand: /* simplified */
     |
     const
     |
-    T_NAME T_L_BRACK p_list T_R_BRACK
+    proc_name T_L_BRACK p_list T_R_BRACK
     |
     T_NAME T_CIRCUMFLEX T_L_BRACK p_list T_R_BRACK
     |

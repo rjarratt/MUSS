@@ -32,5 +32,8 @@ in this Software without prior written authorization from Robert Jarratt.
 void yyerror(const char *msg, ...);
 void lex_trace(const char *msg, ...);
 void yacc_trace(const char *msg, ...);
+void remove_periods(char *name);
 void new_type(char *name);
 int is_type(char *name);
+void new_pspec(char *name);
+int is_pspec(char *name);
