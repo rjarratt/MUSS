@@ -152,7 +152,7 @@ proc_dec:
     |
     proc_dec_spec T_NAME pspec { new_pspec($2); }
     |
-    proc_dec_spec T_NAME T_EQUALS T_NAME;
+    proc_dec_spec T_NAME T_EQUALS T_PSPEC_NAME { new_pspec($2); };
 proc_dec_spec:
     T_LSPEC
     |
