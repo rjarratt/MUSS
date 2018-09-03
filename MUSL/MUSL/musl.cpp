@@ -124,7 +124,7 @@ int is_type(char *name)
 
 void new_pspec(char *name)
 {
-    printf("new_pspec %s\n", name);
+    //printf("new_pspec %s\n", name);
     add_table_entry(&pspec_table, name, name);
 }
 

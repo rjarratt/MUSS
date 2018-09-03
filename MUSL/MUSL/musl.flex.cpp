@@ -1572,19 +1572,19 @@ case 117:
 /* rule 117 can match eol */
 YY_RULE_SETUP
 #line 160 "musl.l"
-{ yylineno++; lex_trace("****** PARSING LINE %d ***********\n", yylineno); }
+{ yylineno++; }
 	YY_BREAK
 case 118:
 /* rule 118 can match eol */
 YY_RULE_SETUP
 #line 161 "musl.l"
-{ yylineno++; lex_trace("****** PARSING LINE %d ***********\n", yylineno); /* filter out directives for now */}
+{ yylineno++; /* filter out directives for now */}
 	YY_BREAK
 case 119:
 /* rule 119 can match eol */
 YY_RULE_SETUP
 #line 162 "musl.l"
-{ yylineno++; lex_trace("****** PARSING LINE %d ***********\n", yylineno); }
+{ yylineno++; }
 	YY_BREAK
 case 120:
 YY_RULE_SETUP
