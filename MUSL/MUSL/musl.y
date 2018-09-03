@@ -115,6 +115,8 @@ in this Software without prior written authorization from Robert Jarratt.
 
 %right T_ADDR T_L_PAREN
 
+%type <nameval> proc_name
+
 %{
 #include <stdio.h>
 #include <string.h>
@@ -313,7 +315,7 @@ comparator: T_EQUALS | T_NOT_EQUALS | T_LT | T_GT | T_LE | T_GE;
 p_list: p_list T_COMMA computation | computation | ;
 
 /* subscripts and variables as defined in the documenation create an ambiguous grammar, so I have re-factored the grammar slightly here */
-variable: T_NAME | T_NAME subscript | T_NAME T_CIRCUMFLEX subscript | T_NAME subscript T_CIRCUMFLEX subscript;
+variable: T_NAME | T_PSPEC_NAME | T_NAME subscript | T_NAME T_CIRCUMFLEX subscript | T_NAME subscript T_CIRCUMFLEX subscript;
 subscript: T_L_PAREN computation T_R_PAREN ;
 
 if_st: T_IF condition action

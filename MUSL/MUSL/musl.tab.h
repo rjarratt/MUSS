@@ -34,7 +34,7 @@
 # define YY_YY_MUSL_TAB_H_INCLUDED
 /* Enabling traces.  */
 #ifndef YYDEBUG
-# define YYDEBUG 1
+# define YYDEBUG 0
 #endif
 #if YYDEBUG
 extern int yydebug;
@@ -140,7 +140,7 @@ extern int yydebug;
 typedef union YYSTYPE
 {
 /* Line 2058 of yacc.c  */
-#line 130 "musl.y"
+#line 132 "musl.y"
 
     char charval;
     char *stringval;

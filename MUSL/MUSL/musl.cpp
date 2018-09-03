@@ -135,6 +135,18 @@ int is_pspec(char *name)
     return entry != NULL;
 }
 
+void add_builtin_functions()
+{
+    new_pspec("MAKE");
+    new_pspec("PART");
+    new_pspec("SIZE");
+    new_pspec("POSN");
+    new_pspec("BYTE");
+    new_pspec("LLST");
+    new_pspec("LPST");
+    new_pspec("LENT");
+}
+
 int main(int argc, char *argv[])
 {
     yydebug = 0;
@@ -159,6 +171,7 @@ int main(int argc, char *argv[])
         if (yyin != NULL && output != NULL)
         {
             yylineno = 1;
+            add_builtin_functions();
             do
             {
                 yyparse();
