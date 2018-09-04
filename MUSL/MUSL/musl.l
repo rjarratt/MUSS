@@ -39,8 +39,9 @@ HEXINTEGER       [0-9ABCDEFabcdef]+
 %%
 
 ADDR                         { return T_ADDR; }
-AND                          { return T_AND; }
 \$AD                         { return T_ADDR; }
+ALTERNATIVE                  { return T_ALTERNATIVE; }
+AND                          { return T_AND; }
 BEGIN                        { return T_BEGIN; }
 DATAVEC                      { return T_DATAVEC; }
 $DA                          { return T_DATAVEC; }
@@ -53,6 +54,7 @@ FI                           { return T_FI; }
 $FI                          { return T_FI; }
 FOR                          { return T_FOR; }
 $FO                          { return T_FOR; }
+FROM                         { return T_FROM; }
 IF                           { return T_IF; }
 $IF                          { return T_IF; }
 IMPORT                       { return T_IMPORT; }

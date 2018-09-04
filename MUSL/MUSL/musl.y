@@ -25,6 +25,7 @@ in this Software without prior written authorization from Robert Jarratt.
 */
 
 %token T_ADDR
+%token T_ALTERNATIVE
 %token T_AND
 %token T_BEGIN
 %token T_DATAVEC
@@ -34,6 +35,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_END
 %token T_FI
 %token T_FOR
+%token T_FROM
 %token T_IMPORT
 %token T_INTEGER
 %token T_INTEGER8
@@ -284,7 +286,7 @@ label_dec: T_NAME T_COLON;
 
 comp_st: computation | if_st | while_st| for_st;
 
-control_st: go_st | switch_st;
+control_st: go_st | switch_st | alt_st;
 
 computation: opr_opd_seq;
 opr_opd_seq: operand | operand operator opr_opd_seq;
@@ -327,6 +329,7 @@ while_st: T_WHILE condition T_DO statements T_OD
 for_st: T_FOR computation T_DO statements T_OD | T_FOR T_NAME T_LT computation T_DO statements T_OD 
 go_st: T_GOTO_OR_SUBSTORE T_NAME;
 switch_st: T_SWITCH computation T_FSLASH nlist;
+alt_st: T_ALTERNATIVE computation T_FROM statements T_END;
 nlist: nlist T_COMMA T_NAME | T_NAME;
 
 action: T_COMMA go_st | T_THEN statements else_cl T_FI;
