@@ -74,6 +74,7 @@ in this Software without prior written authorization from Robert Jarratt.
 %token T_GT
 %token T_LE
 %token T_GE
+%token T_PERIOD
 %token T_COMMA
 %token T_COLON
 %token T_CIRCUMFLEX
@@ -248,9 +249,10 @@ scalar_type:
     T_ADDR T_ADDR;
 vector_pointer: T_ADDR T_L_PAREN;
 
-const: dec_integer | char_const | T_MULTI_CHAR_CONST | T_CH_STRING | T_NAME; /* see 9.3.5 for the rest. T_NAME not documented */
+const: dec_integer | real_const | char_const | T_MULTI_CHAR_CONST | T_CH_STRING | T_NAME; /* see 9.3.5 for the rest. T_NAME not documented, also real_const documented but not shown as part of <const> */
 dec_integer: T_NUMBER | T_PLUS T_NUMBER | T_MINUS T_NUMBER | T_HEXNUMBER | T_HEXNUMBER T_L_BRACK T_NUMBER T_R_BRACK;
 char_const: T_CHAR_CONST;
+real_const: dec_integer T_PERIOD T_NUMBER /* exponent syntax not covered*/
 
 logical: T_LOGICAL | T_LOGICAL8  | T_LOGICAL16  | T_LOGICAL32 | T_LOGICAL64;
 integer: T_INTEGER | T_INTEGER8 | T_INTEGER16 | T_INTEGER32 | T_INTEGER64;

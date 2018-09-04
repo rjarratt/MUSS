@@ -114,6 +114,7 @@ WITHIN                       { return T_WITHIN; }
 \>                           { return T_GT; }
 \=<                          { return T_LE; }
 \>=                          { return T_GE; }
+\.                           { return T_PERIOD; }
 \,                           { return T_COMMA; }
 \:                           { return T_COLON; }
 \^                           { return T_CIRCUMFLEX; }

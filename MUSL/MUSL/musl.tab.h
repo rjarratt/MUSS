@@ -95,43 +95,44 @@ extern int yydebug;
      T_GT = 304,
      T_LE = 305,
      T_GE = 306,
-     T_COMMA = 307,
-     T_COLON = 308,
-     T_CIRCUMFLEX = 309,
-     T_L_BRACK = 310,
-     T_R_BRACK = 311,
-     T_L_PAREN = 312,
-     T_R_PAREN = 313,
-     T_PLUS = 314,
-     T_MINUS = 315,
-     T_STAR = 316,
-     T_SLASH = 317,
-     T_FSLASH = 318,
-     T_AMPERSAND = 319,
-     T_EXCLAMATION = 320,
-     T_XOR = 321,
-     T_RSUB = 322,
-     T_RDIV = 323,
-     T_ADDSTORE = 324,
-     T_MULSTORE = 325,
-     T_DIVSTORE = 326,
-     T_ANDSTORE = 327,
-     T_ORSTORE = 328,
-     T_XORSTORE = 329,
-     T_ASSIGN = 330,
-     T_RSUBSTORE = 331,
-     T_RDIVSTORE = 332,
-     T_LLSHIFT = 333,
-     T_RLSHIFT = 334,
-     T_GOTO_OR_SUBSTORE = 335,
-     T_TYPE_NAME = 336,
-     T_PSPEC_NAME = 337,
-     T_NAME = 338,
-     T_CHAR_CONST = 339,
-     T_MULTI_CHAR_CONST = 340,
-     T_CH_STRING = 341,
-     T_NUMBER = 342,
-     T_HEXNUMBER = 343
+     T_PERIOD = 307,
+     T_COMMA = 308,
+     T_COLON = 309,
+     T_CIRCUMFLEX = 310,
+     T_L_BRACK = 311,
+     T_R_BRACK = 312,
+     T_L_PAREN = 313,
+     T_R_PAREN = 314,
+     T_PLUS = 315,
+     T_MINUS = 316,
+     T_STAR = 317,
+     T_SLASH = 318,
+     T_FSLASH = 319,
+     T_AMPERSAND = 320,
+     T_EXCLAMATION = 321,
+     T_XOR = 322,
+     T_RSUB = 323,
+     T_RDIV = 324,
+     T_ADDSTORE = 325,
+     T_MULSTORE = 326,
+     T_DIVSTORE = 327,
+     T_ANDSTORE = 328,
+     T_ORSTORE = 329,
+     T_XORSTORE = 330,
+     T_ASSIGN = 331,
+     T_RSUBSTORE = 332,
+     T_RDIVSTORE = 333,
+     T_LLSHIFT = 334,
+     T_RLSHIFT = 335,
+     T_GOTO_OR_SUBSTORE = 336,
+     T_TYPE_NAME = 337,
+     T_PSPEC_NAME = 338,
+     T_NAME = 339,
+     T_CHAR_CONST = 340,
+     T_MULTI_CHAR_CONST = 341,
+     T_CH_STRING = 342,
+     T_NUMBER = 343,
+     T_HEXNUMBER = 344
    };
 #endif
 
@@ -140,7 +141,7 @@ extern int yydebug;
 typedef union YYSTYPE
 {
 /* Line 2058 of yacc.c  */
-#line 132 "musl.y"
+#line 133 "musl.y"
 
     char charval;
     char *stringval;
@@ -149,7 +150,7 @@ typedef union YYSTYPE
 
 
 /* Line 2058 of yacc.c  */
-#line 153 "musl.tab.h"
+#line 154 "musl.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
