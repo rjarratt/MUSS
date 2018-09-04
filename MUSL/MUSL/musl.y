@@ -207,6 +207,8 @@ kind:
     |
     T_LITERAL numeric_type
     |
+    T_LITERAL T_ADDR /* not documented in manual */
+    |
     T_VSTORE
     |
     T_VSTORE numeric_type
