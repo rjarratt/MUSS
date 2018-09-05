@@ -90,6 +90,7 @@ OD                           { return T_OD; }
 OF                           { return T_OF; }
 OR                           { return T_OR; }
 PROC                         { return T_PROC; }
+\$PR                         { return T_PROC; }
 PSPEC                        { return T_PSPEC; }
 \$PS                         { return T_PSPEC; }
 REAL                         { return T_REAL; }
