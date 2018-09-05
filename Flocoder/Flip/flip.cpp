@@ -661,10 +661,7 @@ static void output_box_line(char *name, void *value)
     }
     else
     {
-        if (!conditional_already_substituted)
-        {
-            conditional_substitution = strstr(entry->line, "@>>");
-        }
+        conditional_substitution = strstr(entry->line, "@>>");
 
         if (conditional_substitution != NULL)
         {
