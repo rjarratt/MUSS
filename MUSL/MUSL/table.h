@@ -34,12 +34,15 @@ typedef struct TABLE_ENTRY
     struct TABLE_ENTRY *next;
 } TABLE_ENTRY;
 
-typedef struct
+typedef struct TABLE
 {
+    struct TABLE *parent;
     TABLE_ENTRY *head;
     TABLE_ENTRY *tail;
 } TABLE;
 
+TABLE *new_child_table(TABLE *parent);
+TABLE *pop_child_table(TABLE *table);
 void add_table_entry(TABLE *table, char *name, void *value);
 void *find_table_entry(TABLE *table, char *name);
 void process_table_entries(TABLE *table, void(*process)(char *name, void *value));

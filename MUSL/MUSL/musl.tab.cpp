@@ -635,15 +635,15 @@ static const yytype_uint16 yyrline[] =
      261,   261,   262,   262,   262,   262,   262,   263,   263,   263,
      263,   266,   268,   270,   272,   272,   272,   274,   274,   274,
      274,   275,   277,   277,   277,   277,   277,   277,   277,   279,
-     279,   281,   281,   282,   283,   283,   283,   285,   287,   287,
-     287,   287,   289,   289,   289,   291,   292,   292,   294,   294,
-     294,   294,   294,   294,   294,   294,   294,   294,   294,   294,
-     294,   294,   294,   294,   294,   294,   294,   294,   294,   296,
-     298,   300,   302,   304,   306,   308,   310,   311,   311,   313,
-     313,   314,   314,   315,   315,   317,   318,   318,   319,   319,
-     319,   319,   319,   319,   321,   321,   321,   324,   324,   324,
-     324,   324,   325,   327,   328,   329,   329,   330,   331,   332,
-     333,   333,   335,   335,   336,   336
+     279,   281,   281,   282,   284,   286,   288,   290,   292,   292,
+     292,   292,   294,   294,   294,   296,   297,   297,   299,   299,
+     299,   299,   299,   299,   299,   299,   299,   299,   299,   299,
+     299,   299,   299,   299,   299,   299,   299,   299,   299,   301,
+     303,   305,   307,   309,   311,   313,   315,   316,   316,   318,
+     318,   319,   319,   320,   320,   322,   323,   323,   324,   324,
+     324,   324,   324,   324,   326,   326,   326,   329,   329,   329,
+     329,   329,   330,   332,   333,   334,   334,   335,   336,   337,
+     338,   338,   340,   340,   341,   341
 };
 #endif
 
@@ -1985,27 +1985,45 @@ yyreduce:
     { new_type((yyvsp[(2) - (4)].nameval)); }
     break;
 
+  case 73:
+/* Line 1792 of yacc.c  */
+#line 233 "musl.y"
+    { new_var((yyvsp[(3) - (3)].nameval)); }
+    break;
+
+  case 74:
+/* Line 1792 of yacc.c  */
+#line 233 "musl.y"
+    { new_var((yyvsp[(1) - (1)].nameval)); }
+    break;
+
+  case 133:
+/* Line 1792 of yacc.c  */
+#line 282 "musl.y"
+    { pop_symbol(); }
+    break;
+
   case 134:
 /* Line 1792 of yacc.c  */
-#line 283 "musl.y"
-    { new_pspec((yyvsp[(2) - (2)].nameval)); }
+#line 284 "musl.y"
+    { new_pspec((yyvsp[(2) - (2)].nameval)); push_symbol(); }
     break;
 
   case 135:
 /* Line 1792 of yacc.c  */
-#line 283 "musl.y"
-    { new_pspec((yyvsp[(2) - (4)].nameval)); }
+#line 286 "musl.y"
+    { new_pspec((yyvsp[(2) - (4)].nameval)); push_symbol(); }
     break;
 
   case 136:
 /* Line 1792 of yacc.c  */
-#line 283 "musl.y"
-    { new_pspec((yyvsp[(2) - (5)].nameval)); }
+#line 288 "musl.y"
+    { new_pspec((yyvsp[(2) - (5)].nameval)); push_symbol(); }
     break;
 
 
 /* Line 1792 of yacc.c  */
-#line 2009 "musl.tab.cpp"
+#line 2027 "musl.tab.cpp"
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2237,6 +2255,6 @@ yyreturn:
 
 
 /* Line 2055 of yacc.c  */
-#line 337 "musl.y"
+#line 342 "musl.y"
 
 

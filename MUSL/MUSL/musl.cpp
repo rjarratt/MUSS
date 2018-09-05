@@ -49,8 +49,20 @@ extern int yylex(void);
 extern int yyparse(void);
 extern int yydebug;
 
+typedef enum
+{
+    SymbolVariable,
+    SymbolPSpec
+} SYMBOL_TYPE;
+
+typedef struct
+{
+    SYMBOL_TYPE symbol_type;
+} SYMBOL;
+
 TABLE type_table;
-TABLE pspec_table;
+TABLE root_symbol_table;
+TABLE *current_symbol_table = &root_symbol_table;
 
 static int enable_lex_trace = 0;
 static int enable_yacc_trace = 0;
@@ -122,17 +134,39 @@ int is_type(char *name)
     return entry != NULL;
 }
 
+void new_var(char *name)
+{
+    //printf("new_var %s\n", name);
+    SYMBOL *symbol = (SYMBOL *)malloc(sizeof(SYMBOL));
+    symbol->symbol_type = SymbolVariable;
+    add_table_entry(current_symbol_table, name, symbol);
+}
+
 void new_pspec(char *name)
 {
     //printf("new_pspec %s\n", name);
-    add_table_entry(&pspec_table, name, name);
+    SYMBOL *symbol = (SYMBOL *)malloc(sizeof(SYMBOL));
+    symbol->symbol_type = SymbolPSpec;
+    add_table_entry(current_symbol_table, name, symbol);
 }
 
 int is_pspec(char *name)
 {
-    void *entry = find_table_entry(&pspec_table, name);
+    SYMBOL *entry = (SYMBOL *)find_table_entry(current_symbol_table, name);
     //printf("is_pspec %s=%d\n", name, entry != NULL);
-    return entry != NULL;
+    return entry != NULL && entry->symbol_type == SymbolPSpec;
+}
+
+void push_symbol(void)
+{
+    printf("Symbol push\n");
+    current_symbol_table = new_child_table(current_symbol_table);
+}
+
+void pop_symbol(void)
+{
+    printf("Symbol pop\n");
+    current_symbol_table = pop_child_table(current_symbol_table);
 }
 
 void add_builtin_functions()

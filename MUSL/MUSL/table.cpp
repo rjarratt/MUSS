@@ -33,6 +33,20 @@ have already been allocated.
 #include <string.h>
 #include "table.h"
 
+TABLE *new_child_table(TABLE *parent)
+{
+    TABLE *child = (TABLE *)malloc(sizeof(TABLE));
+    child->parent = parent;
+    child->head = NULL;
+    child->tail = NULL;
+    return child;
+}
+
+TABLE *pop_child_table(TABLE *table)
+{
+    return table->parent;
+}
+
 void add_table_entry(TABLE *table, char *name, void *value)
 {
     TABLE_ENTRY *entry = (TABLE_ENTRY *)malloc(sizeof(TABLE_ENTRY));
@@ -64,6 +78,11 @@ void *find_table_entry(TABLE *table, char *name)
             break;
         }
         entry = entry->next;
+    }
+
+    if (result == NULL && table->parent != NULL)
+    {
+        result = find_table_entry(table->parent, name);
     }
 
     return result;

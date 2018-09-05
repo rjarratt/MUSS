@@ -35,5 +35,8 @@ void yacc_trace(const char *msg, ...);
 void remove_periods(char *name);
 void new_type(char *name);
 int is_type(char *name);
+void new_var(char *name);
 void new_pspec(char *name);
 int is_pspec(char *name);
+void push_symbol(void);
+void pop_symbol(void);

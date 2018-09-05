@@ -230,7 +230,7 @@ fields: fields type name_list |  type name_list;
 
 type: scalar_type | scalar_type T_L_PAREN const T_R_PAREN;
 
-name_list: name_list T_COMMA T_NAME | T_NAME;
+name_list: name_list T_COMMA T_NAME { new_var($3); } | T_NAME { new_var($1); };
 
 /* shift-reduce conflict because of vector declaration in the definition of <type> above, with conflict on left square bracket */
 scalar_type:
@@ -279,8 +279,13 @@ declarative_statement: label_dec | var_dec | proc_dec | lit_dec | data_vec | typ
 imperative_statement: comp_st | control_st;
 
 proc_name: T_NAME | T_PSPEC_NAME;
-proc_defn: proc_heading separator statements T_END;
-proc_heading: T_PROC proc_name { new_pspec($2); } | T_PROC proc_name T_L_BRACK T_R_BRACK { new_pspec($2); } | T_PROC proc_name T_L_BRACK name_list T_R_BRACK { new_pspec($2); } 
+proc_defn: proc_heading separator statements T_END { pop_symbol(); };
+proc_heading:
+    T_PROC proc_name { new_pspec($2); push_symbol(); }
+    |
+    T_PROC proc_name T_L_BRACK T_R_BRACK { new_pspec($2); push_symbol(); }
+    |
+    T_PROC proc_name T_L_BRACK name_list T_R_BRACK { new_pspec($2); push_symbol(); } 
 
 label_dec: T_NAME T_COLON;
 
