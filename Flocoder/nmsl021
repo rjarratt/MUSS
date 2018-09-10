@@ -1,0 +1,89 @@
+@X @~
+~V7 56 2 -5
+~D10
+~H                    MUSS
+~
+~
+~D10
+~H            NMSL021
+~D10
+~MMANCHESTER UNIVERSITY  -  CONFIDENTIAL~
+~
+~
+~V2 -16
+                                                                      ISSUE 11~
+~V2 0
+~V9 -1
+~P
+~V9 1
+~YMSL021
+~M~LMSL IMPLEMENTATION DESCRIPTION
+~
+~M~LSection 2 Version 1
+~S1~LSection 2.1 Declarations & Initialisations
+~S1~L1. General Description
+~BThis section serves two functions. In the multi-module
+version of the source it contains the declarations of
+literals which may be installation dependent. For example,
+the literals which define the sizes of the main
+data structures fall into this category.
+Also some other declarations have been placed in this
+module to avoid certain kinds of cross reference.~
+~Y
+~P
+~V9 -1
+~D15
+~HFLOWCHARTS
+~
+~
+~H              NMSL021
+~V9 -1
+~F
+@TITLE MSL02(1,11)
+@COL 1S-2F
+@FLOW 1-2
+@BOX 1.0
+GLOBAL DECLARATIONS
+@BOX 2.0
+END
+@BOX 1.1
+::PDP $TY ITYPE IS $LO8 TAG,ST $LO16 IND;
+MODULE(LBUFFZ,CLISTZ,PLISTZ,PARAMSZ,TLISTZ,NLISTZ,
+NLIST,NLISTENT,PLIST,PLISTENT,CHLIST,XNAME, ::TEMP MOD
+KLAB,KLABREF,KVAR,KDUMMY,KGLAB,KIMPLAB,KTREF,KTYPE, ::TEMP MOD
+::PDP DIF,DTHEN,DELSE,DDO,DVSTORE,DTY,DEND,DDATAVEC,DADDR,
+::PDP DLA,DFROM,DOF,DIS,DAND,DOR,LTHAN,EQUALS,GTHAN,PLUS,MINUS,
+::PDP SLASH,GOTO,DAMPAND,DBANG,DEREF,HASH,REF,COMMA,LSB,RSB,LB,
+::PDP RB,BSLASH,XCOLON,COLON,TLAB,TLO32,
+CHLISTZ,NIL);
+EXIT; ::ESCAPE FROM AUTOMATIC INITIALISATION OF PRIVATE LIBS
+::MU6 $LI LBUFFZ=500, CLISTZ=500;
+::MU6 $LI PLISTZ=1050, PARAMSZ=600, TLISTZ=400;
+::MU6 $LI NLISTZ=2200, CHLISTZ=16000;
+::PDP $LI LBUFFZ=125,CLISTZ=125;
+::PDP $LI PLISTZ=320,PARAMSZ=270,TLISTZ=250;
+::PDP $LI NLISTZ=340,CHLISTZ=4100;
+*GLOBAL 5;
+::PDP $LI/ITYPE DIF = 0\0\%5, DTHEN = 0\0\%6,
+::PDP DELSE = 0\0\%7, DDO = 0\0\%B,DVSTORE = 0\0\%1A,DTY = 0\0\%14,
+::PDP DEND = 0\0\%4, DDATAVEC = 0\0\%13, DADDR = 0\0\%16, DLA = 0\%30\%28,
+::PDP DFROM = 0\0\%2D,DOF = 0\0\%29, DIS = 0\0\%2A, DAND = 0\0\%2B,
+::PDP DOR = 0\0\%2C, LTHAN = 0\0\%31, EQUALS = 0\0\%33, GTHAN = 0\0\%30,
+::PDP PLUS = 0\0\%34, MINUS = 0\0\%35,
+::PDP SLASH = 0\0\%37, GOTO = 0\0\%3F,DAMPAND = 0\0\%3A, DBANG = 0\0\%3B,
+::PDP DEREF = 0\0\%4A, HASH = 0\0\%56, REF = 0\0\%4A, COMMA = 0\0\%4C,
+::PDP LSB = 0\0\%4D, RSB = 0\0\%4E, LB = 0\0\%4F,
+::PDP RB = 0\0\%50, BSLASH = 0\0\%51, XCOLON = 0\0\%52,
+::PDP COLON = 0\0\%4B;
+$LI KLAB=14,KLABREF=15,KVAR=4,KDUMMY=0,KGLAB=13,KIMPLAB=16,KTREF=9,KTYPE=6;
+$LI/ADDR[$LO8] NIL=;
+$TY NLIST.ENT IS $LO16 MUTLN,MUSLN,HASH;
+$TY PLIST.ENT $IS $LO16 INTID,PREVN,K,T $IN32 DETAIL;
+NLISTENT[NLISTZ] NLIST;
+PLIST.ENT[PLISTZ] PLIST;
+$LO8[CHLISTZ] CHLIST;
+$LO8[64] XNAME;
+@BOX 2.1
+*END
+@END
+

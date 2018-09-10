@@ -1,0 +1,1288 @@
+@X @~
+~V7 56 2 -5
+~V9 1
+~D10
+~H                    MUSS
+~
+~
+~H     VOLUME        5
+~D10
+~M~OMSL IMPLEMENTATION DESCRIPTION~
+~BThis Manual contains the implementation description for the
+MUSL compiler.~
+~D10
+~MUNIVERSITY OF MANCHESTER~
+~V9 -1
+~P
+~V9 1
+~D10
+~S1~MVolume 5  CONTENTS
+~
+~
+~MMSL011  -  Compiler Organisation            ~
+~
+~NMSL021  -  Declarations & Initialisations~
+~
+~NMSL031  -  Lexical Analysis~
+~
+~NMSL041  -  Directive Processing~
+~
+~NMSL051  -  Declarative Statement Processing~
+~
+~NMSL061  -  Imperative Statement Processing~
+~
+~NMSL071  -  Computation Processing~
+~
+~NMSL081  -  Name List Management~
+~
+~NMSL091  -  Monitoring~
+~
+~NMSL101  -  MUBL for Multi-Pass Compiler~
+~V9 -1
+~P
+~D10
+~H                    MUSS
+~
+~
+~D10
+~H            NMSL011
+~D10
+~MMANCHESTER UNIVERSITY  -  CONFIDENTIAL~
+~
+~
+                                                           ISSUE 11~
+~V9 -1
+~P
+~V9 1
+~YMSL011
+~M~OMSL IMPLEMENTATION DESCRIPTION
+~
+~M~OSection 1 Version 1
+~S1~OSection 1.1 Compiler Organisation
+~S1~O1. General Description
+~BThe MUSL compiler is written in MUSL. It is a single pass
+compiler operating on a statement by statement basis,
+which translates the statements of a source program
+into calls upon MUTL procedures.
+Normally several different versions of the MUTL procedures
+exist as libraries. They mostly generate code, for different machines, and the s
+ame
+compiler runs with any chosen MUTL, except one version of the
+MUTL procedures outputs the MUBL encoding instead of
+generating code
+and another generates a readable form of the MUTL calls.
+A subset of the version of MUTL which generates MUBL is
+included as Section 10 of this Manual.
+It is not normally included in the compiler and if it is required an edit is nec
+essary to
+include it as shown on MSL01.Thus a MUSL to MUBL compiler is created by compilin
+g
+in Section 10 instead of opening a MUTL library.~
+~BThe source presented here may be used to generate two
+versions of the compiler by means of appropriate edits.
+In the case where the compiler is to run
+in a big virtual store MUSS system the comments '::MU6 '
+should be edited out, whereas in the case where it is to
+run in a PDP11, the comments '::PDP ' should be removed.~
+~S1~O2. Interfaces
+~
+~
+Exported data structures~
+~T# 3 7
+~
+#1)#CON.STK~
+#2)#CON.PTR~
+#3)#RESTART~
+#4)#IX~
+#5)#CEXIT~
+#6)#MSTR~
+#7)#MUTLSTR~
+~
+Exported literals~
+~
+#1)#CONSTKZ~
+~S1~O2.2 Software Interface
+~BThe MUSL compiler uses the following library procedures~
+~T# 13
+~
+#SELECTINPUT~
+#SELECTOUTPUT~
+#INCH~
+#OUTCH~
+#INBACKSPACE~
+#CAPTION~
+#FINDN~
+#CURRENT.INPUT~
+#CURRENT.OUTPUT~
+#SPACES~
+#NEWLINES~
+#OUTI~
+#IPOS~
+#OUTLINENO~
+#PPC.CMD~
+#DEFINE.INPUT~
+#END.INPUT~
+#CREATE.SEGMENT~
+#RELEASE.SEGMENT~
+~
+~T# 10
+#and on the PDP11 only~
+~T# 13
+~
+#MAP~
+#READ.SEGMENTSTATUS~
+#COPY BLOCK~
+~
+In addition it uses MUTL but does not require
+the full facilities of MUTL. The necessary sections of
+MUTL (cross references to the MUTL User Manual) are
+listed and where only a subset of the facilities of a section
+are needed this is stated.~
+~T# 10 13 19 29 33
+~
+#Section 2.2~
+##Only the following types are required~
+##Signed Integer 8,16,24,32 bits~
+##Unsigned integer 1,8,16,24,32 or 64 bits~
+##Real 32,64,128 bits (only used by the~
+####Fortran Implementation).~
+#Section 2.3~
+##TL.EQUIV.POS##not required~
+##TL.INT.AREA##not required~
+#Section 2.4~
+##TL.SET.TYPE##not required~
+##TL.ASS.ADV##not required~
+#Section 2.5~
+##TL.C.LIT64##not required~
+##TL.C.LIT128##not required~
+#Section 2.6~
+##TL.PARAM.NAME##not required~
+##TL.ENTRY##not required~
+##TL.ENTRY.PARAM##not required~
+##TL.ENTRY.RESULT##not required~
+##TL.RENAME##not required~
+#Section 2.7~
+#Section 2.8~
+##Under TL.PL the only ACC-MODES required are~
+###INTEGER 8,16,32~
+###LOGICAL 1,8,16,32,64~
+###REAL 32,64,128~
+##also  MFN (mathematical functions are not required).~
+~S1~O3. Implementation
+~S1~O3.1 Outline of Operation
+~BSome elaboration of the treatment of
+the block structure aspects of the language will be helpful
+at this stage. There are a number of MUSL statements which
+contain nested blocks of statements. These are the IF,
+FOR, WHILE and ALTERNATIVE statements,
+BEGIN/END block and a PROC DEFN.
+In such cases the compiler treats the statement heading as a
+statement, hence the nested statements and the overall
+statement terminator are treated as statements in their own
+right. Consider for example the IF statement shown below.
+Although it is a single statement according to the definition
+of the language, the MUSL compiler subdivides it into six statements
+as shown by the inserted '|' symbols~
+~
+~
+~MIF X = 0 THEN|1 +> Y;|0 => Z|ELSE|-1 => Z|FI|~
+~BIt follows that the compiler needs to
+remember context information over several statements.
+Thus there is a context stack (CON.STK) which serves this function.
+Entries are made on the context stack by the statements~
+~T# 10 26
+~
+#IF ... THEN~
+#FOR ... DO~
+#WHILE ... DO~
+#ALTERNATIVE ... FROM~
+#PROC ...~
+#BEGIN~
+#DATAVEC~
+~
+They are removed by the matching~
+~Q 7
+~
+#FI~
+#OD~
+#OD~
+#END~
+#END~
+#END~
+~
+Also an IF THEN entry is changed by an ELSE,
+and a separate entry is made for each statement contained
+in an ALTERNATIVE.~
+~BNormally the DATAVEC entry will be redundant,
+since it is added and removed within the same procedure (DEC.DVEC).
+However, an error may cause a premature exit from this procedure
+in which case the END is processed by the END.ST procedure which
+requires to know the context.~
+~BWith this notion of a statement in mind the overall action
+of the compiler can be summarised as~
+~
+~
+#1. READ AND ITEMISE A STATEMENT~
+~
+#2. IDENTIFY IT AND CALL THE APPROPRIATE PROCEDURE~
+~
+#3. CHECK FOR ERRORS AND REPEAT 1.~
+~
+~
+Obviously the detailed flowchart MAIN LOOP (MSL01.1) is not quite this
+simple. Some procedures are called after ad hoc explicit tests.
+These are~
+~
+~
+#TRANS.DIRECTIVE#- MSL04.1~
+#DECL.LAB#- MSL05.11~
+#TRANS.COMP#- MSL06.1~
+#DECL.VAR#- MSL05.7~
+#TRANS.GOTO#- MSL06.5~
+~
+~
+The rest of the procedures, and some of the above, are entered from box 46 which
+ switches
+on the initial keyword. These procedures are~
+~
+~
+#BEGIN.ST#- MSL05.5~
+#END.ST#- MSL05.15~
+#DECL.PROC#- MSL05.2~
+#PROC.HEAD#- MSL05.4~
+#MOD.HEAD#- MSL05.1~
+#DECL.TYPE#- MSL05.6~
+#DECL.VAR#- MSL05.7~
+#DECL.FIELD#- MSL05.8~
+#DECL.SPACE#- MSL05.9~
+#DECL.LIT#- MSL05.10~
+#DECL.DVEC#- MSL05.12~
+#DECL.IMPORT#- MSL05.14~
+#DECL.VSTORE#- MSL05.16~
+#TRANS.COMP#- MSL06.1~
+#TRANS.IF#- MSL06.2~
+#TRANS.WHILE#- MSL06.3~
+#TRANS.FOR#- MSL06.4~
+#TRANS.SWITCH#- MSL06.6~
+#TRANS.ALT#- MSL06.7~
+#TRANS.ELSE#- MSL06.8~
+#TRANS.FI#- MSL06.9~
+#TRANS.OD#- MSL06.10~
+#TRANS.EXIT#- MSL06.11
+~S1~O3.2 Data Structures
+~
+~T\ 10 32 51 57
+~
+CON.STK~IThis is a stack on which entries are made by the MODULE, IF, WHILE,
+FOR, PROC, BEGIN, ALTERNATIVE and DATAVEC statements. They are
+removed by the matching FI, OD and END statements.
+The stack is a vector of integers and each kind of
+entry may be of a different size. However, each
+entry ends with an integer that
+defines its type and hence its size as follows~
+~
+\ 0 if the context is\DATAVEC\size\1 word~
+\ 1 if the context is\IF ... THEN\size\2 words~
+\ 2 if the context is\IF ... ELSE\size\2 words~
+\ 3 if the context is\WHILE ... DO\size\3 words~
+\ 4 if the context is\PROC ...\size\9 words~
+\ 5 if the context is\BEGIN\size\4 words~
+\ 6 if the context is\MODULE\size\1 word~
+\ 7 if the context is\PRE MODULE HEADING\size\1 word~
+\ 8 if the context is\FOR ... DO\size\1 word~
+\ 9 if the context is\ALTERNATIVE ...\size\3 words~
+\10 is an ALTERNATIVE JUMP REQD entry\size\4 words~
+\11 is an ALTERNATIVE JUMP PLANTED\size\4 words~
+~
+~IThe detail of each type of CONSTK entry is given with the
+description of the processing of the associated statements.
+The PRE-MODULE entry is made when the stack is initialised
+and it consists only of the integer 7.~
+~
+CON.PTR~IThis is an index to the last used word in CON.STK.
+I.E. it is an index to the 'current context'.~
+~
+RESTART~IThis is a label type variable to which the starting
+address of the main loop is assigned. Fault procedures which
+wish to return to the main loop do so by~
+~I\-> RESTART;~
+~
+CEXIT~IThis is a label type variable to which the end
+address of the compiler is assigned. Thus the *END
+directive in module 4 can force an exit from the compiler.~
+~
+IX~IThis variable controls the passing of import export
+bits to MUTL.~
+~
+MSTR~IThis integer gives the number of the monitor stream.~
+~
+MUTLSTR~IThis integer gives the number of the MUBL stream.~
+~S1~O4. Compiling MUSL
+~BAs described in section 9 of the SYS000 module of MUSS
+there are several MUSL compilers in the system. There is one in
+the library of each version of MUSS and it is the means by which
+programs and libraries, written in MUSL, are compiled to run with
+that version of MUSS. Also there is MUSLX, a cross compiler which is
+normally used on one
+version of MUSS to compile system modules to run with another
+version. The first job given below generates the system compiler
+for any version of MUSS assuming that the '?' symbols are
+edited into the required version number. It uses the cross compiler.
+The second will compile the cross compiling
+MUSL as a private library (MUSLX).
+The third job generates a private library version of MUSL
+for development purposes and the fourth generates the MUBL
+for the MUSL compiler.
+~S1~O4.1 Job to compile MUSL for Paged Machines~
+::BEGIN COMPMUSL FOR PAGED MACHINES~
+DO 0 MSL\?LOG %200~
+LIB MSLX~
+LIB MTLX\~
+LIB L2X\~
+OPENDIR MUSMS~
+LIB DIR6\?~
+TL %5 BMSL\? 1~
+TLSEG 0 %FFFF %24C0000 -1 6             *FOR MC7*~
+TLSEG 0 %A000 %00D40000 -1 6               *FOR MC5*~
+TLSEG 0 %A000 %00D40000 -1 6               *FOR MC5G*~
+TLSEG 0 %FFFF %7FE60000 -1 6               *FOR MC3*~
+MUSL %0 0 %E00                        *FOR MC7*~
+MUSL %0 0 %F00                             *FOR MC5*~
+MUSL %0 0 %F00                             *FOR MC5G*~
+MUSL %0 0 %C00                             *FOR MC3* ~
+**ED MU6C:NMSL021~
+(FD"::MU6 ")~
+E~
+**FLIP 0 1 0 ;L: ;->L: !2C!->L;~
+MSL02~
+**DI 7~
+**TLSEG 1 %10000 %F40000 -3 %C                 *FOR MC7*~
+**TLSEG 1 %D000 %00780000 -3 %C            *FOR MC5*~
+**TLSEG 1 %D000 %001E0000 -3 %C            *FOR MC5G*~
+**TLSEG 1 %10000 %3D0000 -3 %C             *FOR MC3*~
+**TLSEG 2 %4000 0 -3 %C~
+**TLLOAD 1 5~
+**TLLOAD 2 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %E00                         *FOR MC7*~
+MUSL %0 0 %F00                             *FOR MC5*~
+MUSL %0 0 %F00                             *FOR MC5G*~
+MUSL %0 0 %C00                             *FOR MC3* ~
+**ED MU6C:NMSL031~
+(FD"::MU6 ")~
+E~
+**ED                                       *FOR MC5G*~
+(FD"::MC")                                *FOR MC5G*~
+E                                         *FOR MC5G*~
+**ED                                       *FOR MC5*~
+(FD"::MC")                                *FOR MC5*~
+E                                         *FOR MC5*~
+**FLIP 0 1 0 ;L: ;->L; !2C!->L;~
+MSL03~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %E00                        *FOR MC7*~
+MUSL %0 0 %F00                            *FOR MC5*~
+MUSL %0 0 %F00                            *FOR MC5G*~
+MUSL %0 0 %C00                            *FOR MC3* ~
+**ED MU6C:NMSL011~
+(FD"::MU6 ")                                *FOR MC7*~
+(FD"::PTV ")                              *FOR MC5*~
+(FD"::PTV ")                              *FOR MC5G*~
+(FD"::MU6 ")                              *FOR MC3* ~
+E~
+**FLIP 0 1 0 ;L: ;->L; !2C!->L;~
+MSL01~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %E00                       *FOR MC7*~
+MUSL %0 0 %F00                            *FOR MC5*~
+MUSL %0 0 %F00                            *FOR MC5G*~
+MUSL %0 0 %C00                            *FOR MC3* ~
+**FLIP MU6C:NMSL041 1 0 ;L: ;->L; !2C!->L;~
+MSL04~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %E00                        *FOR MC7*~
+MUSL %0 0 %F00                            *FOR MC5*~
+MUSL %0 0 %F00                            *FOR MC5G*~
+MUSL %0 0 %C00                            *FOR MC3* ~
+**FLIP MU6C:NMSL051 1~
+MSL05~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %E00                       *FOR MC7*~
+MUSL %0 0 %F00                            *FOR MC5*~
+MUSL %0 0 %F00                            *FOR MC5G*~
+MUSL %0 0 %C00                            *FOR MC3* ~
+**FLIP MU6C:NMSL061 1~
+MSL06~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %E00                       *FOR MC7*~
+MUSL %0 0 %F00                            *FOR MC5*~
+MUSL %0 0 %F00                            *FOR MC5G*~
+MUSL %0 0 %C00                            *FOR MC3* ~
+**FLIP MU6C:NMSL071 1 0 ;L: ;->L; !2C!->L;~
+MSL07~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %E00                       *FOR MC7*~
+MUSL %0 0 %F00                            *FOR MC5*~
+MUSL %0 0 %F00                            *FOR MC5G*~
+MUSL %0 0 %C00                            *FOR MC3* ~
+**FLIP MU6C:NMSL081 1 0 ;L: ;->L; !2C!->L;~
+MSL08~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %A00                       *FOR MC7*~
+MUSL %0 0 %B00                            *FOR MC5*~
+MUSL %0 0 %B00                            *FOR MC5G*~
+MUSL %0 0 %800                            *FOR MC3* ~
+**FLIP MU6C:NMSL091 1 0 ;L: ;->L; !2C!->L;~
+MSL09~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+STOP~
+::END COMPMUSL FOR PAGED MACHINES~
+~S1~O4.2 Job to compile MUSL on VAX for PTV operation
+::BEGIN COMPMSLX FOR PAGED MACHINES~
+DO 0 MSLXLOG %200~
+TL %5 MSLX 1~
+TLSEG 0 %FFFF %00840000 -1 6               *FOR XMC7*~
+TLSEG 0 %A000 %00680000 -1 6               *FOR XMC5*~
+TLSEG 0 %A000 %001A0000 -1 6               *FOR XMCG*~
+TLSEG 0 %FFFF %00210000 -1 6               *FOR XMC3*~
+MUSL %0 0 %C00~
+**ED MU6C:NMSL021~
+(FD"::MU6 ")~
+E~
+**FLIP 0 1 0 ;L: ;->L: !2C!->L;~
+MSL02~
+**DI 7~
+**TLSEG 1 %D000 %00F40000 -3 %C            *FOR XMC7*~
+**TLSEG 1 %D000 %00780000 -3 %C            *FOR XMC5*~
+**TLSEG 1 %D000 %001E0000 -3 %C            *FOR XMCG*~
+**TLSEG 1 %10000 %3D0000 -3 %C             *FOR XMC3*~
+**TLSEG 2 %4000 0 -3 %C~
+**TLLOAD 1 5~
+**TLLOAD 2 7~
+*INFORM %2420;~
+**LIB MTLX\~
+**LIB L2X\~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %C00~
+**ED MU6C:NMSL031~
+(FD"::MU6 ")~
+E~
+**ED                  *FOR MC5*~
+(FD"::MC")E             *FOR MC5*~
+**ED                  *FOR MC5G*~
+(FD"::MC")E             *FOR MC5G*~
+**FLIP 0 1 0 ;L: ;->L; !2C!->L;~
+MSL03~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %C00 ~
+**ED MU6C:NMSL011~
+(FD"::MU6 ")                               *FOR XMC7*~
+(FD"::PTV ")                               *FOR XMC5*~
+(FD"::PTV ")                               *FOR XMCG*~
+(FD"::MU6 ")                               *FOR XMC3*~
+E~
+**FLIP 0 1 0 ;L: ;->L; !2C!->L;~
+MSL01~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %C00~
+**FLIP MU6C:NMSL041 1 0 ;L: ;->L; !2C!->L;~
+MSL04~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %C00~
+**FLIP MU6C:NMSL051 1~
+MSL05~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %C00~
+**FLIP MU6C:NMSL061 1~
+MSL06~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %C00~
+**FLIP MU6C:NMSL071 1 0 ;L: ;->L; !2C!->L;~
+MSL07~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %C00~
+**FLIP MU6C:NMSL081 1 0 ;L: ;->L; !2C!->L;~
+MSL08~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %800~
+**FLIP MU6C:NMSL091 1 0 ;L: ;->L; !2C!->L;~
+MSL09~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+STOP~
+::END COMPMSLX FOR PAGED MACHINES~
+~S1~O4.3 To Compile a private MUSL on VAX for VAX operation
+
+::BEGIN COMP PRIVATE MUSL FOR PAGED MACHINES~
+DEFINEOUTPUT 0 SLP\LOG %200~
+LIB MTLX\~
+LIB MSLX~
+LIB L2X\~
+LIB LDIR\?~
+OPENDIR MUSMC~
+TL %5 MUSL 1 ~
+TLSEG 0 %0 %00210000 -1 6 *FOR MC3*~
+TLSEG 0 %10000 %006C0000 -1 6 *FOR MC5*~
+TLSEG 0 %10000 %001B0000 -1 6 *FOR MC5G*~
+TLSEG 0 %0 %00840000 -1 6 *FOR MC7*~
+MUSL %0 0 %C00 *FOR MC3* ~
+MUSL %0 0 %F00 *FOR MC5*~
+MUSL %0 0 %F00 *FOR MC5G*~
+MUSL %0 0 %C00 *FOR MC7*~
+**ED MU6C:NMSL021~
+(FD"::MU6 ")~
+E~
+**FLIP 0 1 0 ;L: ;->L: !2C!->L;~
+MSL02~
+**DI 7~
+**TLSEG 1 %10000 %003D0000 -3 %C *FOR MC3*~
+**TLSEG 1 %10000 %00780000 -3 %C *FOR MC5*~
+**TLSEG 1 %10000 %001E0000 -3 %C *FOR MC5G*~
+**TLSEG 1 %10000 %00F40000 -3 %C *FOR MC7*~
+**TLSEG 2 %4000 0 -3 %C~
+**TLLOAD 1 5~
+**TLLOAD 2 7~
+**LIB MUTLC~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %C00 *FOR MC3* ~
+MUSL %0 0 %C00 *FOR MC7*~
+MUSL %0 0 %F00 *FOR MC5*~
+MUSL %0 0 %F00 *FOR MC5G*~
+**ED MU6C:NMSL031~
+(FD"::MU6 ")~
+E~
+**ED                            *FOR MC5*~
+(FD"::MC")                       *FOR MC5*~
+E~                               *FOR MC5*~
+**ED                                *FOR MC5G*~
+(FD"::MC")                          *FOR MC5G*~
+E                                   *FOR MC5G*~
+**FLIP 0 1 0 ;L: ;->L; !2C!->L;~
+MSL03~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %C00 *FOR MC3* ~
+MUSL %0 0 %F00 *FOR MC5*~
+MUSL %0 0 %F00 *FOR MC5G*~
+MUSL %0 0 %C00 *FOR MC7*~
+**ED MU6C:NMSL011~
+(FD"::MU6 ")            *FOR MC7*~
+(FD"::PTV ")            *FOR MC5*~
+(FD"::PTV ")             *FOR MC5G*~
+(FD"::MU6 ")            *FOR MC3*~
+E~
+**FLIP 0 1 0 ;L: ;->L; !2C!->L;~
+MSL01~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %C00 *FOR MC3* ~
+MUSL %0 0 %F00 *FOR MC5*~
+MUSL %0 0 %F00 *FOR MC5G*~
+MUSL %0 0 %C00 *FOR MC7*~
+**FLIP MU6C:NMSL041 1 0 ;L: ;->L; !2C!->L;~
+MSL04~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %C00 *FOR MC3* ~
+MUSL %0 0 %F00 *FOR MC5*~
+MUSL %0 0 %F00 *FOR MC5G*~
+MUSL %0 0 %C00 *FOR MC7*~
+**FLIP MU6C:NMSL051 1~
+MSL05~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %C00 *FOR MC3* ~
+MUSL %0 0 %F00 *FOR MC5*~
+MUSL %0 0 %F00 *FOR MC5G*~
+MUSL %0 0 %C00 *FOR MC7*~
+**FLIP MU6C:NMSL061 1~
+MSL06~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %C00 *FOR MC3* ~
+MUSL %0 0 %F00 *FOR MC5*~
+MUSL %0 0 %F00 *FOR MC5G*~
+MUSL %0 0 %C00 *FOR MC7*~
+**FLIP MU6C:NMSL071 1 0 ;L: ;->L; !2C!->L;~
+MSL07~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %C00 *FOR MC3* ~
+MUSL %0 0 %F00 *FOR MC5*~
+MUSL %0 0 %F00 *FOR MC5G*~
+MUSL %0 0 %C00 *FOR MC7*~
+**FLIP MU6C:NMSL081 1 0 ;L: ;->L; !2C!->L;~
+MSL08~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+MUSL %0 0 %800 *FOR MC3* ~
+MUSL %0 0 %B00 *FOR MC5*~
+MUSL %0 0 %B00 *FOR MC5G*~
+MUSL %0 0 %800 *FOR MC7*~
+**FLIP MU6C:NMSL091 1 0 ;L: ;->L; !2C!->L;~
+MSL09~
+**DI 7~
+*INFORM %2420;~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+*FOR TRANDIR*~
+STOP~
+::END
+~S1~O4.4 Generate MUBL
+::BEGIN CBOOT
+DEFINEOUTPUT 0 BOOTLOG %200~
+OPENDIR MU6C X~
+LIB MUSM:MUSLX~
+LIB MUSM:MUTLB~
+LIB USER03~:RPLIB
+TL %5 TMPMUBL1 1~
+TLSEG 0 %FFFF %210000 -1 6~
+DO 7 MUSLMSL1 0 0~
+SO~
+MUSL %0 0 %C00~
+**SO~
+**ED NMSL021~
+(FD"::MU6 ")~
+E~
+**FLIP 0 1 0 ;L: ;->L: !2C!->L;~
+MSL02~
+**APPEND 0 7~
+**DI 7~
+**TLSEG 1 %10000 %3D0000 -3 %C~
+**TLSEG 2 %4000 0 -3 %C~
+**TLLOAD 1 5~
+**TLLOAD 2 7~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+SO~
+MUSL %0 0 %C00~
+**SO~
+**ED NMSL031~
+(FD"::MU6 ")~
+E~
+**FLIP 0 1 0 ;L: ;->L; !2C!->L;~
+MSL03~
+**APPEND 0 7~
+**DI 7~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+SO~
+MUSL %0 0 %C00~
+**SO~
+**ED NMSL011~
+(FD"::MU6 ")~
+E~
+**FLIP 0 1 0 ;L: ;->L; !2C!->L;~
+MSL01~
+**APPEND 0 7~
+**DI 7~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+SO~
+MUSL %0 0 %C00~
+**SO~
+**FLIP MU6C:NMSL041 1 0 ;L: ;->L; !2C!->L;~
+MSL04~
+**APPEND 0 7~
+**DI 7~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+SO~
+MUSL %0 0 %C00~
+**SO~
+**FLIP MU6C:NMSL051 1~
+MSL05~
+**APPEND 0 7~
+**DI 7~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+SO~
+MUSL %0 0 %C00~
+**SO~
+**FLIP MU6C:NMSL061 1~
+MSL06~
+**APPEND 0 7~
+**DI 7~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+SO~
+MUSL %0 0 %C00~
+**SO~
+**FLIP MU6C:NMSL071 1 0 ;L: ;->L; !2C!->L;~
+MSL07~
+**APPEND 0 7~
+**DI 7~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+SO~
+MUSL %0 0 %C00~
+**SO~
+**FLIP MU6C:NMSL081 1 0 ;L: ;->L; !2C!->L;~
+MSL08~
+**APPEND 0 7~
+**DI 7~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+SO~
+MUSL %0 0 %800~
+**SO~
+**FLIP MU6C:NMSL091 1 0 ;L: ;->L; !2C!->L;~
+MSL09~
+**APPEND 0 7~
+**DI 7~
+**SELECTINPUT 7~
+ENDINPUT 7~
+DELETE~
+EO 7~
+BINTOHEX TMPMUBL1 MSLMUBL1~
+DEL TMPMUBL2~
+MUSL TST1MSL TMPMUBL1~
+**BINTOHEX TMPMUBL1 TST1MUBL~
+MUSL TST2MSL TMPMUBL1~
+**BINTOHEX TMPMUBL1 TST2MUBL~
+MUSL TST3MSL TMPMUBL1~
+**BINTOHEX TMPMUBL1 TST3MUBL~
+DEL TMPMUBL1~
+IN -1~
+::END CBOOT~
+~S15. MUSL Test Programs
+~BA suite of MUSL programs is available to assist in the
+development and testing of the MUSL compiler and MUTL
+translators. At present there are four programs in the
+suite contained in the files: TST1MSL, TST2MSL, TST3MSL
+and TST4MSL. The first two programs are to be compiled
+by the MUSL system under test, and the compiled code
+produced checked for correctness; ~Wno attempt should be
+made to run them once they compile. The main purpose of
+those first two programs is in assisting the debugging
+of a new MUTL translator. The other programs
+in the suite should be compiled and executed, these
+programs are organised for running under
+the MUSS or a stand alone environment. The latter
+option enables the tests to be run on a machine
+before a MUSS environment is established on it.
+~BEach file in the suite contains a description of
+the tests in it.
+~BA job to compile and run TST3MSL and TST4MSL
+under the MUSS environment is given in 5.1 below.
+~S15.1 Job for TST3MSL and TST4MSL
+~
+::BEGIN TSTMSL~
+DO 0 TSTMSLLG %200~
+ED MU6C:TST3MSL~
+S/::BEGIN TST3MSL/~
+S+1~
+(F D/::SS/)E~
+MUSL~
+RUN~
+ED MU6C:TST4MSL~
+S/::BEGIN TST4MSL/~
+S+1~
+(F D/::SS/)E~
+MUSL~
+RUN~
+STOP~
+::END TSTMSL~
+~X%%
+~Y
+~V9 -1
+~P
+~V9 -1
+~D15
+~HFLOWCHARTS
+~
+~
+~H              NMSL011
+~V9 -1
+~F
+@TITLE MSL01(1,11)
+@COL 1S-2R-3R-4R-5R-6F
+@FLOW 1-2-3-4-5-6
+@BOX1.0
+COMPILER MAIN SECTION
+@BOX 2.0
+OVERLAY PROCS
+@BOX 3.0
+     .
+@BOX4.0
+CHARTS IN MODULE
+MSL01.1 MAIN.LOOP
+@BOX5.0
+INITIALISATION FOR
+ENTRY TO MAIN.LOOP
+@BOX6.0
+END
+@BOX 1.1
+#MSL01/1
+MODULE (CON.STK,CON.PTR,CONSTKZ,MUSL,IX,DIRYZ,CEXIT,RESTART,RESFILE,MSTR,MUTLSTR
+);
+::PDP *CODE 1;
+*GLOBAL 7;
+$IN PW0,PW1;
+*GLOBAL 5;
+@BOX 2.1
+::PDP $IN CUR.OLAY;
+::PDP $PS OVERLAY($IN);
+::PDP $PR OVERLAY(N);
+::PDP IF N = 0, -> OUT;
+::PDP IF N /= CUR.OLAY THEN
+::PDP MAP (N=>CUR.OLAY +78, 4, 0)FI
+::PDP OUT: END
+@BOX3.1
+$LI CON.STKZ = 500;
+$IN OLDIN,MSTR,ISTR,MUTL.STR;
+$IN [CON.STKZ]CON.STK;
+$IN CON.PTR, TEMP,IX,DIRYZ;
+ADDR[$LO8] RES.FILE;
+$LA RESTART,CEXIT;
+@BOX 4.1
+$LS MUSL(ADDR [$LO8],ADDR [$LO8],$IN,$IN);
+$PR MUSL(FILE,PROG,CMP.MODE,DIR);
+::PDP $IN SNO1,SNO2;
+@BOX 5.1
+::THE LAYOUT HERE IS TEMPORARY TO AVOID FORWARD REFS
+->TEMP.LAB.1;
+TEMP.LAB.2:
+#MSL01.1
+->TEMP.LAB.3;
+TEMP.LAB.1:
+::MU6 RELEASE.SEGMENT(61);
+::MU6 CREATE.SEGMENT(61,%10000);
+::PTV RELEASE.SEGMENT(30);
+::PTV CREATE.SEGMENT(30,%D000);
+::MC68000 RELEASE.SEGMENT(59);
+::MC68000 RELEASE.SEGMENT(60);
+::MC68000 RELEASE.SEGMENT(61);
+::MC68000 CREATE.SEGMENT(59,%4000);
+::MC68000 CREATE.SEGMENT(60,%4000);
+::MC68000 CREATE.SEGMENT(61,%4000);
+::MC68000 MAP(59, -1, 0);
+::MC68000 MAP(60, -1, 0);
+::MC68000 MAP(61, -1, 0);
+::PDP OPEN.FILE("NMSL5",0,-1,%E);
+::PDP IF PW0 /= 0, -> GETOUT;
+::PDP MAP(PW1 => SNO1,5,0);
+::PDP OPEN.FILE("NMSL6",0,-1,%E);
+::PDP IF PW0 /= 0, -> GETOUT;
+::PDP MAP(PW1 => SNO2,6,0);
+::PDP OPENFILE("NMSL3",%0,28,%D);
+::PDP IF PW0 /= 0, ->GETOUT;
+::PDP OPEN.FILE("NMSL4",%0,29,%D);
+::PDP IF PW0 /= 0, ->GETOUT;
+::PDP 0 => CUR.OLAY;
+PROG => RES.FILE;
+DIR => DIRYZ;
+START => RESTART;
+OUT => CEXIT;
+0 => CON.PTR;
+7 => CON.STK[0];
+%8000 => IX;
+CMP.MODE ->> 8 => C.MODE;
+INIT.S3();
+INIT.S4();
+INIT.S5();
+INIT.S8();
+INIT.S9();
+CURRENT.INPUT() => OLDIN;
+CURRENT.OUTPUT() => MSTR;
+DEFINE.INPUT(-1,FILE,0) => ISTR;
+SELECT.INPUT(ISTR);
+::PDP DEFINE.OUTPUT(-1,PROG,1,64,100,0) => MUTL.STR;
+IF CMP.MODE & %800 = 0 THEN
+TL(CMP.MODE&%FF,PROG,DIR) FI
+TL.MODULE();
+::THIS IS WHERE #MSL01.1 SHOULD BE
+->TEMP.LAB.2;
+TEMP.LAB.3:
+SELECT.INPUT(OLDIN);
+::PDP GETOUT:
+SELECTOUTPUT(MSTR);
+END.INPUT(ISTR,0);
+::PDP END.OUTPUT(MUTL.STR,0);
+::MU6 RELEASE.SEGMENT(61);
+::PTV RELEASE.SEGMENT(30);
+::MC68000 RELEASE.SEGMENT(59);
+::MC68000 RELEASE.SEGMENT(60);
+::MC68000 RELEASE.SEGMENT(61);
+::PDP RELEASE.SEGMENT(28);
+::PDP RELEASE.SEGMENT(29);
+::PDP RELEASE.SEGMENT(SNO1);
+::PDP RELEASE.SEGMENT(SNO2);
+END
+@BOX6.1
+*END
+@END
+
+@TITLE MSL01/1(1,11)
+@COL 1S-2R-3R-4F
+@FLOW 1-2-3-4
+@BOX1.0
+EXTERNAL ENVIRONMENT
+@BOX2.0
+TYPES
+LITERALS
+DATAVECS
+VARIABLES
+@BOX3.0
+PROC SPECS
+@BOX4.0
+END
+@BOX1.1
+::EXTERNAL ENVIRONMENT
+$LS SELECT.INPUT($IN);
+$LS SELECTOUTPUT($IN);
+$LS CAPTION($AD[$LO8]);
+$LS OUTI($IN32,$IN);
+$LS DEFINE.INPUT($IN,$AD[$LO8],$IN32)/$IN;
+$LS CURRENT.OUTPUT()/$IN;
+$LS CURRENT.INPUT()/$IN;
+$LS END.INPUT($IN,$IN);
+$LS RELEASE.SEGMENT($IN);
+$LS CREATE.SEGMENT($IN,ADDR);
+::MC68000 $LS MAP($IN,$IN,$IN);
+::PDP $LS MAP($IN,$IN,$IN);
+$LS END.OUTPUT($IN,$IN);
+::PDP $LS OPEN.FILE($LO64,$LO64,$IN,$IN);
+$IN CMODE;
+$LS TL.PRINT($IN);
+$LS TL($IN,ADDR[$LO8],$IN);
+$LS TL.PL($IN,$IN);
+$LS TL.MODULE();
+@BOX2.1
+$TY ITYPE $IS $LO8 TAG,ST $LO16 IND;
+$TY PLIST.ENT IS $LO16 INTID,PREVN,K,T $IN32 DETAIL;
+$IM $LI LBUFFZ,PLISTZ,KTYPE,KTREF;
+ITYPE COLON,XCOLON,EOS,GOTO,ASTERISK;::LITERALS REALLY!
+PLIST.ENT[PLISTZ] PLIST;
+$IM $LI SDLIST;
+$LO16[SDLIST] DLIST;
+
+$IN IPTR;
+ITYPE[LBUFFZ] LBUFF;
+@BOX3.1
+$PS INIT.S3();
+$PS INIT.S4();
+$PS INIT.S5();
+$PS INIT.S6();
+$PS INIT.S8();
+$PS INIT.S9();
+$PS ITEMISE($IN);
+$PS DECL.SPACE();
+$PS DECL.PROC($IN);
+$PS DECL.LIT();
+$PS DECL.DVEC();
+$PS DECL.TYPE($LO);
+$PS DECL.FIELD();
+$PS DECL.VAR();
+$PS DECL.VSTORE();
+$PS DECL.IMP();
+$PS DECL.LAB();
+$PS TRANS.IF();
+$PS TRANS.FI();
+$PS TRANS.ELSE();
+$PS TRANS.WHILE();
+$PS TRANS.FOR();
+$PS TRANS.OD();
+$PS TRANS.SWITCH();
+$PS TRANS.ALT();
+$PS TRANS.EXIT();
+$PS TRANS.COMP($IN)/$IN;
+$PS TRANS.DIRECTIVE();
+$PS TRANS.GOTO();
+$PS ALT.LABEL();
+$PS MONITOR($IN);
+$PS BEGIN.ST();
+$PS PROC.HEAD();
+$PS MOD.HEAD();
+$PS END.ST();
+$PS MUTLN($LO16)/$LO16;
+
+@BOX4.1
+::END
+@END
+@TITLE MSL01.1(1,9)
+@COL 23N-26T-28T-30T-32R-34T-36R-38R-39N
+@COL 1S-2N-4R-14T-8R-10T-12T-16T-18R-19N-20T-22R
+@COL 48R-46T-50R-51N-52F
+@ROW 23-2
+@ROW 12-46
+@ROW 26-14
+@ROW 28-16
+@ROW 30-18-50
+@ROW 34-19-51
+@ROW 8-48
+@ROW 38-20
+@FLOW 1-2-4-14N-8-10N-12Y-16N-18-19-20N-22-39
+@FLOW 20Y-39-23-4
+@FLOW 10Y-46-51-20
+@FLOW 14Y-48-51
+@FLOW 16Y-50-51
+@FLOW 12N-26N-28N-30Y-32-19
+@FLOW 26Y-18
+@FLOW 28Y-18
+@FLOW 30N-34Y-36-20
+@FLOW 34N-38-39
+@BOX 1.0
+MAIN LOOP
+@BOX 4.0
+ITEMISE STATEMENT
+@BOX 10.0
+IS NEXT ITEM
+A KEYWORD
+@BOX 12.0
+IS IT A NAME
+@BOX 16.0
+IS IT A TYPENAME
+@BOX 14.0
+IS IT A LABEL
+@BOX 18.0
+ASSUME COMPUTATION
+@BOX 20.0
+AT EOS ITEM?
+@BOX 26.0
+IS IT A CONST
+@BOX 28.0
+IS IT '+,-,^,('
+@BOX 30.0
+IS IT '->'
+@BOX 32.0
+PROCESS GOTO
+@BOX 34.0
+IS IT '*'
+@BOX 36.0
+PROCESS DIRECTIVE
+@BOX 38.0
+FAULT 2
+@BOX 46.0
+SWITCH ON KEYWORD
+MSL01.2
+@BOX 50.0
+PROCESS VAR DEC
+@BOX 52
+COMPILER
+EXIT
+@BOX 48.0
+IF CONTEXT IS ALT
+PLANT JUMP TO END
+THEN DECLARE LABEL
+@BOX 8.0
+IF CONTEXT IS ALT
+COMPILE INFRASTRUCT
+@BOX 22.0
+FAULT 2
+@BOX 1.1
+:: MAIN LOOP
+@BOX 4.1
+START>:
+ITEMISE(0);
+@BOX 8.1
+$IF CON.STK[CON.PTR] >= 9 $TH
+ALT.LABEL() $FI
+@BOX 10.1
+$IF TAG OF LBUFF[1]=0
+$AN IND OF LBUFF[1]=<40
+@BOX 12.1
+IND OF LBUFF[1] => TEMP;
+$IF TAG OF LBUFF[1] /= 1
+@BOX 14.1
+$IF TAG OF LBUFF[1] = 1
+$AN [LBUFF[2] = COLON
+$OR LBUFF[2] = XCOLON]
+@BOX 16.1
+$IF MUTLN(TEMP) => TEMP /= 0 /= %1002 $AN
+[K OF PLIST[TEMP] = KTYPE
+OR K OF PLIST[TEMP] = KTREF]
+@BOX 18.1
+::PDP OVERLAY(2);
+TRANS.COMP(0);
+@BOX 20.1
+$IF LBUFF[1+>IPTR] = EOS
+@BOX 22.1
+MONITOR(0);
+@BOX 26.1
+$IF TAG OF LBUFF[1]=3
+@BOX 28.1
+$IF TAG OF LBUFF[1] = 0
+$AN DLIST[TEMP] & 2/= 0
+@BOX 30.1
+$IF LBUFF[1=>IPTR] /= GOTO
+@BOX 32.1
+TRANS.GOTO();
+@BOX 34.1
+$IF LBUFF[1] /= ASTERISK
+@BOX 36.1
+::PDP OVERLAY(1);
+TRANS.DIRECTIVE();
+@BOX 38.1
+MONITOR(0);
+@BOX 46.1
+::MU6 #MSL01.2
+::PTV #MSL01.2
+::MC68000 #MSL01.2
+::PDP #MSL01.2/1
+@BOX 48.1
+$IF CONSTK[CONPTR]=10$TH
+TLPL(%4F,CONSTK[CONPTR-1]);
+11 => CONSTK[CONPTR]$FI
+DECL.LAB();
+@BOX 50.1
+1 => IPTR;
+DECL.VAR();
+@BOX 52.1
+OUT>:
+@END
+@TITLE MSL01.2(1,11)
+@COL 2T
+@FLOW 2
+@BOX 2.0
+SWITCH ON KEYWORD
+@BOX 2.1
+ALTERNATIVE IND OF LBUFF[1=>IPTR] -1 FROM
+BEGIN.ST();PROC.HEAD();MOD.HEAD();
+END.ST();TRANS.IF();MONITOR(0);
+TRANS.ELSE();TRANS.FI();TRANS.WHILE();
+TRANS.FOR();MONITOR(0);TRANS.OD();
+TRANS.SWITCH();TRANS.ALT();DECL.SPACE();
+TRANS.EXIT();DECL.PROC(0);DECL.LIT();
+DECL.DVEC();DECL.TYPE(0);DECL.FIELD();
+DECL.VAR();DECL.VAR();DECL.VAR();
+DECL.VAR();DECL.VSTORE();DECL.IMP();
+DECL.PROC(8);TRNS.CMP: TRANS.COMP(0=>IPTR);->TRNS.CMP;
+->TRNS.CMP;->TRNS.CMP;->TRNS.CMP;
+->TRNS.CMP;->TRNS.CMP;->TRNS.CMP;
+->TRNS.CMP;DECL.PROC(4);DECL.TYPE (%3000);
+DECL.VAR();
+END
+@END
+@TITLE MSL01.2/1(1,11)
+@COL 2T
+@FLOW 2
+@BOX 2.0
+SWITCH ON KEYWORD
+@BOX 2.1
+$DA OLN($LO8)
+ 0 1 1 0 2 2 0 0 2 2
+ 2 0 2 2 1 0 1 1 1 1
+ 2 0 0 0 0 1 1 1 2 2
+ 2 2 2 2 2 2 2 2
+END
+OVERLAY(OLN[IND OF LBUFF[1]-1]);
+ALTERNATIVE IND OF LBUFF[1=>IPTR] -1 FROM
+BEGIN.ST();PROC.HEAD();MOD.HEAD();
+END.ST();TRANS.IF();MONITOR(0);
+TRANS.ELSE();TRANS.FI();TRANS.WHILE();
+TRANS.FOR();MONITOR(0);TRANS.OD();
+TRANS.SWITCH();TRANS.ALT();DECL.SPACE();
+TRANS.EXIT();DECL.PROC(0);DECL.LIT();
+DECL.DVEC();DECL.TYPE();DECL.FIELD();
+DECL.VAR();DECL.VAR();DECL.VAR();
+DECL.VAR();DECL.VSTORE();DECL.IMP();
+DECL.PROC(8);TRNS.CMP: TRANS.COMP(0=>IPTR);->TRNS.CMP;
+->TRNS.CMP;->TRNS.CMP;->TRNS.CMP;
+->TRNS.CMP;->TRNS.CMP;->TRNS.CMP;
+->TRNS.CMP;DECL.PROC(4);DECL.TYPE(%3000);
+DECL.VAR();
+END
+@END
+
+

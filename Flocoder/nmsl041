@@ -1,0 +1,351 @@
+@X @~
+~V7 56 2 -5
+~D10
+~H                    MUSS
+~
+~
+~D10
+~H            NMSL041
+~D10
+~MMANCHESTER UNIVERSITY  -  CONFIDENTIAL~
+~
+~V2 -16
+                                                                      ISSUE 11~
+~V2 0
+~V9 -1
+~P
+~V9 1
+~YMSL041
+~S1~M~LMSL IMPLEMENTATION DESCRIPTION~
+~
+~M~LSection 4 Version 1~
+~S1~LSection 4.1 Directive Processing~
+~BThe language has the following 11 directives~
+~
+~M*CODE~
+~N*GLOBAL~
+~N*INIT~
+~N*CMAP~
+~N*STOPD~
+~N*STOPC~
+~N*END~
+~N*INFORM~
+~N*VTYPE~
+~N*TLSEG~
+~N*TLLOAD~
+~N*TLMODE~
+~N*#~
+~BThis section is concerned with their implementation.~
+~B*INIT, *TLSEG, *TLLOAD and *TLMODE are directives
+provided mainly for MUSL compilers running
+in alien (non-MUSS) environments.~
+~S1~L2. Interfaces~
+~S1~L2.1 Software Interface~
+~
+~MTRANS.DIRECTIVE~
+~NCWORD~
+~NCMODE
+~S1~L3. Implementation~
+~BThe transdirective procedure indentifies the directive and
+carries out the associated action.~
+~S1~L3.2 Data Structure~
+~
+~
+~T# 12
+~
+CWORD~IThis is a bit significant indicator whose bits have the
+following significance~
+~
+# 0 print the itemised line on each exit from ITEMISE()~
+# 1 print the source characters as read~
+# 2 print compile run statistics~
+# 4 print AR on exit from PREPROCESS~
+# 5 inhibit procedure compile map~
+# 6 display all data structures as declared~
+# 8 monitor MUTL calls~
+# 9 produce MUBL output~
+#10 print MUTL compile map~
+#11 print MUTL data map~
+~X}*
+#13}~
+#14}JL monitoring control~
+#15}~
+~X}}
+~
+CUR.GLB~IThis gives the number of the current global area.~
+~
+CMODE~IThis is a copy of the compiler mode parameter to
+MUSL shifted down 8 bits.~
+~Y
+~P
+~V9 -1
+~D15
+~HFLOWCHARTS
+~
+~
+~H              NMSL041
+~V9 -1
+~F
+@TITLE MSL04(1,8)
+@COL 1S-2R-3R-4R-5R-6F
+@FLOW 1-2-3-4-5-6
+@BOX 1.0
+DIRECTIVES
+@BOX 4.0
+PROCEDURES IN MODULE
+TRANS.DIRECTIVE [MSL04.1]
+@BOX 5.0
+INITIALISE CWORD
+AND CUR.GLB
+@BOX 6.0
+END
+@BOX 1.1
+#MSL04/1
+MODULE(CMODE,TRANS.DIRECTIVE,CWORD,CUR.GLB,INIT.S4);
+*GLOBAL 5;
+@BOX 2.1
+$LI/ITYPE DEND = 0\0\%4,HASH = 0\0\%56,EOS=0\0\%0;
+::PDP *CODE 2;
+*GLOBAL 1;
+$LI NO.DNAMES = 11;
+$DA DNAMES($LO8)
+"INFORM"
+0
+"CODE"
+0
+"GLOBAL"
+0
+"INIT"
+0
+"CMAP"
+0
+"STOPD"
+0
+"STOPC"
+0
+"TLSEG"
+0
+"TLLOAD"
+0
+"TLMODE"
+0
+"VTYPE"
+0
+$EN
+@BOX 3.1
+*GLOBAL 5;
+$IN CWORD,CMODE,CURGLB;
+@BOX 4.1
+$PS TRANS.DIRECTIVE();
+::PDP *CODE 2;
+#MSL04.1
+::PDP *CODE 1;
+@BOX 5.1
+$PS INIT.S4();
+$PR INIT.S4;
+0 => CWORD => CUR.GLB;
+$EN
+@BOX 6.1
+*END
+@END
+@TITLE MSL04/1(1,11)
+@COL 1S
+@BOX 1.0
+EXTERNAL INTERFACE
+OF MODULE MSL041
+@BOX 1.1
+$LS LIB(ADDR[$LO8],$IN);
+$LS TL($IN,ADDR[$LO8],$IN);
+$LS TL.MODULE();
+$LS TLSEG($IN,ADDR,$LO32,ADDR,$IN);
+$LS TLLOAD($IN,$IN);
+$LS TL.MODE($IN,$IN);
+$LS TL.PRINT($IN);
+$LS TL.CODE.AREA($IN);
+$LS TL.DATA.AREA($IN);
+$LS TL.END.MODULE($IN);
+$LS TL.END();
+$LS TL.INSERT($IN);
+$PS COMP.TYPE()/$IN;
+$PS ADDN()/$LO16;
+$PS GENN($LO16)/ADDR[$LO8];
+$PS PRINT.STATS();
+$IN CONPTR;
+$IN IPTR;
+$PS END.CHECKS();
+$IM $LI CONSTKZ;
+$IN [CONSTKZ] CONSTK;
+$IN IX,DIRYZ;
+$IM $LI LBUFFZ;
+$TY ITYPE $IS $LO8 TAG,ST $LO16 IND;
+ITYPE[LBUFFZ] LBUFF;
+$IM $LI CLISTZ;
+$LO8[CLISTZ] CLIST;
+$PS EVAL.CONST()/$IN32;
+$PS MONITOR($IN);
+$IN FAULTS;
+ADDR[$LO8] RES.FILE;
+$IN TINT,TBYADDR,TVST,TLO,TRE;
+$IM $LI TADPROC;
+$LA CEXIT;
+$LI/ADDR[$LO8] NIL=;
+@END
+@TITLE MSL04.1(1,11)
+@COL 1S-2R-3T-4T-5T-6T-8R-9R-14F
+@COL 10T-11R-15T-16R-17R-12C-18T-19R-13R
+@ROW 4-10
+@FLOW 1-2-3N-4Y-5Y-6Y-8-9-14
+@FLOW 3Y-10Y-11-15N-16-17-12
+@FLOW 15Y-17
+@FLOW 10N-18Y-19-14
+@FLOW 18N-13
+@FLOW 4N-13
+@FLOW 5N-13
+@FLOW 6N-9
+@BOX 1.0
+TRANS.DIRECTIVE
+@BOX2.0
+DECLARATIONS
+@BOX 3.0
+IS NEXT ITEM A DELIMITER?
+@BOX 4.0
+IS NEXT ITEM A NAME?
+@BOX 5.0
+IS IT A DIRECTIVE NAME?
+@BOX 6.0
+IS THE NAME MONITOR
+CODE,GLOBAL OR INIT
+@BOX 8.0
+EVALUATE CONST
+IN NEXT ITEM AND
+NOTE ITS VALUE
+@BOX 9.0
+PROCESS DIRECTIVE
+DISPLAY,CMAP,STOPD,STOPC
+SIMPLY SET BIT IN CWORD
+MONITOR SETS CWORD
+AND CALL MUTL FOR BIT2
+CODE AND GLOBAL CALL
+MUTL PROCS
+@BOX10.0
+IS IT END?
+@BOX11.0
+PERFORM END
+CHECKS
+@BOX12.0
+CEXIT
+@BOX13.0
+FAULT
+@BOX 14
+END
+@BOX 15
+IS THE CONTEXT MODULE
+@BOX16
+FAULT
+@BOX 17
+SIGNAL MODULE
+END TO MUTL
+SIGNAL COMPILE END
+TO MUTL IF REQUIRED
+INDICATE END OF MODULE
+@BOX 18.0
+IS IT '#'
+@BOX 19.0
+EVALUATE AND PLANT
+CONSTANT
+@BOX 1.1
+$PR TRANS.DIRECTIVE;
+@BOX 2.1
+$IN I,J,K,C;
+$AD[$LO8] NAME,LIBN;
+#MSL04.1.1
+@BOX 3.1
+$IF TAG OF LBUFF[1+>IPTR] = 0
+@BOX 4.1
+$IF TAG OF LBUFF[IPTR] /= 1
+@BOX 5.1
+%8000 &> IX;
+GENN(IND OF LBUFF[IPTR]) => NAME;
+0 => I;-1 => J;
+DIR.LOOP:
+-1 => K;
+CHAR.LOOP:
+IF DNAMES[1+>J] = 0,->DONE;
+IF DNAMES[J] = NAME^[1+>K],->CHAR.LOOP;
+IF 1 +> I = NO.DNAMES,->DONE;
+$WH DNAMES[1+>J] /= 0 DO OD
+->DIR.LOOP;
+DONE:
+IF I = NO.DNAMES
+@BOX 6.1
+$IF I > 3
+@BOX 8.1
+EVAL.CONST() => C
+@BOX 9.1
+$AL I $FR
+TL.PRINT(C => CWORD ->>8);
+TL.CODE.AREA(C);
+TL.DATA.AREA(C=>CUR.GLB);
+INIT(C);
+%DF &> CWORD;
+%EF &> CWORD;
+%20 !> CWORD;
+TLSEG(EVALCONST(),EVALCONST(),EVALCONST(),EVALCONST(),EVALCONST());
+TLLOAD(EVALCONST(),EVALCONST());
+TLMODE(EVALCONST(),EVALCONST());
+IF COMP.TYPE () => TVST
+   & %8000 /= 0 $TH
+TADPROC => TVST;
+FI
+$EN
+@BOX 10.1
+$IF LBUFF[IPTR] /= DEND
+@BOX 11.1
+END.CHECKS();
+@BOX 12.1
+-> CEXIT;
+@BOX 14.1
+$EN
+@BOX 13.1
+MONITOR(0);
+@BOX 15.1
+$IF CONSTK[CONPTR] = 6
+@BOX 16.1
+MONITOR(138);
+@BOX 17.1
+TL.END.MODULE(0);
+IF CMODE & 4 = 0 AND FAULTS = 0 THEN
+TL.END();
+FI
+MONITOR(201);
+IF CWORD & %4 = 0 THEN
+PRINT.STATS() FI
+@BOX 18.1
+$IF LBUFF[IPTR] /= HASH
+@BOX 19.1
+$WH LBUFF[IPTR+1] /= EOS DO
+TL.INSERT(EVAL.CONST()) OD
+@END
+@TITLE MSL04.1.1(1,6)
+@COL 1S-2R-3F
+@FLOW 1-2-3
+@BOX1.0
+SUBPROCS OF
+TRANS DIRECTIVE
+@BOX2.0
+INIT
+@BOX3.0
+END
+@BOX1.1
+::SUBPROCS OF
+::TRANS DIRECTIVE
+@BOX2.1
+$PS INIT($IN);
+$PR INIT(I);
+IF I & %4000 /= 0 THEN
+TL(I->>8,RESFILE,DIRYZ) FI
+END
+@BOX 3.1
+::END 4.1.1
+@END
+

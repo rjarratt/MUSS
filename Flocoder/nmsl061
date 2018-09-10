@@ -1,0 +1,1244 @@
+@X @~
+~V7 56 2 -5
+~D10
+~H                    MUSS
+~
+~
+~D10
+~H            NMSL061
+~D10
+~MMANCHESTER UNIVERSITY  -  CONFIDENTIAL~
+~
+~
+~V2 -16
+                                                                      ISSUE 11~
+~V2 0
+~V9 -1
+~P
+~V9 1
+~YMSL061
+~S1~M~LMSL IMPLEMENTATION DESCRIPTION
+~S1~M~LSection 6   Version 1
+~S1~LSection 6.1 Imperative Statement Processing
+~S1~L1. General Description
+~BThis section deals with the processing of imperative
+statements, which results in the production of code via
+the MUTL interface. Note that COMPUTATIONs,
+which form an important part of many statements, are
+dealt with separately in Chapter 7.
+However, the COMPUTATION as a statement in its own
+right is processed in this section.~
+~S1~L2.2 Software Interface
+~BMost of the externally
+available procedures in this module have an obvious connection
+with the statements of the language. They are:-~
+~
+~
+TRANS.COMP~
+TRANS.IF~
+TRANS.WHILE~
+TRANS.FOR~
+TRANS.GOTO~
+TRANS.SWITCH~
+TRANS.ALT~
+TRANS.ELSE~
+TRANS.FI~
+TRANS.OD~
+~
+Some are subprocedures of these that are needed also by
+other sections of the compiler. These are~
+~
+TRANS.END.ALT~
+ALT.LABEL~
+~S1~L3.1 Outline of Operations
+~BA brief description is given of the processing of the more
+complicated statements of the language, in order to make the
+flowcharts more easily understood.~
+~S1~LIF statements
+~
+~BMUSL provides two forms of IF statement:-~
+~T# 15 19
+~
+# i)#IF<CONDITION>,-><NAME>~
+#ii)#IF<CONDITION>THEN~
+~BThe latter is followed by a sequence of statements, an optional ELSE
+clause (i.e. an ELSE statement and a further sequence of statements) and a FI st
+atement.
+This IF....THEN...ELSE....FI construct is transposed to the form below:-~
+~
+~T# 18 23 27
+IF<COND>THEN#becomes#UNLESS<COND>,->END.LAB~
+statements###statements~
+FI###END.LAB:~
+~
+IF<COND>THEN#becomes#UNLESS<COND>,->ELSE.LAB~
+statements1###statements1~
+ELSE###->END.LAB~
+###ELSE.LAB:~
+statements2#becomes#statements2~
+FI#becomes#END.LAB:~
+~BAs this construct is not dealt with as a complete syntactic
+entity by the compiler, but as separate IF, ELSE, FI and included
+statements, certain information such as END.LAB and ELSE.LAB must be retained du
+ring
+the translation of the component statements into the form shown
+above.
+This information is retained in a context stack (CON.STACK).
+An IF/THEN entry on the context stack consists of~
+~T# 15
+~
+#MUTLN OF ENDLAB~
+#1~
+~
+if an ELSE is encountered a new END.LAB is created on the
+context stack and the '1' becomes '2'. Also the previous
+END.LAB from the context stack is used as ELSE.LAB.~
+~S1~LFOR/WHILE statements
+~BThe FOR/WHILE....DO....OD construct is treated in a similar way
+to that given above for the IF..THEN...ELSE...FI statement.
+The transposition of the WHILE statement is:-~
+~
+~T# 18 23 27
+WHILE<COND>DO#becomes#ST.LAB:~
+###UNLESS<COND>,->END.LAB~
+statements#becomes#statements~
+OD#becomes#->ST.LAB~
+###END.LAB:~
+~
+The FOR statement is more complicated because:~
+~T# 5
+~
+ i)~Ithe terminating value must be evaluated once only and stored
+before the loop is entered.~
+~
+ii)~Ia variable must be declared for the loop counter if a <NAME> is
+not given in the statement. Thus~
+~T# 15 19 22
+~
+#FOR[<NAME><<>!<NIL>]<COMPUTATION>DO~
+~
+is translated to :-~
+~
+#-1 => [V1!<NAME>]~
+#<COMPUTATION> => V2~
+#ST.LAB:~
+#IF 1 +> [V1!<NAME>] > V2, -> END.LAB~
+~
+Where V1 is a variable created by the compiler for the
+case where an explicit loop control variable is not given,
+and V2 is variable (also created by the compiler) to contain
+the value of the COMPUTATION which is to be computed once
+only on entry to the loop.
+In both cases the information~
+~
+#MUTLN OF ST.LAB~
+#MUTLN OF END.LAB~
+#3~
+~
+is retained on the
+context stack so that the next OD statement can generate.~
+~
+#-> ST.LAB~
+#END.LAB:~
+~S1~LSWITCH statements
+~BThis statement has the syntax:-~
+~
+#SWITCH <COMPUTATION> \ <NLIST>~
+~
+and is implemented by planting a data vector (SWDV) containing the control
+addresses of the labels given in the <NLIST>. The transfer of control is then
+effected by planting:-~
+~
+#BM#=#<COMPUTATION>~
+#->##SWV[BM]~
+~S1~LALTERNATIVE statements
+~BThe ALTERNATIVE statement is implemented by means of a form of SWITCH.
+However, the datavector of  control addresses (ALTDV) is obtained in a different
+way, in fact from the addresses of the statements within the ALTERNATIVE.
+Thus the heading:-~
+~
+#ALTERNATIVE <COMPUTATION> FROM~
+~
+results in code:-~
+~
+#BM#=#<COMPUTATION>~
+#JUMP#=#ALTDV[BM]~
+~
+and an entry on the context stack consisting of~
+~
+#MUTLN OF ALTDV~
+#MUTLN OF END.LAB~
+#8~
+~BWhen the context stack shows the immediate context to be
+an alternative statement,
+the main compiler loop calls the procedure ALT.LABEL
+before each statement.
+This procedure generates a label for each statement of the
+ALTERNATIVE and makes a new entry on the context stack
+consisting of~
+~
+#MUTLN OF ALT.LAB~
+#MUTLN OF ALTDV~
+#MUTLN OF END.LAB~
+#9~
+~
+(Note that IF .. THEN .. ELSE .. FI .. FOR/WHILE
+loops and blocks enclosed in BEGIN/END
+are treated as single statements for this purpose). It also plants
+a jump after each statement to the statement following the END of the
+ALTERNATIVE statement (END.LAB).~
+~BAt the END, the data vector ALTDV is planted using the
+generated labels.
+This is done by using, and removing, the
+entries on the context stack.~
+~S1~LCONDITIONS
+~BThe evaluation of CONDITIONs in IF, FOR, WHILE or other
+statements in MUSL is undertaken in a shared set of procedures.
+CONDITIONS in MUSL consist of an arbitrary number of TESTs
+separated by the logical operators AND and OR. They are evaluated
+left to right and the evaluation ceases when the status
+of the condition is known. The written form of MUSL only allows
+an IF form of testing but UNLESS forms are generated within
+the compiler. For this reason, and because the AND symbol
+has greater binding power than OR, CONDITIONs are translated into
+a series of AND clauses separated by ORs. (There may, of course,
+only be one AND clause.) These AND clauses are then further
+broken down into a series of TESTs separated by ORs. Procedures
+provided are TRANS.COND (for CONDITIONs), TRANS.AND (for AND clauses) and TRANS.
+TEST for TESTs. At any
+stage there will be a destination label (DEST.LAB) to which
+control is to be passed if the test on the component succeeds
+and possibly a label on the next statement (NEXT.LAB) to which
+control is passed if any element of this component fails. Also
+information as to whether an IF or UNLESS test should be applied.
+~BThus the overall CONDITION
+(e.g. where A,B,C are AND clauses) is translated as follows~
+~T# 5 25 29
+~
+IF/UNLESS A V B V C , -> DEST.LAB~
+~
+becomes~
+~
+#IF case##UNLESS case~
+~
+IF A, -> DEST.LAB##IF A, -> NEXT.LAB~
+IF B, -> DEST.LAB##IF B, -> NEXT.LAB~
+IF C, -> DEST.LAB##UNLESS C, -> DEST.LAB~
+###NEXT.LAB:~
+~BSimilarly an AND clause (A,B,C are now TESTs)~
+~
+IF/UNLESS A & B & C , -> DEST.LAB~
+~
+becomes~
+~
+#IF##UNLESS~
+~
+UNLESS A, -> NEXT.LAB##UNLESS A, -> DEST.LAB~
+UNLESS B, -> NEXT.LAB##UNLESS B, -> DEST.LAB~
+IF C,      -> DEST.LAB##UNLESS C, -> DEST.LAB~
+NEXT.LAB:~
+~
+   TESTs are the bottom level of the translation of CONDITIONs. They
+may take one of two forms:-~
+~T# 6
+~
+~
+ i)~I(<CONDITION>)~
+ii)~I<COMPUTATION><COMPARISON>~
+~BThe case of (<CONDITION>) is dealt with by
+calling TRANS.COND with the appropriate parameters.~
+~BThe COMPARISON form of TEST is processed by
+TRANS.COMPARE, see Section 7.~
+~S1~L3.2 Data Structures
+~Y
+~P
+~V9 -1
+~D15
+~HFLOWCHARTS
+~
+~
+~H              NMSL061
+~V9 -1
+~F
+@TITLE MSL06(1,7)
+@COL 1S-2R-3R-4R-5R-6F
+@FLOW 1-2-3-4-5-6
+@BOX 1
+IMPERATIVE PROCESSING
+@BOX 2
+     .
+@BOX 3
+     .
+@BOX 4
+PROCEDURES IN MODULE
+TRANS.COMP[MSL06.1]
+TRANS.IF [MSL06.2]
+TRANS.WHILE [MSL06.3]
+TRANS.FOR [MSL06.4]
+TRANS.GOTO [MSL06.5]
+TRANS.SWITCH [MSL06.6]
+TRANS.ALT [MSL06.7]
+TRANS.ELSE [MSL0.6.8]
+TRANS.FI [MSL0.6.9]
+TRANS.OD [MSL06.10]
+TRANS.EXIT [MSL06.11]
+TRANS.END.ALT [MSL06.12]
+ALT.LABEL [MSL06.13]
+TRANS.COND [MSL06.14]
+@BOX 5
+     .
+@BOX 6
+END
+@BOX 1.1
+#MSL06/1
+MODULE(TRANS.COMP,TRANS.IF,TRANS.WHILE,
+TRANS.FOR,TRANS.GOTO,TRANS.SWITCH,
+TRANS.ALT,TRANS.ELSE,TRANS.FI,
+TRANS.OD,TRANS.EXIT,TRANS.END.ALT,
+ALT.LABEL,INIT.S6);
+*GLOBAL 5;
+@BOX 2.1
+@BOX 3.1
+    ::
+@BOX 4.1
+$PS TRANS.COMP($IN)/$IN;
+$PS TRANS.IF();
+$PS TRANS.WHILE();
+$PS TRANS.FOR();
+$PS TRANS.GOTO();
+$PS TRANS.SWITCH();
+$PS TRANS.ALT();
+$PS TRANS.ELSE();
+$PS TRANS.FI();
+$PS TRANS.OD();
+$PS TRANS.EXIT();
+$PS TRANS.END.ALT();
+$PS ALT.LABEL();
+$PS TRANS.COND($IN,$IN);
+::PDP *CODE 3;
+#MSL06.1
+::PDP *CODE 1;
+#MSL06.2
+::PDP *CODE 3;
+#MSL06.3
+#MSL06.4
+::PDP *CODE 1;
+#MSL06.5
+::PDP *CODE 3;
+#MSL06.6
+#MSL06.7
+::PDP *CODE 1;
+#MSL06.8
+#MSL06.9
+#MSL06.10
+#MSL06.11
+#MSL06.12
+#MSL06.13
+::PDP *CODE 3;
+#MSL06.14
+::PDP *CODE 1;
+@BOX 5.1
+$PS INIT.S6();
+$PR INIT.S6;
+END
+@BOX 6.1
+*END
+@END
+@TITLE MSL06/1(1,11)
+@COL 1S
+@BOX 1.0
+EXTERNAL ENVIRONMENT
+@BOX 1.1
+$LS TL.LABEL.SPEC(ADDR[$LO8],$IN);
+$LS TL.LABEL($IN);
+$LS TL.S.DECL(ADDR[$LO8],$IN,ADDR);
+$LS TL.PL($IN,$IN);
+$LS TL.C.LIT.32($IN,$IN32);
+$LS TL.C.LIT.16($IN,$IN16);
+$LS TL.REG($IN);
+$LS TL.ASS($IN,$IN);
+$LS TL.ASS.VALUE($IN,$IN);
+$LS TL.ASS.END();
+$LS TL.CYCLE($IN);
+$LS TL.CV.CYCLE($IN,$IN,$IN);
+$LS TL.CV.LIMIT($IN);
+$LS TL.REPEAT();
+$IN LASTMN;
+$IN AP;
+$PS PREPROCESS.COMP($IN)/$IN;
+$IN CWORD;
+$PS PRINT.AR();
+$IN IPTR;
+$PS COMPILE.COMP($IN,$IN)/$IN;
+$TY ITYPE IS $LO8 TAG,ST $LO16 IND;
+ITYPE EOS,DTHEN,COMMA,GOTO,DDO,LTHAN,BSLASH,DFROM,DEND;
+$IM $LI LBUFFZ;
+ITYPE[LBUFFZ] LBUFF;
+$IM $LI CONSTKZ;
+$IN [CONSTKZ] CONSTK;
+$IN CONPTR;
+$TY PLIST.ENT IS $LO16 INTID,PREVN,K,T $IN32 DETAIL;
+$IM $LI PLISTZ;
+PLIST.ENT[PLISTZ] PLIST;
+$PS MONITOR($IN);
+$IN CUR.LEV;
+$IN GLEV;
+$IN FPTR;
+$IN REGS.IU;
+$LI/ADDR[$LO8] NIL=;
+$IM $LI KLAB;
+$IM $LI KLABREF;
+$IM $LI KVAR;
+$IN TINT,TBYADDR;
+$IM $LI TLAB,TADPROC,TINT32;
+$IN CURBLK;
+$PS BEGIN.ST();
+$PS PREPROCESS.COND();
+$IM $LI KGLAB;
+$IN ST.PTR;
+$IN CURPROC;
+$IN CURRES;
+$PS COMPILE.COND($IN,$IN,$IN);
+$PS DECLARE.N($LO16,$IN,$IN)/$LO16;
+$PS DUMMY()/$LO16;
+$PS MUTLN($LO16)/$LO16;
+$PS EXPN($LO16);
+$PS EVAL.LIT($IN,$IN)/$IN32;
+$LI BREQD = -1, DIND = %1004, AOPD = %3000;
+@END
+@TITLE MSL06.1(1,6)
+@COL 1S-2R-3R-4R-5F
+@FLOW 1-2-3-4-5
+@BOX 1
+TRANS.COMP(REQD.TYPE)
+@BOX 2
+DECLARATION &
+INITIALISATION
+@BOX 3
+PREPROCESS COMPUTATION
+TO PRODUCE ANALYSIS
+RECORD IN AR
+@BOX 4
+COMPILE
+COMPUTATION
+@BOX 5
+EXIT
+@BOX 1.1
+$PR TRANS.COMP(REQD.TYPE);
+@BOX 2.1
+::DECL & INIT
+@BOX 3.1
+0 => AP => FPTR;
+PREPROCESS.COMP(0);
+@BOX 4.1
+$IF CWORD & %10 /= 0 $TH
+PRINTAR();FI
+1 -> IPTR;
+0 => AP => REGS.IU => ST.PTR;
+COMPILE.COMP(0,REQD.TYPE)=>TRANS.COMP;
+@BOX 5.1
+$EN
+@END
+@TITLE MSL06.2(1,6)
+@COL 1S-2R-4R-5T-3R-6R-7R-9R-10R-11R-12T-13R-14F
+@COL 15R-16T-17T-18T-23T-24T-25R-20R-21R
+@ROW 3-15
+@ROW 13-21
+@FLOW 1-2-4-5Y-3-6-7-9-10-11-12Y-13-14
+@FLOW 5N-15-16Y-17Y-18Y-23N-25-20-10
+@FLOW 23Y-24Y-21
+@FLOW 24N-20
+@FLOW 12N-21
+@FLOW 16N-21
+@FLOW 17N-21
+@FLOW 18N-21
+@BOX 1
+TRANS.IF
+@BOX 2
+DECLARATIONS &
+INITIALISATION
+@BOX 3
+FIND END OF CONDITION
+@BOX 4
+FIND END OF STATEMENT
+@BOX 5
+DOES IT END 'THEN'
+@BOX 6
+DECLARE NAME(DEST.LAB)
+FOR THE LABEL FOR THE JUMP
+AROUND THE THEN CLAUSE
+@BOX 7
+MAKE THEN ENTRY ON CONTEXT STACK
+@BOX 9
+SET COND.FLAG
+AS UNLESS
+@BOX 10
+RESET IPTR TO
+POINT TO CONDITION
+@BOX 11
+TRANSLATE CONDITION
+USING
+DEST.LAB AND COND.FLAG
+@BOX 12
+IS IPTR AT CORRECT
+END VALUE?
+@BOX 13
+SET IPTR TO
+EOS ITEM
+@BOX 14
+EXIT
+@BOX 15
+FIND END OF CONDITION
+@BOX 16
+IS NEXT ITEM ','?
+@BOX 17
+ IS NEXT ITEM '->'?
+@BOX 18
+IS NEXT ITEM A NAME?
+@BOX 20
+SET COND.FLAG
+AS IF
+@BOX 21
+FAULT
+@BOX23
+IS THE NAME LOCALLY DEFINED
+@BOX24
+IS THE NAME A LABEL
+@BOX25
+DECLARE IT AS A LABEL
+@BOX 1.1
+$PR TRANS.IF;
+@BOX 2.1
+$IN DEST.LAB,COND.PTR,ID,END.PTR,IF.OR.UN;
+@BOX 3.1
+IPTR - 1 => END.PTR;
+@BOX 4.1
+IPTR => COND.PTR;
+$WH LBUFF[1+>IPTR] /= EOS $DO $OD
+@BOX 5.1
+$IF LBUFF[1->IPTR] /= DTHEN
+@BOX 6.1
+DUMMY() => DEST.LAB;
+TL.LABEL.SPEC(NIL,3);
+@BOX 7.1
+DEST.LAB => CON.STK[1+>CON.PTR];
+1 => CON.STK[1+>CON.PTR];
+@BOX 9.1
+1 => IF.OR.UN;
+@BOX 10.1
+COND.PTR => IPTR;
+@BOX 11.1
+TRANS.COND(IF.OR.UN,DEST.LAB)
+@BOX 12.1
+$IF IPTR /= END.PTR
+@BOX 13.1
+$WH LBUFF[IPTR+1] /= EOS $DO
+EOS => LBUFF[1+>IPTR] $OD
+@BOX 14.1
+$EX;
+$EN
+@BOX 15.1
+IPTR - 3 => IPTR => END.PTR
+@BOX 16.1
+$IF LBUFF[1+>IPTR] /= COMMA
+@BOX 17.1
+$IF LBUFF[1+>IPTR] /= GOTO
+@BOX 18.1
+$IF TAG $OF LBUFF[1+>IPTR] /= 1
+@BOX 20.1
+0 => IF.OR.UN;
+@BOX 21.1
+MONITOR(0);
+@BOX 23.1
+IND $OF LBUFF[IPTR] => ID;
+$IF MUTLN(ID) => DEST.LAB < CURLEV
+@BOX 24.1
+$IF K $OF PLIST[DEST.LAB] >= KLAB
+@BOX 25.1
+DECLARE.N (ID,KLAB.REF,0) => DEST.LAB;
+@END
+@TITLE MSL06.3(1,6)
+@COL 1S-2R-3R-5R-6T-7R-9F
+@COL 10R
+@ROW 7-10
+@FLOW 1-2-3-5-6Y-7-9
+@FLOW 6N-10
+@BOX 1
+TRANS.WHILE
+@BOX 2
+DECLARATIONS &
+INITIALISATION
+@BOX 3
+DECLARE LABELS
+FOR START AND END OF LOOP
+(ST.LAB,END.LAB)
+@BOX 5
+TRANSLATE CONDITION AS
+UNLESS CONDITION
+USING END.LAB
+@BOX 6
+IS NEXT ITEM 'DO'
+@BOX 7
+MAKE FOR/WHILE
+ENTRY ON CONTEXT STACK
+@BOX 9
+END
+@BOX 10
+FAULT
+@BOX 1.1
+$PR TRANS.WHILE;
+@BOX 2.1
+$IN ST.LAB,END.LAB;
+@BOX3.1
+DUMMY() => ST.LAB;
+DUMMY() => END.LAB;
+TL.LABEL.SPEC(NIL,2);
+TL.LABEL.SPEC(NIL,3);
+TL.LABEL(ST.LAB);
+@BOX5.1
+TRANS.COND(1,END.LAB);
+@BOX6.1
+$IF LBUFF[1+>IPTR] /= DDO
+@BOX7.1
+ST.LAB => CON.STK[1+>CON.PTR];
+END.LAB => CON.STK[1+>CON.PTR];
+3 => CON.STK [1 +> CON.PTR];
+@BOX9.1
+$EN
+@BOX 10.1
+MONITOR(0);
+@END
+@TITLE MSL06.4(1,11)
+@COL 11R
+@COL 1S-2R-3T-10T-4R-6R-9R-12T-13F
+@COL 8R
+@FLOW 1-2-3Y-10OK-4-6-9-12Y-13
+@FLOW 3N-8-9
+@FLOW 10NOT OK-11
+@FLOW 12N-11
+@ROW 6-8
+@ROW 11-4
+@BOX 1.0
+TRANS.FOR
+@BOX 2.0
+DECLARATIONS AND
+INITIALISATION
+EVAL.LIMIT
+#MSL06.4.1
+@BOX 3.0
+IS THE CONTROL VARIABLE SPECIFIED
+@BOX 4.0
+CALL TL.CV.CYCLE
+GIVING CONTROL VAR
+AND INCREMENT + 1
+@BOX 6.0
+PRODUCE A MUTL NAME
+FOR THE LIMIT AND
+CALL TL.CV.LIMIT
+@BOX 8.0
+PRODUCE A MUTL
+NAME FOR THE LIMIT
+CALL TL.CYCLE
+@BOX 9.0
+MAKE FOR STACK
+ENTRY ON CONTEXT STACK
+@BOX12.0
+IS NEXT ITEM 'DO'?
+@BOX13.0
+END
+@BOX 10.0
+CHECK CV SYNTAX
+@BOX 11.0
+FAULT
+@BOX 1.1
+$PR TRANS.FOR;
+$PS EVAL.LIMIT($IN)/$IN;
+@BOX 2.1
+$IN CV,T;
+#MSL06.4.1
+@BOX 3.1
+$IF LBUFF[IPTR+2] /= LTHAN
+@BOX 4.1
+IF T = TINT32 THEN
+TL.C.LIT.32(T,0);
+ELSE
+TL.C.LIT.16(T,0);
+FI
+TL.CV.CYCLE(CV,0,%4);
+@BOX 6.1
+2 +> IPTR;
+TL.CV.LIMIT(EVAL.LIMIT(T));
+@BOX 8.1
+TL.CYCLE(EVAL.LIMIT(TINT));
+@BOX 9.1
+8 => CON.STK[1 +> CON.PTR];
+@BOX12.1
+IF LBUFF[1 +> IPTR] /= DDO
+@BOX13.1
+END
+@BOX 10.1
+$IF TAG OF LBUFF[IPTR+1] /= 1
+OR K OF PLIST[MUTLN(IND OF LBUFF[IPTR+1]) => CV] /= KVAR
+OR T OF PLIST[CV] => T /= TINT
+AND T /= TBYADDR
+@BOX 11.1
+MONITOR(0);
+@END
+@TITLE MSL06.4.1(1,10)
+@COL 1S-3T-5R-6R-9F
+@COL 7R-8R
+@ROW 5-7
+@FLOW 1-3Y-5-6-9
+@FLOW 3N-7-8-9
+@BOX 1.0
+EVAL.LIMIT(TYPE)
+@BOX 3.0
+IS LIMIT A LITERAL
+@BOX 5.0
+PASS LITERAL TO MUTL
+@BOX 6.0
+RETURN MUTLN OF LITERAL
+@BOX 7.0
+TRANSLATE COMPUTATION
+ADD "ACONV TYPE"
+@BOX 8.0
+RETURN MUTLN %3000
+@BOX 9.0
+END
+@BOX 1.1
+$PR EVAL.LIMIT(T);
+@BOX 3.1
+IF LBUFF[IPTR+2] /= DDO
+OR EVAL.LIT(2,T) => EVAL.LIMIT = -1
+@BOX5.1
+::ALREADY DONE IN EVAL.LIT
+@BOX 6.1
+::ALREADY DONE (BOX 3)
+@BOX 7.1
+TRANS.COMP(0);
+TL.PL(%45,T);
+@BOX 8.1
+%3000 => EVAL.LIMIT;
+@BOX 9.1
+END
+@END
+
+@TITLE MSL06.5(1,6)
+@COL 6R
+@COL 1S-2R-3T-10T-4T-5T-7R-8F
+@COL 9R
+@ROW 6-5
+@ROW 7-9
+@FLOW 1-2-3Y-10N-4N-5Y-7-8
+@FLOW 3N-9
+@FLOW 10Y-7
+@FLOW 4Y-6-7
+@FLOW 5N-9
+@BOX 1
+TRANS.GOTO
+@BOX 2
+DECLARATIONS &
+INITIALISATION
+@BOX 3
+NEXT ITEM
+A NAME?
+@BOX 4
+IS THE NAME LOCALLY UNDEFINED
+@BOX 5
+IS THE NAME A LABEL OR GLABEL
+@BOX 6
+DECLARE IT AS
+A LABEL
+@BOX 7
+PLANT '-> NAME'
+@BOX 8
+EXIT
+@BOX 9
+FAULT
+@BOX 1.1
+$PR TRANS.GOTO;
+@BOX 2.1
+$IN DEST.LAB,ID,K;
+@BOX 3.1
+$IF TAG $OF LBUFF[1+>IPTR] /= 1
+@BOX 10.1
+IND $OF LBUFF[IPTR] => ID;
+MUTLN(ID) => DEST.LAB;
+$IF K OF PLIST[DEST.LAB] => K = KGLAB
+OR K = KVAR AND T OF PLIST[DEST.LAB] = TLAB
+@BOX 4.1
+IF DEST.LAB < CUR.BLK
+@BOX 5.1
+$IF K < KLAB
+@BOX 6.1
+DECLARE.N(ID,KLAB.REF,0) => DEST.LAB;
+@BOX 7.1
+IF K = KVAR THEN
+ TL.PL(%50, DEST.LAB)
+ELSE
+ TL.PL(%4F, DEST.LAB) FI
+@BOX 8.1
+$EN
+@BOX 9.1
+MONITOR(0);
+@END
+@TITLE MSL06.6(1,6)
+@COL 1S-2R-3R-4R-5R-6T-7T-8T-9T-20R-10R-12T-11T-13N
+@COL 14R-16R-19F
+@ROW 20-14
+@ROW 11-16
+@FLOW 1-2-3-4-5-6Y-7Y-8N-9Y-10-12N-11N-13-14
+@FLOW 6N-14-16
+@FLOW 7N-14
+@FLOW 12Y-16-19
+@FLOW 11Y-7
+@FLOW 8Y-20-10
+@FLOW 9N-14
+@BOX 1
+TRANS.SWITCH
+@BOX 2
+DECLARATIONS &
+INITIALISATION
+@BOX 3
+PLANT BM <= COMPUTATION
+@BOX 4
+DECLARE NAME(SWDV) FOR DATA VECTOR
+PLANT '-> SWDV[BM]'
+@BOX 5
+PLANT(DATAVEC DV(LABEL))
+@BOX 6
+IS NEXT ITEM '\'?
+@BOX 7
+IS NEXT ITEM
+A NAME?
+@BOX 8
+IS THE NAME LOCALLY UNDEFINED
+@BOX 9
+IS THE NAME A LABEL
+@BOX 20
+DECLARE IT AS A LABEL
+@BOX 10
+PLANT(DATAVEC ELEMENT)
+@BOX 12
+NEXT ITEM
+END OF STATEMENT?
+@BOX 11
+IS IT ','?
+@BOX 14
+FAULT
+@BOX 16
+TERMINATE
+DATA VECTOR
+@BOX 19
+EXIT
+@BOX 1.1
+$PR TRANS.SWITCH;
+@BOX 2.1
+$IN SWDV,N,ID;
+@BOX3.1
+TRANS.COMP(B.REQD);
+@BOX 4.1
+DUMMY() => SWDV;
+TL.S.DECL(NIL,%2C,-1);
+TL.PL(%61, SWDV);
+TL.PL(%64,0);
+TL.PL(%4F,DIND);
+@BOX 5.1
+TL.ASS(SWDV,-1);
+@BOX 6.1
+$IF LBUFF[1+>IPTR] /= BSLASH
+@BOX 7.1
+$IF TAG $OF LBUFF[1+>IPTR] /= 1
+@BOX 8.1
+IND $OF LBUFF[IPTR] => ID;
+$IF MUTLN(ID) => N < CURBLK
+@BOX 9.1
+$IF K $OF PLIST[N] < KLAB
+@BOX 20.1
+DECLARE.N(ID,KLAB.REF,0) => N;
+@BOX 10.1
+TL.ASS.VALUE(N,1);
+@BOX 12.1
+$IF LBUFF[IPTR+1] = EOS
+@BOX 11.1
+$IF LBUFF[1+>IPTR] = COMMA
+@BOX 14.1
+MONITOR(128);
+@BOX 16.1
+TL.ASS.END();
+@BOX 19.1
+$EX;
+$EN
+@END
+@TITLE MSL06.7(1,7)
+@COL 1S-2R-6R-3R-8T-4R-5R-7F
+@COL 9R
+@ROW 4-9
+@FLOW 1-2-6-3-8Y-4-5-7
+@FLOW 8N-9
+@BOX 1
+TRANS.ALT
+@BOX 2
+DECLARATIONS &
+INITIALISATION
+@BOX 3
+LOAD COMPUTATION
+INTO BM
+@BOX 8
+NEXT ITEM
+DELIMITER 'FROM'?
+@BOX 4
+DECLARE NAME (ALTDV) FOR DATAVEC
+PLANT(GOTO ALTDV[BM])
+@BOX 5
+DECLARE NAME FOR
+LABEL AFTER END(ENDDV)
+MAKE ALTERNATIVE
+ENTRY ON CONTEXT STACK
+@BOX 6
+FORCE 'BEGIN'
+@BOX 7
+EXIT
+@BOX 9
+FAULT
+@BOX 1.1
+$PR TRANS.ALT;
+@BOX 2.1
+$IN ALTDV;
+@BOX 3.1
+TRANS.COMP(B.REQD);
+@BOX 8.1
+$IF LBUFF[1+>IPTR] /= DFROM
+@BOX 4.1
+DUMMY() => ALTDV;
+TL.S.DECL(NIL,%2C,-1);
+TL.PL(%61,ALTDV);
+TL.PL(%64,0);
+TL.PL(%4F,DIND);
+@BOX 5.1
+TL.LABEL.SPEC(NIL,3);
+ALTDV => CON.STK[1 +> CON.PTR];
+DUMMY() => CON.STK[1+>CON.PTR];
+9 => CON.STK[1 +> CON.PTR];
+@BOX 6.1
+BEGIN.ST();
+@BOX 7.1
+$EN
+@BOX 9.1
+MONITOR(0);
+@END
+@TITLE MSL06.8(1,6)
+@COL 1S-2R-3T-4R-6R-7R-8R-10F
+@COL 11R
+@ROW 7-11
+@FLOW 1-2-3Y-4-6-7-8-10
+@FLOW 3N-11
+@BOX 1
+TRANS.ELSE
+@BOX 2
+DECLARATIONS &
+INITIALISATION
+@BOX 3
+IS THE CONTEXT
+UNTERMINATED THEN
+@BOX 4
+DECLARE LABEL
+FOR END.ST
+@BOX 6
+PLANT '-> END.ST'
+@BOX 7
+DECLARE LABEL
+ON ELSE CLAUSE
+@BOX 8
+CHANGE THEN ON THE
+CONTEXT STACK INTO ELSE
+TYPE NOTE END.ST
+@BOX 10
+EXIT
+@BOX 11
+FAULT
+@BOX 1.1
+$PR TRANS.ELSE;
+@BOX 2.1
+$IN END.LAB
+@BOX 3.1
+$IF CON.STK[CON.PTR] /= 1
+@BOX 4.1
+DUMMY() => END.LAB;
+TL.LABEL.SPEC(NIL,3);
+@BOX 6.1
+TL.PL(%4F,END.LAB);
+@BOX 7.1
+TL.LABEL(CON.STK[CON.PTR-1]);
+@BOX 8.1
+END.LAB => CON.STK[CON.PTR-1];
+2 => CON.STK[CON.PTR];
+@BOX 10.1
+$EN
+@BOX 11.1
+MONITOR(10);
+@END
+@TITLE MSL06.9(1,6)
+@COL 1S-2R-3T-5R-6R-8F
+@COL 9R-10R
+@ROW 5-9
+@FLOW 1-2-3Y-5-6-8
+@FLOW 3N-9
+@BOX 1
+TRANS.FI
+@BOX 2
+DECLARATIONS &
+INITIALISATION
+@BOX 3
+IS THE CONTEXT
+UNTERMINATED THEN/ELSE
+@BOX 5
+SET LABEL
+FOR JUMP AROUND
+THEN/ELSE CLAUSE
+@BOX 6
+REMOVE THEN
+FROM THE CONTEXT STACK
+@BOX 8
+EXIT
+@BOX 9
+FAULT
+@BOX 1.1
+$PR TRANS.FI;
+@BOX 2.1
+::DECL & INIT;
+@BOX 3.1
+$IF CON.STK[CON.PTR] /= 1 /= 2
+@BOX 5.1
+TL.LABEL(CON.STK[CON.PTR -1]);
+@BOX 6.1
+2 -> CON.PTR;
+@BOX 8.1
+$EN
+@BOX 9.1
+MONITOR(10);
+@END
+@TITLE MSL06.10(1,7)
+@COL 1S-2R-3T-5R-6R-7R-9F
+@COL 11T-12R-13R
+@COL 10R
+@ROW 5-11
+@ROW 12-10
+@FLOW 1-2-3Y-5-6-7-9
+@FLOW 3N-11Y-12-13-9
+@FLOW 11N-10
+@BOX 1
+TRANS.OD
+@BOX 2
+DECLARATIONS &
+INITIALISATION
+@BOX 3
+IS THE CONTEXT 'WHILE'
+@BOX 5
+PLANT JUMP TO
+ST.LAB
+@BOX 6
+SET
+END.LAB
+@BOX 7
+REMOVE WHILE
+ENTRY FROM
+THE CONTEXT STACK
+@BOX 9
+EXIT
+@BOX11.0
+IS THE CONTEXT 'FOR'?
+@BOX12.0
+CALL TL REPEAT
+@BOX13.0
+REMOVE FOR ENTRY
+FROM CONTEXT STACK
+@BOX 10
+FAULT
+@BOX 1.1
+$PR TRANS.OD;
+@BOX 2.1
+::DECL & INIT;
+@BOX 3.1
+$IF CON.STK[CON.PTR] /= 3
+@BOX 5.1
+TL.PL(%4F, CON.STK[CON.PTR -2]);
+@BOX 6.1
+TL.LABEL(CON.STK[CON.PTR-1]);
+@BOX 7.1
+3 -> CON.PTR;
+@BOX 9.1
+$EN
+@BOX11.1
+IF CON.STK[CON.PTR] /= 8
+@BOX12.1
+TL.REPEAT();
+@BOX13.1
+1 -> CON.PTR;
+@BOX 10.1
+MONITOR(10);
+@END
+@TITLE MSL06.11(1,10)
+@COL 1S-2R-3F
+@FLOW 1-2-3
+@BOX 1.0
+TRANS.EXIT
+@BOX2.0
+TL PLANT
+ASSIGN RESULT
+AND RETURN
+@BOX 3.0
+END
+@BOX 1.1
+$PR TRANS.EXIT;
+$IN I;
+@BOX 2.1
+IF T OF PLIST[CURPROC] =>I /= 0 THEN
+IF I & %8000 /= 0 THEN
+TADPROC => I;
+FI
+TL.PL(%46,I);
+TL.PL(%22,CUR.RES);
+AOPD=>I;
+FI
+TL.PL(%43,I);
+@BOX 3.1
+$EN
+@END
+@TITLE MSL06.12(1,7)
+@COL 1S-2R-3T-4R-5R-8R-6F
+@COL 7R
+@ROW 4-7
+@FLOW 1-2-3N-4-5-8-6
+@FLOW 3Y-7-5
+@BOX 1
+TRANS.END.ALT
+@BOX 2
+DECLARATIONS &
+INITIALISATION
+@BOX 3
+NO STATEMENTS
+IN ALTERNATIVE
+@BOX 4
+PLANT DATA VECTOR
+OF ALTERNATIVE LABELS
+AND REMOVE CON.STACK
+ENTRIES
+@BOX 5
+DECLARE LABEL
+AFTER END
+@BOX 6
+EXIT
+@BOX 7
+FAULT
+@BOX 8
+REMOVE CONTEXT STACK
+ENTRY FOR ALT
+@BOX 1.1
+$PR TRANS.END.ALT;
+@BOX 2.1
+$IN I,J;
+@BOX 3.1
+$IF CON.STK[CON.PTR] /= 10
+@BOX 4.1
+TL.ASS(CON.STK[CON.PTR-2],-1);
+CON.PTR => J;
+$WH CON.STK[CON.PTR] >= 10 $DO
+4 -> CON.PTR;
+$OD;
+CONPTR => I;
+$WH I < J $DO
+TL.ASS.VALUE(CONSTK[I+1],1);
+4 +> I;
+$OD
+TL.ASS.END();
+@BOX 5.1
+TL.LABEL(CON.STK[CON.PTR -1]);
+@BOX 8.1
+3 -> CON.PTR;
+@BOX 6.1
+$EN
+@BOX 7.1
+MONITOR(128);
+@END
+@TITLE MSL06.13(1,7)
+@COL 1S-2R-4T-3T-5R-6R-7F
+@FLOW 1-2-4N-3N-5-6-7
+@FLOW 3Y-6
+@FLOW 4Y-7
+@BOX 1
+ALT.LABEL
+@BOX 2
+DECLARATIONS &
+INITIALISATION
+@BOX 3
+FIRST STATEMENT
+IN ALTERNATIVE?
+@BOX 5
+PLANT JUMP TO
+END LABEL
+@BOX 4
+IS IT
+END?
+@BOX 6
+DECLARE LABEL
+ON ALTERNATIVE
+AND NOTE IT
+IN CONTEXT STACK
+@BOX 7
+EXIT
+@BOX 1.1
+$PR ALT.LABEL;
+@BOX 2.1
+::DECL & INIT;
+@BOX 3.1
+$IF CON.STK[CON.PTR] /= 10
+@BOX 4.1
+$IF LBUFF[1] = DEND
+@BOX 5.1
+TL.PL(%4F,CON.STK[CON.PTR -1]);
+@BOX 6.1
+TL.LABEL.SPEC(NIL,3);
+DUMMY() => CONSTK[1+>CONPTR];
+TL.LABEL(LASTMN);
+CON.STK[CON.PTR-3] => CON.STK[1+>CON.PTR];
+CON.STK[CON.PTR-3] => CON.STK[1+>CON.PTR];
+10 => CON.STK[1 +> CON.PTR];
+@BOX 7.1
+$EN
+@END
+@TITLE MSL06.14(1,6)
+@COL 1S-2R-3R-4R-5F
+@FLOW 1-2-3-4-5
+@BOX 1.0
+TRANS.COND(IF.OR.UN,DEST.LAB)
+@BOX 2.0
+DECLARATIONS &
+INITIALISATION
+@BOX 3.0
+PREPROCESS CONDITION
+TO PRODUCE ANALYSIS
+RECORD IN AR
+@BOX 4.0
+COMPILE
+CONDITION
+@BOX 5.0
+EXIT
+@BOX 1.1
+$PR TRANS.COND(IF.OR.UN,DEST.LAB);
+@BOX 2.1
+::DECL & INIT
+@BOX 3.1
+0 => AP => FPTR;
+PREPROCESS.COND();
+IF CWORD & %10 /= 0 THEN
+PRINT.AR()
+FI
+1 -> IPTR;
+@BOX 4.1
+0 => AP => REGS.IU => ST.PTR;
+COMPILE.COND(IF.OR.UN,DEST.LAB,0);
+@BOX 5.1
+$EN
+@END
+

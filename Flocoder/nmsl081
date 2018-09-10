@@ -1,0 +1,508 @@
+@X @~
+~V7 56 2 -5
+~D10
+~H                    MUSS
+~
+~
+~D10
+~H            NMSL081
+~D10
+~MMANCHESTER UNIVERSITY  -  CONFIDENTIAL~
+~
+~
+~V2 -16
+                                                                      ISSUE 11~
+~V2 0
+~V9 -1
+~P
+~V9 1
+~YMSL081
+~M~LMSL IMPLEMENTATION DESCRIPTION
+~
+~M~LSection 8 Version 1
+~S1~LSection 8.1 Name List Management
+~S1~L1. General Description
+~BThis section provides the data structures that
+record the names used in a program and procedures to
+convert them to internal identifiers INTIDs. Its data
+structures also record the associated MUTL name.
+Every name used in a program has a unique INTID but
+MUTL names are reallocated after PROCs and blocks end.
+If more than one declaration is given for a name (at different
+levels of the block structure) a MUTLN will be allocated to each.
+Only the current one is contained in the NLIST of this section.
+The others are the responsibility of section 5.~
+~S1~L2. Interfaces
+~S1~L2.1 Software Interface
+~T# 6
+~
+~
+1)~IADDN () $LO16 - this procedure returns an
+INTID for the name given in CHLIST (see below).~
+~
+2)~IGENN ($LO16) ADDR [$LO8] - this procedure returns a bounded
+pointer which addresses the characters of the name with the
+given INTID.~
+~
+3)~IDECLARE.N($LO16,$IN,$IN)/$LO16 - given an INTID, (as
+first parameter), this procedure allocates an entry
+on PLIST of the specified KIND (second parameter) and
+TYPE (third parameter) and
+returns its MUTLN as a result. If an entry
+already exists for the INTID a fault is generated,
+(unless it is a label which has been referenced
+but not declared).~
+~
+4)~IDUMMY()/$LO16 - this procedure allocates an
+entry on PLIST for entities which have no
+associated name i.e. compiler generated quantities.
+The KIND of the entry is set as KDUMMY and
+its MUTLN returned as a result.~
+~
+5)~IMUTLN($LO16)/$LO16 - given an INTID
+as parameter, this procedures returns the index of the
+associated entry in PLIST, its MUTLN as a result.~
+~
+6)~IEXPN($LO16) - this procedure marks the
+entry for the INTID given as an export name.~
+~
+7)~INLIST - the list is indexed by INTID and the only one of its fields
+relevant as an interface entity is MUTLN which contains the current MUTL
+name for the name associated with INTID.~
+~
+8)~ICHLIST - this is a byte vector in which the character of a name
+should be placed before calling ADDN. The first character of the
+name should be in the position indexed by LASTCH and the last
+character should be followed by a zero byte.~
+~
+9)~ILASTCH - this is an index to the last allocated position in
+CHLIST.~
+~
+10)~ILASTN - this is an index to the last allocated position
+in NLIST.~
+~
+11)~IXNAME -~
+~
+12)~IXNPTR -~
+~S1~L3. Implementation
+~BNLIST is a linear structure the index into which
+is the INTID of a name. Names are located by searching
+backwards through NLIST from the last allocated
+position. A hash value is stored for each name to
+facilitate a quick comparison. If hash values
+correspond the actual characters of the name are compared.~
+~S1~L3.2 Data Structures
+~T# 12
+~
+~
+NLIST -~Ieach entry in this list relates to a name. It is indexed by the
+INTID of the name. There are three fields in an entry,
+MUTLN, HASH and MUSLN.
+The field MUTLN records the MUTL name of each name.
+It is 0 or 1 if the name has not been declared to MUTL.
+A newly introduced name has MUTLN = 0 and a name which has
+appeared as an export name of the module being compiled but
+has not otherwise been declared will have MUTLN = 1.
+The second field HASH contains the hash value of the
+name in the most significant 8 bits and the number of
+characters in the name in the next 8 bits.
+The third field MUSLN is an index to the
+first byte of the actual name in the CHLIST.~
+~
+CHLIST -~Ithis list is a byte vector in which the characters of names are stored
+.~
+~
+LASTN -~Ithis integer gives the index of the last allocated entry in NLIST.~
+~
+XNAME -~Ithis is a byte vector which contains the module name
+prefix for export names.~
+~
+XNPTR -~Ithis is a pointer to the last character of the prefix in
+XNAME.~
+~Y
+~P
+~V9 -1
+~D15
+~HFLOWCHARTS
+~
+~
+~H              NMSL081
+~V9 -1
+~F
+@TITLE MSL08(1,7)
+@COL 1S-2R-3R-4R-5R-6F
+@FLOW 2-3-4-5-6
+@BOX 1.0
+NAME LIST MANAGEMENT
+@BOX 2.0
+     .
+@BOX 3.0
+     .
+@BOX 4.0
+PROCEDURES IN MODULE:
+ADDN [MSL08.1]
+GENN [MSL08.2]
+@BOX 5.0
+.
+@BOX 6.0
+END
+@BOX 1.1
+#MSL08/1
+MODULE(ADDN,GENN,DECLARE.N,DUMMY,MUTLN,EXPN,
+::TEMP MOVE TO SECTION 2 NLIST.ENT,NLIST,CHLIST,XNAME,
+XNPTR,LASTN,LASTCH,INIT.S8);
+@BOX 2.1
+::DECLARATIONS
+::TEMP MOVE TO SECT 2 $TY NLIST.ENT IS $LO16 MUTLN,MUSLN,HASH;
+@BOX 3.1
+*GLOBAL 5;
+::TEMP MOVE TO SECT 2$LO8 [CHLISTZ] CHLIST;
+::TEMP MOVE TO SECT 2 NLIST.ENT [NLISTZ] NLIST;
+$IN LASTCH,LASTN,XNPTR;
+::TEMP MOVE TO SECT 2 $LO8[64] XNAME;
+::PDP *GLOBAL 0;
+$LI/ADDR[$LO8] NIL=;
+@BOX 4.1
+$PS ADDN()/$LO16;
+$PS GENN($LO16)/ADDR [$LO8];
+$PS DECLARE.N($LO16,$IN,$IN)/$LO16;
+$PS DUMMY()/$LO16;
+$PS MUTLN($LO16)/$LO16;
+$PS EXPN($LO16);
+::PDP *CODE 1;
+#MSL08.1
+#MSL08.2
+#MSL08.3
+#MSL08.4
+#MSL08.5
+#MSL08.6
+@BOX 5.1
+$PS INIT.S8();
+$PR INIT.S8;
+$IN TEMP;
+-1 => LASTCH => LASTN;
+'V => CHLIST[0];
+'S => CHLIST[1];
+'U => CHLIST[2];
+'B => CHLIST[3];
+0 => CHLIST[4];
+ADDN() => TEMP;
+%1002 => MUTLN OF NLIST[TEMP];
+END
+@BOX 6.1
+::END OF MODULE MSL081
+*END
+@END
+@TITLE MSL08/1(1,11)
+@COL 1S
+@BOX 1.0
+EXTERNAL INTERFACE
+OF MODULE MSL081
+@BOX 1.1
+$LO8[64] XNAME; ::TEMP MOD
+$LS SELECTOUTPUT($IN);
+$LS NEWLINES($IN);
+$LS CAPTION(ADDR[$LO8]);
+$LS TL.LABEL.SPEC(ADDR[$LO8],$IN);
+$PS MONITOR($IN);
+$IN MSTR,MUTLSTR;
+$IN IX;
+$IM $LI NLISTZ,PLISTZ,CHLISTZ;
+$TY NLIST.ENT IS $LO16 MUTLN,MUSLN,HASH; ::TEMP
+NLIST.ENT[NLISTZ] NLIST; ::TEMP
+$LO8[CHLISTZ] CHLIST; ::TEMP
+$TY PLIST.ENT IS $LO16 INTID,PREVN,K,T $IN32 DETAIL;
+PLIST.ENT[PLISTZ] PLIST;
+$IN CUR.BLK,LASTMN,PROCLEV;
+$IM $LI KTYPE,KDUMMY,KGLAB,KLABREF,KIMPLAB,KLAB,KTREF;
+$IM $LI KPSPEC,KPROC;
+@END
+@TITLE MSL08.1(1,7)
+@COL 1S-2R-3R-4T-5T-6R-7T-8T-9R-10F
+@COL 11R-12R
+@ROW 5-11
+@FLOW 1-2-3-4N-5Y-6-7Y-8Y-9-10
+@FLOW 4Y-11-12-10
+@FLOW 5N-4
+@FLOW 7N-4
+@FLOW 8N-7
+@BOX1.0
+ADDN
+@BOX2.0
+DECLARATIONS
+@BOX3.0
+COMPUTE HASH
+SET NLIST PTR
+@BOX4.0
+COMPARED ALL NAMES
+IN NLIST?
+@BOX5.0
+ARE HASHS THE SAME?
+@BOX6.0
+SET POINTERS FOR
+NAME COMPARISON
+@BOX7.0
+NEXT CHARACTERS
+THE SAME?
+@BOX8.0
+ALL NAME COMPARED?
+@BOX9.0
+RETURN NLIST PTR
+AS INTID
+@BOX10.0
+EXIT
+@BOX11.0
+MAKE NEW NLIST
+ENTRY AT LASTN POSITION
+@BOX12.0
+RETURN NEW NAME
+INDEX AS INTID
+@BOX1.1
+$PR ADDN;
+@BOX2.1
+$IN I,J,K,L,HASH1,N;
+$LI LIT = 'A - 'a + %80;
+@BOX3.1
+LASTCH => I + 1 => K;
+0 => HASH1;
+$WH CHLIST[1+>I] => J /= 0 DO
+IF J >= 'a THEN
+J + LIT => J => CHLIST[I] FI
+J & %1F + HASH1 & %3FF <<- 1 => HASH1 OD
+I - LASTCH - 1 => N + (HASH1 <<- 5) => HASH1;
+1 + LASTN => I;
+@BOX4.1
+IF 1 -> I < 0
+@BOX5.1
+IF HASH OF NLIST[I] /= HASH1
+@BOX6.1
+MUSLN OF NLIST[I] => J;
+0 => L;
+@BOX7.1
+IF CHLIST[J+L]&%7F /= CHLIST[K+L]&%7F
+@BOX8.1
+IF 1 +> L /= N
+@BOX9.1
+I => ADDN;
+@BOX10.1
+END
+@BOX11.1
+0 => MUTLN OF NLIST[1 +> LASTN];
+LASTCH + 1 => MUSLN OF NLIST[LASTN];
+HASH1 => HASH OF NLIST[LASTN];
+N +> LASTCH;
+IF LASTN >= NLISTZ OR LASTCH >= CHLISTZ THEN
+SELECTOUTPUT(MSTR);
+NEWLINES(0);CAPTION(%"NLIST");MONITOR(9);FI
+@BOX12.1
+LASTN => ADDN;
+@END
+@TITLE MSL08.2(1,7)
+@COL 8R-9R
+@COL 1S-2R-3R-7T-4R-5R-6F
+@ROW 8-4
+@FLOW 1-2-3-7N-4-5-6
+@FLOW 7Y-8-9-6
+@BOX 1.0
+GENN(INTID)
+@BOX 2.0
+DECLARATIONS
+@BOX3.0
+1ST CH NAME IS
+MUSLN OF NLIST[INTID]
+@BOX4.0
+FIND LAST CHARACTER
+OF NAME
+@BOX5.0
+CREATE PARTITION
+CHLIST (1ST CH, LASTCH)
+AS RESULT
+@BOX6.0
+END
+@BOX 7.0
+EXPORT BIT OF IXSET
+@BOX 8.0
+COPY NAME TO
+XNAME
+@BOX 9.0
+CREATE PARTITION
+OF XNAME AND
+RETURN AS RESULT
+@BOX 1.1
+$PR GENN(INTID);
+@BOX 2.1
+$IN FSTCH,LSTCH,I,N;
+@BOX 3.1
+MUSLN OF NLIST[INTID] => FSTCH => LSTCH;
+HASH OF NLIST[INTID] & %3F => N;
+@BOX 4.1
+N - 1 +> LSTCH;
+@BOX 5.1
+PART(^CHLIST,FSTCH,LSTCH) => GENN;
+@BOX 6.1
+$EN
+@BOX 7.1
+$IF IX & %4000 /= 0
+@BOX 8.1
+XNPTR => I;
+1 -> LSTCH;
+FOR N DO
+CHLIST[1+>LSTCH] => XNAME[1+>I] $OD
+@BOX9.1
+PART(^XNAME,0,I) => GENN;
+@END
+@TITLE MSL08.3(1,6)
+@COL 1S-2R-3T-14R-4R-5R-6R-11T-12R-7R-8R-15F
+@COL 13T-9T-16T-10R-17R
+@ROW 12-17
+@ROW 14-13
+@FLOW 1-2-3Y-14-4-5-6-11Y-12-7-8-15
+@FLOW 3N-13N-4
+@FLOW 13Y-9N-16N-10
+@FLOW 16Y-17-7
+@FLOW 11N-7
+@FLOW 9Y-7
+@BOX 1.0
+CREATE MUTLN FOR INTID
+@BOX 2.0
+RESET EXPORT BIT OF IX
+@BOX 3.0
+IS INTID AN EXPORT
+AND PROCLEV = 0
+@BOX 4.0
+ALLOCATE NEXT MUTLN
+@BOX5.0
+NOTE PREVIOUS MUTLN FOR
+THIS INTID IN PLIST[NEWMUTLN]
+@BOX 6.0
+NOTE NEW MUTLN IN NLIST[INTID]
+@BOX 7.0
+SET KIND IN PLIST
+@BOX 8.0
+SET TYPE IN PLIST
+@BOX 9.0
+IS IT A LABEL FOR WHICH
+THERE HAVE BEEN REFERENCES
+@BOX 10.0
+FAULT
+@BOX 11.0
+IS INTID OF KIND LABEL OR LABREF
+@BOX 12.0
+GIVE MUTL SPEC
+@BOX 13.0
+IS IT DECLARED IN CURRENT BLOCK
+@BOX14.0
+SET EXPORT BIT
+OF IX
+@BOX 15.0
+END
+@BOX 16.0
+IS IT A TYPE FOR WHICH
+THERE HAVE BEEN FORWARD REFS
+SET MUTLN AND
+"ALREADY DEF" IN IX
+@BOX 1.1
+$PR DECLARE.N(ID,KIND,TY);
+@BOX 2.1
+$IN OLDN;
+%8000 &> IX;
+@BOX 3.1
+$IF MUTLN OF NLIST[ID]=>OLDN & %3FFF => DECLARE.N/=1
+$OR PROCLEV /= 0
+@BOX 4.1
+IF 1+>LASTMN=>DECLARE.N >= PLISTZ THEN
+NEWLINES(0);CAPTION(%"PLIST");MONITOR(9);FI
+@BOX5.1
+OLDN => PREVN OF PLIST[DECLARE.N];
+@BOX 6.1
+DECLARE.N => MUTLN OF NLIST[ID];
+ID => INTID OF PLIST[DECLARE.N]
+@BOX 7.1
+$IF KIND = K.IMP.LAB $TH
+KGLAB => KIND
+$EL IF KIND = KPSPEC AND IX & %8000 /= 0 $TH
+KPROC => KIND
+FI FI
+KIND => K OF PLIST[DECLARE.N];
+@BOX 8.1
+TY => T OF PLIST[DECLARE.N];
+@BOX 9.1
+$IF KIND = KLAB AND K OF PLIST[DECLARE.N]=KLAB.REF
+@BOX 10.1
+MONITOR(7);
+@BOX11.1
+$IF KIND < KGLAB
+@BOX 12.1
+$IF KIND = KGLAB $TH
+TL.LABEL.SPEC(GENN(ID),IX ! 1) $EL
+TL.LABEL.SPEC(GENN(ID),IX) $FI
+@BOX 13.1
+$IF DECLARE.N < CUR.BLK
+@BOX 14.1
+%4000 => IX;
+@BOX 15.1
+$EN
+@BOX 16.1
+IF KIND = KTYPE AND K OF PLIST[DECLARE.N] = KTREF
+@BOX 17.1
+OLDN !> IX;
+@END
+@TITLE MSL08.4(1,6)
+@COL 1S-2R-4R-5F
+@FLOW 1-2-4-5
+@BOX1.0
+DUMMY
+@BOX2.0
+ALLOCATE NEXT MUTLN
+SET KIND AS KDUMMY
+@BOX4.0
+SET RESULT
+AS MUTLN
+@BOX5.0
+END
+@BOX1.1
+$PR DUMMY;
+@BOX2.1
+KDUMMY => K OF PLIST[1+>LASTMN];
+@BOX4.1
+LASTMN => DUMMY;
+@BOX5.1
+END
+@END
+@TITLE MSL08.5(1,6)
+@COL 1S-2R-3F
+@FLOW 1-2-3
+@BOX1.0
+MUTLN(INTID)
+@BOX2.0
+SET RESULT TO MUTLN FIELD
+FROM NLIST ENTRY FOR INTID
+@BOX3.0
+END
+@BOX1.1
+$PR MUTLN(INTID);
+@BOX2.1
+MUTLN OF NLIST[INTID] & %3FFF => MUTLN;
+@BOX3.1
+END
+@END
+@TITLE MSL08.6(1,6)
+@COL 1S-2R-3F
+@FLOW 1-2-3
+@BOX1.0
+EXPN(INTID)
+@BOX2.0
+SET MUTLN OF NLIST
+ENTRY FOR INTID TO 1
+@BOX3.0
+END
+@BOX1.1
+$PR EXPN(ID);
+@BOX2.1
+IF MUTLN OF NLIST[ID] = 0 THEN
+1 => MUTLN OF NLIST[ID];
+ELSE %4000 !> MUTLN OF NLIST[ID] FI
+@BOX3.1
+END
+@END
+

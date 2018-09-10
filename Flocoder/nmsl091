@@ -1,0 +1,284 @@
+@X @~
+~V7 56 2 -5
+~D10
+~H                    MUSS
+~
+~
+~D10
+~H            NMSL091
+~D10
+~MMANCHESTER UNIVERSITY  -  CONFIDENTIAL~
+~
+~
+~V2 -16
+                                                                      ISSUE 11~
+~V2 0
+~V9 -1
+~P
+~V9 1
+~YMSL091
+~S1~M~LMSL IMPLEMENTATION DESCRIPTION
+~
+~M~LSection 9 Version 1~
+~S1~LSection 9.1 Monitoring
+~BThis section is mainly concerned with producing a compile time
+report on the module being compiled. The messages it outputs
+may be reference points~
+~
+~T% 12 18 25 36
+%e.g.%10.1%>>>>>%$PR PROC1(A,B);~
+%%10.12%>>>>>%$EN~
+~
+or error indications~
+~
+%e.g.%10.3%***SYNTAX!%$TY T $IS $REAL<? X,Y;~
+%%10.5%***SYNTAX!%T<? A,B;~
+%%10.7%***NOTDEF!%A<? => B;~
+~
+The reference messages are numbers 200 and 201 and the first
+causes the indentation of itself and subsequent messages to be
+increased by 4 whilst 201 reduces the level of indentation by
+4 after printing. Message numbers less than 200 each cause an error type
+to be given (such as SYNTAX, NOTDEF etc) in addition to the
+standard items which are
+source line number >>>>> (or *** etc), and source line (with
+<? inserted at the position of IPTR for error messages).
+The error type is one of the 16 standard messages given below
+and is selected by the least significant 4 bits of the message
+number. Numbers greater than 64 cause the monitor procedure to
+exit in the normal way whilst numbers < 64 cause a branch to
+the label "RESTART" in the main loop (Section 1).~
+~BThis section also contains a procedure which prints
+some statistics at the end of a compilation indicating the
+maximum size reached in the main lists of the compiler.~
+~S1~L9.2 Interface
+~
+~
+~MMONITOR($IN)~
+~NPRINT.STATS~
+~NMAXMUTLN~
+~NMAXN~
+~NMAXCH~
+~S1~L9.3 Implementation
+~BThe following error messages are provided~
+~
+~M 0 SYNTAX!~
+~N 1 NOTDEF!~
+~N 2 SCOPE!~
+~N 3 TYPE!~
+~N 4 ILLEGAL!~
+~N 5 ENDS?~
+~N 6 INVALID!~
+~N 7 DEFINED!~
+~N 8 FIELD?~
+~N 9 SUBS?~
+~N10 CONTEXT?~
+~N11 PARAM?~
+~N12 ACCESS!~
+~N13 NO.FI?~
+~N14 LEXICAL!~
+~N15 NO.OD?~
+~Y
+~P
+~V9 -1
+~D15
+~HFLOWCHARTS
+~
+~
+~H              NMSL091
+~V9 -1
+~F
+@TITLE MSL09(1,11)
+@COL 1S-2R-3R-4R-5R-6F
+@FLOW 1-2-3-4-5-6
+@BOX 1.0
+MONITORING
+@BOX 4.0
+PROCEDURES IN MODULE
+MONITOR[MSL09.1]
+@BOX 6.0
+END
+@BOX 1.1
+#MSL09/1
+MODULE (MONITOR,FAULTS,LINE.NO,INIT.S9,LASTT,LASTP,PRINT.STATS,
+MAXCH,MAXN,MAXMUTLN);
+@BOX 3.1
+*GLOBAL 5;
+$IN FAULTS,MAXMUTLN,MAXN,MAXCH,LASTT,LASTP;
+$IN32 LINENO;
+$IN MESS.IND;
+@BOX 4.1
+$PS MONITOR ($IN);
+$PS PRINT.STATS();
+::PDP  *CODE 1;
+#MSL09.1
+#MSL09.2
+@BOX 5.1
+$PS INIT.S9();
+$PR INIT.S9;
+0=>MAXN=>MAXCH=>MAXMUTLN=>FAULTS;
+-4=> MESS.IND;
+0 => FAULTS => LINE.NO;
+END
+@BOX 6.1
+*END
+@END
+@TITLE MSL09/1(1,11)
+@COL 1S
+@BOX 1.0
+EXTERNAL INTERFACE
+TO MODULE MSL091
+@BOX 1.1
+$LA RESTART;
+$IN IPTR,SPTR,CWORD;
+$LS SELECTOUTPUT($IN);
+$LS SPACES($IN);
+$LS NEWLINES($IN);
+$LS OUTLINE.NO($IN32);
+$LS OUTI($IN32,$IN);
+$LS CAPTION($AD[$LO8]);
+$LS OUTCH($IN);
+$LO8[2000] SBUFF;
+$IN MSTR,MUTLSTR;
+@END
+@TITLE MSL09.1(1,6)
+@COL 1S-2R-14R-15T-3R-6T-7R-8R-9R-12T-16R-10F
+@COL 11R-13C
+@ROW 16-13
+@ROW 7-11
+@FLOW 1-2-14-15N-3-6N-7-8-9-12N-16-10
+@FLOW 15Y-16
+@FLOW 12-13
+@FLOW 6Y-11-8
+@BOX 1.0
+INFORM ( M NUMBER)
+@BOX14.0
+ADJUST INDENTATION IF THE
+MESSAGE IS A REFERENCE HEADER
+@BOX15.0
+REFERENCE AND
+COMPILE MAP OFF?
+@BOX 3.0
+START A NEWLINE
+AND PRINT THE LINE NUMBER
+OUTPUT INDENTATION
+@BOX 6.0
+IS M NUMBER A REF MESSAGE
+@BOX 7.0
+OUTPUT >>>>* ERROR MESSAGE
+AND NOTE <? POSITION
+@BOX 8.0
+OUTPUT SBUFF
+INSERTING ??
+AT THE POSITION OF IPTR
+@BOX 9.0
+NEWLINE
+@BOX 16.0
+ADJUST INDENTATION IF THE
+MESSAGE IS A REFERENCE ENDING
+@BOX 10.0
+EXIT
+@BOX 11.0
+OUTPUT (   >>>>>)
+SUPPRESS <?
+@BOX 12
+IS MNUMBER <100
+@BOX 13
+RESTART
+@BOX 1.1
+$PR MONITOR(MNO);
+@BOX 2.1
+$IN QPOS,I,J,CH;
+@BOX 14.1
+IF MNO = 200 THEN
+4 +> MESS.IND FI
+@BOX 15.1
+IF MNO > 199 AND CWORD & 32 /= 0
+@BOX 3.1
+SELECTOUTPUT(MSTR);
+NEWLINES(0);
+OUTLINENO(LINE.NO);
+SPACES(MESS.IND);
+@BOX 6.1
+$IF MNO > 199
+@BOX 7.1
+CAPTION(%">>>>*");
+$DA FMESS($LO8)
+"SYNTAX! "
+"NOTDEF! "
+"SCOPE!  "
+"TYPE!   "
+"ILLEGAL!"
+"ENDS?   "
+"INVALID!"
+"DEFINED!"
+"FIELD?  "
+"SUBS?   "
+"CONTEXT?"
+"PARAM?  "
+"ACCESS! "
+"NO FI!  "
+"LEXICAL!"
+"NO OD!  "
+$EN
+MNO & 15 * 8 => J;
+CAPTION(PART(^FMESS,J,J+7));
+IPTR => QPOS;
+@BOX 8.1
+0 => I
+$WH 1 +> I =< SPTR $DO
+$IF SBUFF[I] => CH < 128 $TH
+OUTCH(CH)
+$EL $IF CH & 127 = QPOS $TH
+OUTCH('<);
+OUTCH('?);
+10000 => QPOS;
+$FI $FI $OD
+@BOX 9.1
+NEWLINES(1);
+@BOX 16.1
+IF MNO = 201 THEN
+4 -> MESS.IND FI
+@BOX 10.1
+$EN
+@BOX 11.1
+CAPTION(%">>>>>   ");
+10000 => QPOS;
+@BOX 12.1
+$IF MNO < 99
+@BOX 13.1
+-1 => FAULTS;
+-> RESTART;
+@END
+@TITLE MSL09.2(1,7)
+@COL 1S-3R-4R-5F
+@FLOW 1-3-4-5
+@BOX1.0
+PRINT STATS
+@BOX 3.0
+NEWLINE
+@BOX 4.0
+PRINT SIZE OF
+   NLIST
+   CHLIST
+   PLIST
+   TLIST
+   PARAMS
+@BOX 5.0
+END
+@BOX 1.1
+$PR PRINT.STATS;
+@BOX 3.1
+SELECTOUTPUT(MSTR);
+NEWLINES(0);
+@BOX 4.1
+OUTI(MAXN,5);
+OUTI(MAXCH,5);
+OUTI(MAXMUTLN,5);
+OUTI(LASTT,5);
+OUTI(LASTP,5);
+SELECTOUTPUT(MUTLSTR);
+@BOX 5.1
+END
+@END
+
