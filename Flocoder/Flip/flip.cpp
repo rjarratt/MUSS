@@ -116,6 +116,7 @@ static char *conditional_goto_format;
 static char conditional_goto[80];
 static int conditional_already_substituted;
 
+static int box_selection_level;
 static int in_selected_box = 0;
 static CHART_TABLE_ENTRY *current_chart_table_entry;
 static char *current_chart_name;
@@ -184,7 +185,7 @@ void start_chart(char *title)
 void start_box(int number, int level)
 {
     yacc_trace("New box %d.%d\n", number, level);
-    in_selected_box = level == 1;
+    in_selected_box = level == box_selection_level;
     if (in_selected_box)
     {
         if (check_box_number(number))
@@ -694,15 +695,17 @@ static void output_code(void)
 
 int main(int argc, char *argv[])
 {
-    if (argc != 3)
+    if (argc != 4)
     {
-        fprintf(stderr, "usage: flip [infile] [outfile]\n");
+        fprintf(stderr, "usage: flip [infile] [outfile] [level]\n");
     }
     else
     {
         label_format = "LB%05d:\n";
-        goto_format = "-> LB%05d;\n";
-        conditional_goto_format = ",-> LB%05d;";
+        //goto_format = "-> LB%05d;\n";
+        goto_format = "goto LB%05d;\n";
+        //conditional_goto_format = ",-> LB%05d;";
+        conditional_goto_format = "goto LB%05d;";
         yyin = fopen(argv[1], "r");
         if (yyin == NULL)
         {
@@ -714,6 +717,8 @@ int main(int argc, char *argv[])
         {
             fprintf(stderr, "cannot open %s\n", argv[2]);
         }
+
+        box_selection_level = atoi(argv[3]);
 
         if (yyin != NULL && output != NULL)
         {
