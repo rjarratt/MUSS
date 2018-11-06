@@ -1099,6 +1099,23 @@ $LS TL.PRINT($IN);
 $LS TL($IN,ADDR[$LO8],$IN);
 $LS TL.PL($IN,$IN);
 $LS TL.MODULE();
+@BOX1.2
+extern void SELECT.INPUT(int);
+extern void SELECTOUTPUT(int);
+extern void CAPTION(void *[]);
+extern void OUTI(int,int);
+extern int DEFINE.INPUT(int,void *[],int);
+extern int CURRENT.OUTPUT(void)
+extern int CURRENT.INPUT(void)
+extern void END.INPUT(int, int);
+extern void RELEASE.SEGMENT(int);
+extern void CREATE.SEGMENT(int, void *);
+extern void END.OUTPUT(int, int);
+int CMODE;
+extern void TL.PRINT(int);
+extern void TL(int, void *[],int);
+extern void TL.PL(int, int);
+extern void TL.MODULE(void);
 @BOX2.1
 $TY ITYPE $IS $LO8 TAG,ST $LO16 IND;
 $TY PLIST.ENT IS $LO16 INTID,PREVN,K,T $IN32 DETAIL;
@@ -1109,6 +1126,17 @@ $IM $LI SDLIST;
 $LO16[SDLIST] DLIST;
 
 $IN IPTR;
+ITYPE[LBUFFZ] LBUFF;
+@BOX2.2
+typedef struct { byte TAG; byte ST, short int IND } ITYPE;
+typedef struct {short int INTID,PREVN,K,T; int DETAIL } PLIST.ENT;
+extern const int LBUFFZ,PLISTZ,KTYPE,KTREF;
+ITYPE COLON,XCOLON,EOS,GOTO,ASTERISK; //LITERALS REALLY!
+PLIST.ENT[PLISTZ] PLIST;
+extern const int  SDLIST;
+shor tint[SDLIST] DLIST;
+
+int IPTR;
 ITYPE[LBUFFZ] LBUFF;
 @BOX3.1
 $PS INIT.S3();
