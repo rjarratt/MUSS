@@ -1435,6 +1435,172 @@ DECL.PROC(8);TRNS.CMP: TRANS.COMP(0=>IPTR);->TRNS.CMP;
 ->TRNS.CMP;DECL.PROC(4);DECL.TYPE (%3000);
 DECL.VAR();
 END
+@BOX 2.2
+IPTR = 1;
+switch (LBUFF[IPTR].IND -1)
+{
+    case 0:
+	{
+	    BEGIN.ST();
+	    break;
+	}
+    case 1:
+	{
+	    PROC.HEAD();
+	    break;
+	}
+    case 2:
+	{
+	    MOD.HEAD();
+	    break;
+	}
+    case 3:
+	{
+	    END.ST();
+	    break;
+	}
+    case 4:
+	{
+	    TRANS.IF();
+	    break;
+	}
+    case 5:
+	{
+	    MONITOR(0);
+	    break;
+	}
+    case 6:
+	{
+	    TRANS.ELSE();
+	    break;
+	}
+    case 7:
+	{
+	    TRANS.FI();
+	    break;
+	}
+    case 8:
+	{
+	    TRANS.WHILE();
+	    break;
+	}
+    case 9:
+	{
+	    TRANS.FOR();
+	    break;
+	}
+    case 10:
+	{
+	    MONITOR(0);
+	    break;
+	}
+    case 11:
+	{
+	    TRANS.OD();
+	    break;
+	}
+    case 12:
+	{
+	    TRANS.SWITCH();
+	    break;
+	}
+    case 13:
+	{
+	    TRANS.ALT();
+	    break;
+	}
+    case 14:
+	{
+	    DECL.SPACE();
+	    break;
+	}
+    case 15:
+	{
+	    TRANS.EXIT();
+	    break;
+	}
+    case 16:
+	{
+	    DECL.PROC(0);
+	    break;
+	}
+    case 17:
+	{
+	    DECL.LIT();
+	    break;
+	}
+    case 18:
+	{
+	    break;
+	}
+    case 19:
+	{
+	    DECL.DVEC();
+	    break;
+	}
+    case 20:
+	{
+	    DECL.TYPE(0);
+	    break;
+	}
+    case 21:
+	{
+	    DECL.FIELD();
+	    break;
+	}
+    case 22:
+    case 23:
+    case 24:
+    case 25:
+	{
+	    DECL.VAR();
+	    break;
+	}
+    case 26:
+	{
+        DECL.VSTORE();
+	    break;
+	}
+    case 27:
+	{
+	    DECL.IMP();
+	    break;
+	}
+    case 28:
+	{
+	    DECL.PROC(8);
+	    break;
+	}
+    case 29:
+    case 30:
+    case 31:
+    case 32:
+    case 33:
+    case 34:
+    case 35:
+    case 36:
+    case 37:
+	{
+	    IPTR = 0;
+	    TRANS.COMP(IPTR)
+	    break;
+	}
+    case 38:
+	{
+	    DECL.PROC(4);
+	    break;
+	}
+    case 39:
+	{
+	    DECL.TYPE (0x3000);
+	    break;
+	}
+    case 40:
+	{
+	    DECL.VAR();
+	    break;
+	}
+}
 @END
 @TITLE MSL01.2/1(1,11)
 @COL 2T
