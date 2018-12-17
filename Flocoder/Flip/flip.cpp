@@ -211,7 +211,7 @@ void process_line(char *line)
     {
         entry = (LINE_TABLE_ENTRY *)malloc(sizeof(LINE_TABLE_ENTRY));
         leading_spaces = strspn(line, " ");
-        if (line[leading_spaces] == '#')
+        if (line[leading_spaces] == '#' && strnicmp("#include", &line[leading_spaces], 8) != 0 && strnicmp("#define", &line[leading_spaces], 7) != 0)
         {
             entry->line_type = CrossReference;
             entry->line = &line[leading_spaces + 1];
