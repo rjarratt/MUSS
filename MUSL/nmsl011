@@ -940,17 +940,17 @@ $IN CON.PTR, TEMP,IX,DIRYZ;
 ADDR[$LO8] RES.FILE;
 $LA RESTART,CEXIT;
 @BOX 3.2
-const int CON.STKZ = 500;
-int OLDIN,MSTR,ISTR,MUTL.STR;
-int CON.STK[CON.STKZ];
-int CON.PTR, TEMP,IX,DIRYZ;
-char *RES.FILE;
+const int CON_STKZ = 500;
+int OLDIN,MSTR,ISTR,MUTL_STR;
+int CON_STK[CON_STKZ];
+int CON_PTR, TEMP,IX,DIRYZ;
+char *RES_FILE;
 @BOX 4.1
 $LS MUSL(ADDR [$LO8],ADDR [$LO8],$IN,$IN);
 $PR MUSL(FILE,PROG,CMP.MODE,DIR);
 ::PDP $IN SNO1,SNO2;
 @BOX 4.2
-void MUSL(FILE *file, FILE *PROG, int CMP.MODE, int DIR)
+void MUSL(FILE *file, FILE *PROG, int CMP_MODE, int DIR)
 {
 @BOX 5.1
 ::THE LAYOUT HERE IS TEMPORARY TO AVOID FORWARD REFS
@@ -1024,40 +1024,40 @@ END.INPUT(ISTR,0);
 END
 @BOX 5.2
 //THE LAYOUT HERE IS TEMPORARY TO AVOID FORWARD REFS
-goto TEMP.LAB.1;
-TEMP.LAB.2:
+goto TEMP_LAB_1;
+TEMP_LAB_2:
 #MSL01.1
 // MSL01.1
-goto TEMP.LAB.3;
-TEMP.LAB.1:
-RES.FILE = PROG;
+goto TEMP_LAB_3;
+TEMP_LAB_1:
+RES_FILE = PROG;
 DIRYZ = DIR;
 //START => RESTART;
 //OUT => CEXIT;
-CON.PTR = NULL;
-CON.STK[0] = 7;
+CON_PTR = NULL;
+CON_STK[0] = 7;
 IX = 0x8000 => ;
-C.MODE = CMP.MODE >> 8;
-INIT.S3();
-INIT.S4();
-INIT.S5();
-INIT.S8();
-INIT.S9();
-OLDIN = CURRENT.INPUT();
-MSTR = CURRENT.OUTPUT();
-ISTR = DEFINE.INPUT(-1,file,0) ;
-SELECT.INPUT(ISTR);
-if (CMP.MODE & 0x800 == 0)
+C_MODE = CMP_MODE >> 8;
+INIT_S3();
+INIT_S4();
+INIT_S5();
+INIT_S8();
+INIT_S9();
+OLDIN = CURRENT_INPUT();
+MSTR = CURRENT_OUTPUT();
+ISTR = DEFINE_INPUT(-1,file,0) ;
+SELECT_INPUT(ISTR);
+if (CMP_MODE & 0x800 == 0)
 {
-    TL(CMP.MODE & 0xFF,PROG,DIR);
+    TL(CMP_MODE & 0xFF,PROG,DIR);
 }
-TL.MODULE();
+TL_MODULE();
 //THIS IS WHERE #MSL01.1 SHOULD BE
-goto TEMP.LAB.2;
-TEMP.LAB.3:
-SELECT.INPUT(OLDIN);
+goto TEMP_LAB_2;
+TEMP_LAB_3:
+SELECT_INPUT(OLDIN);
 SELECTOUTPUT(MSTR);
-END.INPUT(ISTR,0);
+END_INPUT(ISTR,0);
 }
 @BOX6.1
 *END
@@ -1100,22 +1100,22 @@ $LS TL($IN,ADDR[$LO8],$IN);
 $LS TL.PL($IN,$IN);
 $LS TL.MODULE();
 @BOX1.2
-extern void SELECT.INPUT(int);
+extern void SELECT_INPUT(int);
 extern void SELECTOUTPUT(int);
 extern void CAPTION(void *[]);
 extern void OUTI(int,int);
-extern int DEFINE.INPUT(int,void *[],int);
-extern int CURRENT.OUTPUT(void)
-extern int CURRENT.INPUT(void)
-extern void END.INPUT(int, int);
-extern void RELEASE.SEGMENT(int);
-extern void CREATE.SEGMENT(int, void *);
-extern void END.OUTPUT(int, int);
+extern int DEFINE_INPUT(int,void *[],int);
+extern int CURRENT_OUTPUT(void);
+extern int CURRENT_INPUT(void);
+extern void END_INPUT(int, int);
+extern void RELEASE_SEGMENT(int);
+extern void CREATE_SEGMENT(int, void *);
+extern void END_OUTPUT(int, int);
 int CMODE;
-extern void TL.PRINT(int);
+extern void TL_PRINT(int);
 extern void TL(int, void *[],int);
-extern void TL.PL(int, int);
-extern void TL.MODULE(void);
+extern void TL_PL(int, int);
+extern void TL_MODULE(void);
 @BOX2.1
 $TY ITYPE $IS $LO8 TAG,ST $LO16 IND;
 $TY PLIST.ENT IS $LO16 INTID,PREVN,K,T $IN32 DETAIL;
@@ -1128,11 +1128,11 @@ $LO16[SDLIST] DLIST;
 $IN IPTR;
 ITYPE[LBUFFZ] LBUFF;
 @BOX2.2
-typedef struct { byte TAG; byte ST, short int IND } ITYPE;
-typedef struct {short int INTID,PREVN,K,T; int DETAIL } PLIST.ENT;
+typedef struct { unsigned char TAG; unsigned char ST; short int IND } ITYPE;
+typedef struct {short int INTID,PREVN,K,T; int DETAIL } PLIST_ENT;
 extern const int LBUFFZ,PLISTZ,KTYPE,KTREF;
 ITYPE COLON,XCOLON,EOS,GOTO,ASTERISK; //LITERALS REALLY!
-PLIST.ENT[PLISTZ] PLIST;
+PLIST_ENT[PLISTZ] PLIST;
 extern const int  SDLIST;
 short int[SDLIST] DLIST;
 
@@ -1177,41 +1177,41 @@ $PS END.ST();
 $PS MUTLN($LO16)/$LO16;
 
 @BOX3.2
-void INIT.S3(void);
-void INIT.S4(void);
-void INIT.S5(void);
-void INIT.S6(void);
-void INIT.S8(void);
-void INIT.S9(void);
+void INIT_S3(void);
+void INIT_S4(void);
+void INIT_S5(void);
+void INIT_S6(void);
+void INIT_S8(void);
+void INIT_S9(void);
 void ITEMISE(int);
-void DECL.SPACE(void);
-void DECL.PROC(int);
-void DECL.LIT(void);
-void DECL.DVEC(void);
-void DECL.TYPE(unsigned int);
-void DECL.FIELD(void);
-void DECL.VAR(void);
-void DECL.VSTORE(void);
-void DECL.IMP(void);
-void DECL.LAB(void);
-void TRANS.IF(void);
-void TRANS.FI(void);
-void TRANS.ELSE(void);
-void TRANS.WHILE(void);
-void TRANS.FOR(void);
-void TRANS.OD(void);
-void TRANS.SWITCH(void);
-void TRANS.ALT(void);
-void TRANS.EXIT(void);
-int TRANS.COMP(int);
-void TRANS.DIRECTIVE(void);
-void TRANS.GOTO(void);
-void ALT.LABEL(void);
+void DECL_SPACE(void);
+void DECL_PROC(int);
+void DECL_LIT(void);
+void DECL_DVEC(void);
+void DECL_TYPE(unsigned int);
+void DECL_FIELD(void);
+void DECL_VAR(void);
+void DECL_VSTORE(void);
+void DECL_IMP(void);
+void DECL_LAB(void);
+void TRANS_IF(void);
+void TRANS_FI(void);
+void TRANS_ELSE(void);
+void TRANS_WHILE(void);
+void TRANS_FOR(void);
+void TRANS_OD(void);
+void TRANS_SWITCH(void);
+void TRANS_ALT(void);
+void TRANS_EXIT(void);
+int TRANS_COMP(int);
+void TRANS_DIRECTIVE(void);
+void TRANS_GOTO(void);
+void ALT_LABEL(void);
 void MONITOR(int);
-void BEGIN.ST(void);
-void PROC.HEAD(void);
-void MOD.HEAD(void);
-void END.ST(void);
+void BEGIN_ST(void);
+void PROC_HEAD(void);
+void MOD_HEAD(void);
+void END_ST(void);
 unsigned int MUTLN(unsigned int);
 
 @BOX4.1
@@ -1302,9 +1302,9 @@ ITEMISE(0);
 $IF CON.STK[CON.PTR] >= 9 $TH
 ALT.LABEL() $FI
 @BOX 8.2
-if (CON.STK[CON.PTR] >= 9)
+if (CON_STK[CON_PTR] >= 9)
 {
-  ALT.LABEL()
+  ALT_LABEL()
 }
 @BOX 10.1
 $IF TAG OF LBUFF[1]=0
@@ -1339,7 +1339,7 @@ if (MUTLN(TEMP) >= TEMP != 0 != 0x1002 &&
 TRANS.COMP(0);
 @BOX 18.2
 ::PDP OVERLAY(2);
-TRANS.COMP(0);
+TRANS_COMP(0);
 @BOX 20.1
 $IF LBUFF[1+>IPTR] = EOS
 @BOX 20.2
@@ -1361,11 +1361,12 @@ if (LBUFF[1].TAG == 0
 @BOX 30.1
 $IF LBUFF[1=>IPTR] /= GOTO
 @BOX 30.2
-if (LBUFF[1=>IPTR] != GOTO)
+IPTR = 1;
+if (LBUFF[IPTR] != GOTO)
 @BOX 32.1
 TRANS.GOTO();
 @BOX 32.2
-TRANS.GOTO();
+TRANS_GOTO();
 @BOX 34.1
 $IF LBUFF[1] /= ASTERISK
 @BOX 34.2
@@ -1374,7 +1375,7 @@ if (LBUFF[1] != ASTERISK)
 ::PDP OVERLAY(1);
 TRANS.DIRECTIVE();
 @BOX 36.2
-::PDP OVERLAY(1);
+//PDP OVERLAY(1);
 TRANS.DIRECTIVE();
 @BOX 38.1
 MONITOR(0);
@@ -1389,7 +1390,7 @@ MONITOR(0);
 //MU6 #MSL01.2
 //PTV #MSL01.2
 //MC68000 #MSL01.2
-//PDP #MSL01.2/1
+#MSL01.2/1
 @BOX 48.1
 $IF CONSTK[CONPTR]=10$TH
 TLPL(%4F,CONSTK[CONPTR-1]);
@@ -1401,10 +1402,10 @@ if (CONSTK[CONPTR]==10)
   TLPL(0x4F,CONSTK[CONPTR-1]);
   CONSTK[CONPTR] = 11;
 }
-DECL.LAB();
+DECL_LAB();
 @BOX 50.1
 1 => IPTR;
-DECL.VAR();
+DECL_VAR();
 @BOX 50.2
 IPTR = 1;
 DECL.VAR();
@@ -1441,27 +1442,27 @@ switch (LBUFF[IPTR].IND -1)
 {
     case 0:
 	{
-	    BEGIN.ST();
+	    BEGIN_ST();
 	    break;
 	}
     case 1:
 	{
-	    PROC.HEAD();
+	    PROC_HEAD();
 	    break;
 	}
     case 2:
 	{
-	    MOD.HEAD();
+	    MOD_HEAD();
 	    break;
 	}
     case 3:
 	{
-	    END.ST();
+	    END_ST();
 	    break;
 	}
     case 4:
 	{
-	    TRANS.IF();
+	    TRANS_IF();
 	    break;
 	}
     case 5:
@@ -1471,22 +1472,22 @@ switch (LBUFF[IPTR].IND -1)
 	}
     case 6:
 	{
-	    TRANS.ELSE();
+	    TRANS_ELSE();
 	    break;
 	}
     case 7:
 	{
-	    TRANS.FI();
+	    TRANS_FI();
 	    break;
 	}
     case 8:
 	{
-	    TRANS.WHILE();
+	    TRANS_WHILE();
 	    break;
 	}
     case 9:
 	{
-	    TRANS.FOR();
+	    TRANS_FOR();
 	    break;
 	}
     case 10:
@@ -1496,52 +1497,52 @@ switch (LBUFF[IPTR].IND -1)
 	}
     case 11:
 	{
-	    TRANS.OD();
+	    TRANS_OD();
 	    break;
 	}
     case 12:
 	{
-	    TRANS.SWITCH();
+	    TRANS_SWITCH();
 	    break;
 	}
     case 13:
 	{
-	    TRANS.ALT();
+	    TRANS_ALT();
 	    break;
 	}
     case 14:
 	{
-	    DECL.SPACE();
+	    DECL_SPACE();
 	    break;
 	}
     case 15:
 	{
-	    TRANS.EXIT();
+	    TRANS_EXIT();
 	    break;
 	}
     case 16:
 	{
-	    DECL.PROC(0);
+	    DECL_PROC(0);
 	    break;
 	}
     case 17:
 	{
-	    DECL.LIT();
+	    DECL_LIT();
 	    break;
 	}
     case 18:
 	{
-	    DECL.DVEC();
+	    DECL_DVEC();
 	    break;
 	}
     case 19:
 	{
-	    DECL.TYPE(0);
+	    DECL_TYPE(0);
 	    break;
 	}
     case 20:
 	{
-	    DECL.FIELD();
+	    DECL_FIELD();
 	    break;
 	}
     case 21:
@@ -1549,22 +1550,22 @@ switch (LBUFF[IPTR].IND -1)
     case 23:
     case 24:
 	{
-	    DECL.VAR();
+	    DECL_VAR();
 	    break;
 	}
     case 25:
 	{
-        DECL.VSTORE();
+        DECL_VSTORE();
 	    break;
 	}
     case 26:
 	{
-	    DECL.IMP();
+	    DECL_IMP();
 	    break;
 	}
     case 27:
 	{
-	    DECL.PROC(8);
+	    DECL_PROC(8);
 	    break;
 	}
     case 28:
@@ -1578,22 +1579,22 @@ switch (LBUFF[IPTR].IND -1)
     case 36:
 	{
 	    IPTR = 0;
-	    TRANS.COMP(IPTR)
+	    TRANS_COMP(IPTR)
 	    break;
 	}
     case 37:
 	{
-	    DECL.PROC(4);
+	    DECL_PROC(4);
 	    break;
 	}
     case 38:
 	{
-	    DECL.TYPE (0x3000);
+	    DECL_TYPE (0x3000);
 	    break;
 	}
     case 39:
 	{
-	    DECL.VAR();
+	    DECL_VAR();
 	    break;
 	}
 }
@@ -1628,38 +1629,39 @@ DECL.PROC(8);TRNS.CMP: TRANS.COMP(0=>IPTR);->TRNS.CMP;
 DECL.VAR();
 END
 @BOX2.2
+;
 char OLN[] = {
-0,1,1,0,2,2,0,0,2,2
-2,0,2,2,1,0,1,1,1,1
-2,0,0,0,0,1,1,1,2,2
+0,1,1,0,2,2,0,0,2,2,
+2,0,2,2,1,0,1,1,1,1,
+2,0,0,0,0,1,1,1,2,2,
 2,2,2,2,2,2,2,2
-}
+};
 OVERLAY(OLN[LBUFF[1].IND-1]);
 switch (LBUFF[IPTR].IND -1)
 {
     case 0:
 	{
-	    BEGIN.ST();
+	    BEGIN_ST();
 	    break;
 	}
     case 1:
 	{
-	    PROC.HEAD();
+	    PROC_HEAD();
 	    break;
 	}
     case 2:
 	{
-	    MOD.HEAD();
+	    MOD_HEAD();
 	    break;
 	}
     case 3:
 	{
-	    END.ST();
+	    END_ST();
 	    break;
 	}
     case 4:
 	{
-	    TRANS.IF();
+	    TRANS_IF();
 	    break;
 	}
     case 5:
@@ -1669,22 +1671,22 @@ switch (LBUFF[IPTR].IND -1)
 	}
     case 6:
 	{
-	    TRANS.ELSE();
+	    TRANS_ELSE();
 	    break;
 	}
     case 7:
 	{
-	    TRANS.FI();
+	    TRANS_FI();
 	    break;
 	}
     case 8:
 	{
-	    TRANS.WHILE();
+	    TRANS_WHILE();
 	    break;
 	}
     case 9:
 	{
-	    TRANS.FOR();
+	    TRANS_FOR();
 	    break;
 	}
     case 10:
@@ -1694,52 +1696,52 @@ switch (LBUFF[IPTR].IND -1)
 	}
     case 11:
 	{
-	    TRANS.OD();
+	    TRANS_OD();
 	    break;
 	}
     case 12:
 	{
-	    TRANS.SWITCH();
+	    TRANS_SWITCH();
 	    break;
 	}
     case 13:
 	{
-	    TRANS.ALT();
+	    TRANS_ALT();
 	    break;
 	}
     case 14:
 	{
-	    DECL.SPACE();
+	    DECL_SPACE();
 	    break;
 	}
     case 15:
 	{
-	    TRANS.EXIT();
+	    TRANS_EXIT();
 	    break;
 	}
     case 16:
 	{
-	    DECL.PROC(0);
+	    DECL_PROC(0);
 	    break;
 	}
     case 17:
 	{
-	    DECL.LIT();
+	    DECL_LIT();
 	    break;
 	}
     case 18:
 	{
-	    DECL.DVEC();
+	    DECL_DVEC();
 	    break;
 	}
     case 19:
 	{
-	    DECL.TYPE(0);
+	    DECL_TYPE(0);
 	    break;
 	}
     case 20:
 	{
-	    DECL.FIELD();
+	    DECL_FIELD();
 	    break;
 	}
     case 21:
@@ -1747,22 +1749,22 @@ switch (LBUFF[IPTR].IND -1)
     case 23:
     case 24:
 	{
-	    DECL.VAR();
+	    DECL_VAR();
 	    break;
 	}
     case 25:
 	{
-        DECL.VSTORE();
+        DECL_VSTORE();
 	    break;
 	}
     case 26:
 	{
-	    DECL.IMP();
+	    DECL_IMP();
 	    break;
 	}
     case 27:
 	{
-	    DECL.PROC(8);
+	    DECL_PROC(8);
 	    break;
 	}
     case 28:
@@ -1776,22 +1778,22 @@ switch (LBUFF[IPTR].IND -1)
     case 36:
 	{
 	    IPTR = 0;
-	    TRANS.COMP(IPTR)
+	    TRANS_COMP(IPTR);
 	    break;
 	}
     case 37:
 	{
-	    DECL.PROC(4);
+	    DECL_PROC(4);
 	    break;
 	}
     case 38:
 	{
-	    DECL.TYPE (0x3000);
+	    DECL_TYPE (0x3000);
 	    break;
 	}
     case 39:
 	{
-	    DECL.VAR();
+	    DECL_VAR();
 	    break;
 	}
 }
