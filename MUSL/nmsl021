@@ -92,6 +92,7 @@ typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 #define TLISTZ 250
 #define NLISTZ 340
 #define CHLISTZ 4100
+#define SDLIST 87
 const ITYPE DIF = { 0, 0, 0x5 };
 const ITYPE DTHEN = { 0, 0, 0x6 };
 const ITYPE DELSE = { 0, 0, 0x7 };
@@ -136,10 +137,10 @@ const ITYPE COLON = { 0, 0, 0x4B };
 #define KTREF 9
 #define KTYPE 6
 #define NIL NULL
-typedef struct { unsigned short MUTLN,MUSLN,HASH;} NLIST_ENT;
-typedef struct { unsigned short INTID,PREVN,K,T; int DETAIL; } PLIST_ENT;
-NLIST_ENT NLIST[NLISTZ];
-PLIST_ENT PLIST[PLISTZ];
+typedef struct { unsigned short MUTLN,MUSLN,HASH;} NLISTENT;
+typedef struct { unsigned short INTID,PREVN,K,T; int DETAIL; } PLISTENT;
+NLISTENT NLIST[NLISTZ];
+PLISTENT PLIST[PLISTZ];
 unsigned char CHLIST[CHLISTZ];
 unsigned char XNAME[64];
 @BOX 2.1

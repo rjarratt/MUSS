@@ -322,8 +322,13 @@ TINT16,TINT32,TINT64,TLO32,EOS,LSHIFT,ASTERISK,EOL,DIMPORT,
 ::MU6 RB,BSLASH,XCOLON,COLON,
 UMINUS,
 TDELIM,TNAME,TSTRING,TCONST,IEOS,IBYTE,IMIN.COMP,ILOAD,ISTORE,ICOMP,INIT.S3);
+@BOX 1.2
+#include "nmsl021.h"
+#MSL03/1
 @BOX 2.1
 $TY ITYPE $IS $LO8 TAG, ST $LO16 IND;
+@BOX 2.2
+// ITYPE declaration comes from nmsl011.h
 @BOX 3.1
 *GLOBAL 5;
 $LI MAX.KEYWORD = 45;
@@ -372,10 +377,69 @@ $LO8[2000]SBUFF;
 $LI NL=10, NEWP=12;
 $LO CFWDPTR, CBWDPTR;
 ITYPE SAVEDELIM;
+@BOX 3.2
+#define MAXKEYWORD 45
+#define TINT0 0x40
+#define TLO8 0x80
+#define TLO0 0x80
+#define TLO1 0x20
+#define TADPROC 0x24
+#define STRINGTYPE 0x83
+#define TINT16 0x44
+#define TINT32 0x4C
+#define TINT64 0x5C
+#define TLO32 0x8C
+#define TRE0 0x00
+#define TLAB 0x30
+ITYPE LBUFF[LBUFFZ];
+unsigned char CLIST[CLISTZ];
+int TINT,TLO,TRE,TBYADDR,TVST;
+int IPTR,SPTR;
+unsigned short DLIST[] = {
+0x801, 0xC0, 0x80, 0x2080, 0xC0, 0xA0, 0x861, 0x8E0,
+0x8E0, 0x80, 0x80, 0x841, 0xC0, 0x80, 0x80, 0x80,
+0xC0, 0x80, 0x2080, 0x2080, 0x2080, 0x80, 0x100, 0x300,
+0x300, 0x300, 0x80, 0x80, 0x80, 0x400, 0x400, 0x400,
+0x400, 0x400, 0x400, 0x400, 0x400, 0x400, 0x80, 0x80,
+0x300, 0x0, 0x0, 0x801, 0x801, 0x840, 0x808, 0x808,
+0x808, 0x808, 0x808, 0x808, 0x12, 0x12, 0x10,
+0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x14, 0x14,
+0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14,
+0x0, 0x1010, 0x1010, 0x2, 0x40, 0x801, 0x0, 0x801,
+0x2, 0x800, 0x800, 0x40, 0x40, 0x0, 0x10, 0x80
+};
+ITYPE UMINUS = { 0, 0, 0x55 };
+ITYPE EOS = { 0, 0, 0x0 };
+ITYPE LSHIFT = { 0, 0, 0x47 };
+ITYPE ASTERISK = { 0, 0, 0x36 };
+ITYPE EOL = { 0, 0, 0x57 };
+ITYPE DIMPORT = { 0, 0, 0x1B };
+#define KEYWORD 44
+#define TDELIM 0
+#define TNAME 1
+#define TSTRING 2
+#define TCONST 3
+
+#define IEOS 0
+#define IBYTE 29
+#define IMIN.COMP 46
+#define ILOAD 51
+#define ISTORE 61
+#define ICOMP 71
+
+unsigned char SBUFF[2000];
+#define NL 10
+#define NEWP 12
+int CFWDPTR, CBWDPTR;
+ITYPE SAVEDELIM;
 @BOX 4.1
 ::PDP *CODE 1;
 #MSL03.1.2
 $PS ITEMISE($IN);
+#MSL03.1
+@BOX 4.2
+#MSL03.1.2
+extern void ITEMISE(int);
 #MSL03.1
 @BOX 5.1
 $PS INITS3();
@@ -398,6 +462,53 @@ $FO IPTR < LBUFFZ $DO
 EOS => LBUFF[IPTR] $OD
 EOS => SAVEDELIM;
 $EN
+@BOX 5.2
+void INITS3(void);
+void INITS3(void)
+{
+  const unsigned char INT = 0x44;
+  const unsigned char DEFAD = 0x44;
+  switch (CMODE&3)
+  {
+    case 0:
+    {
+      TINT = INT;
+	  TBYADDR = DEFAD;
+      break;
+    }
+   
+    case 1:
+    {
+      TINT = TINT16;
+	  TBYADDR = TINT16;
+	  break;
+	}
+
+    case 2:
+    {
+      TINT = TINT32;
+	  TBYADDR = TINT32;
+	  break;
+	}
+
+    case 3:
+    {
+      TINT = TINT16;
+	  TBYADDR = TINT32;
+      break;
+    }
+  }
+
+  TVST = TINT + 0x40;
+  TLO = TINT + 0x40;
+
+  TRE = (CMODE & 0x30 == 0) ? 0x0C : ((CMODE & 0x10 != 0) ? 0x0C : 0x1C);
+  for ( ; IPTR < LBUFFZ; IPTR++)
+  {
+    memcpy(&LBUFF[IPTR], &EOS, sizeof(ITYPE));
+  }
+  memcpy(&SAVEDELIM, &EOS, sizeof(ITYPE));
+}
 @BOX 6.1
 
 ::END OF MODULE MSL031
@@ -431,6 +542,26 @@ $LO8[CHLISTZ] CHLIST;
 $IN CWORD,LASTCH,CMODE;
 $IN32 LINE.NO;
 $IN MSTR,MUTLSTR
+@BOX 1.2
+#include "nmsl021.h"
+extern int INCH(void);
+extern void OUTCH(int);
+extern void INBACKSPACE(int);
+extern int NEXTCH(void);
+extern void NEWLINES(int);
+extern void OUTLINENO(int);
+extern void PPCCMD(void);
+extern unsigned int FINDN(void *[],int);
+extern void SELECTOUTPUT(int);
+extern void SPACES(int);
+extern void OUTHEX(unsigned int,int);
+extern int TLLINE(int);
+extern unsigned short ADDN();
+extern void** GENN(unsigned short);
+extern void MONITOR(int);
+int CWORD,LASTCH,CMODE;
+int LINENO;
+int MSTR,MUTLSTR
 @END
 @TITLE MSL03.1(1,11)
 @COL 8C-9R-10C-11R-12C
@@ -460,7 +591,7 @@ IF MODE IS = 0
 IGNORE SP NL
 (CALL PPC.SEQ
 IF **ENCOUNTERED)
-@BOX 19
+@BOX 19.0
 SET LINE.NO
 @BOX5.0
 SWITCH ON CH
@@ -508,12 +639,24 @@ NEWPAGE
 INC PAGE NO AND RESET LINE NO
 @BOX 1.1
 $PR ITEMISE(MODE);
+@BOX 1.2
+void ITEMISE(int MODE)
+{
 @BOX 2.1
 $LO STEM,PTR,RPTR,NPTR,ISYM,SYM,
     PPOS,BCOUNT,CSIZE,CTYPE,I,J,TY,SW;
 $LO32 INT; $LO64 L64;
 $RE64 FP,POWERS;
 $LI/$IN TEN = 10, ZERO = 0;
+#MSL03.1.1
+@BOX 2.2
+unsigned int STEM,PTR,RPTR,NPTR,ISYM,SYM,
+    PPOS,BCOUNT,CSIZE,CTYPE,I,J,TY,SW;
+unsigned int INT;
+unsigned long L64;
+double FP,POWERS;
+const int TEN = 10;
+const int ZERO = 0;
 #MSL03.1.1
 @BOX 3.1
 BX3:
@@ -525,6 +668,29 @@ SAVEDELIM => LBUFF[1=>IPTR];
 EOS => SAVEDELIM
 $IF DLIST[IND OF LBUFF[1]] & 64 /= 0, -> SCOLON
 $FI
+@BOX 3.2
+BX3:
+CFWDPTR = 0;
+CBWDPTR = CLISTZ;
+IPTR = 0;
+PTR = 0;
+BCOUNT = 0;
+SPTR =0;
+TY = 0;
+@BOX 20.1
+$IF SAVEDELIM /= EOS $TH
+SAVEDELIM => LBUFF[1=>IPTR];
+EOS => SAVEDELIM
+$IF DLIST[IND OF LBUFF[1]] & 64 /= 0, -> SCOLON
+$FI
+@BOX 20.2
+if (memcmp(&SAVEDELIM, &EOS, sizeof(ITYPE)) != 0)
+{
+  IPTR = 1;
+  memcpy(&LBUFF[IPTR], SAVEDELIM, sizeof(ITYPE));
+  memcpy(&SAVEDELIM, &EOS, sizeof(ITYPE));
+  if (DLIST[LBUFF[1].IND] & 64 != 0) goto SCOLON;
+}
 @BOX 4.1
 B4:
 $WH INCH() => ISYM = '; $AN MODE=0 $OR ISYM = '$L
@@ -535,6 +701,22 @@ PPC.CMD(); -> B4;
 ELSE INBACKSPACE(1)
 $FI
 INBACKSPACE(1);
+@BOX 4.2
+B4:
+while ((ISYM = INCH()) == ';' && MODE == 0 || ISYM == '\n' || ISYM == ' ' || ISYM == 0x9)
+{}
+
+if (INCH() == '*' && ISYM == '*')
+{
+  SELECTOUTPUT(MSTR);
+  PPCCMD();
+  goto B4;
+}
+else
+{
+  INBACKSPACE(1);
+}
+INBACKSPACE(1);
 @BOX 19.1
 1 +> LINE.NO;
 TL.LINE(LINE.NO);
@@ -543,6 +725,15 @@ SELECTOUTPUT(MSTR);
 NEWLINES(1);OUTLINENO(LINE.NO);
 OUTCH(9)
 $FI
+@BOX 19.2
+LINENO++;
+TLLINE(LINENO);
+if (CWORD & 2 == 2)
+{
+  SELECTOUTPUT(MSTR);
+  NEWLINES(1);OUTLINENO(LINENO);
+  OUTCH(9)
+}
 @BOX 5.1
 IG: $IF SBUFF[SPTR]&%80 = 0 $TH
 128 + IPTR => SBUFF[1+>SPTR] $FI
@@ -551,29 +742,85 @@ VALCODE[ISYM] => SYM;
 SWITCH SWCODE[ISYM]=>SW\
 IG,ALPHA,DD,LBR,RBR,DOT,DQ,SQ,DELIM,COLON,PCENT,
 COMP,COMP,COMP,MINUS,SCOLON,DOLLAR,NLINE,NPAGE;
+@BOX 5.2
+IG:
+if (SBUFF[SPTR] & 0x80 == 0)
+{
+  SPTR++;
+  SBUFF[SPTR] = 128 + IPTR;
+}
+ISYM = XSYM();
+SYM = VALCODE[ISYM];
+SW = SWCODE[ISYM];
+switch (SW)
+{
+case 0: goto IG;
+case 1: goto ALPHA;
+case 2: goto DD;
+case 3: goto LBR;
+case 4: goto RBR;
+case 5: goto DOT;
+case 6: goto DQ;
+case 7: goto SQ;
+case 8: goto DELIM;
+case 9: goto COLON;
+case 10: goto PCENT;
+case 11: goto COMP;
+case 12: goto COMP;
+case 13: goto COMP;
+case 14: goto MINUS;
+case 15: goto SCOLON;
+case 16: goto DOLLAR;
+case 17: goto NLINE;
+case 18: goto NPAGE;
+}
 @BOX 6.1
 :: PROCESS CONSTANTS
 # MSL03.1.3
+@BOX 6.2
+// PROCESS CONSTANTS
+#MSL03.1.3
 @BOX 7.1
 :: PROCESS NAMES
 :: AND DELIMITERS
 # MSL03.1.4
+@BOX 7.2
+// PROCESS NAMES
+// AND DELIMITERS
+#MSL03.1.4
 @BOX 8.1
+LBR:
+@BOX 8.2
 LBR:
 @BOX 9.1
 1 +> BCOUNT;
+@BOX 9.2
+BCOUNT++;
 @BOX 10.1
+RBR:
+@BOX 10.2
 RBR:
 @BOX 11.1
 1 -> BCOUNT;
+@BOX 11.2
+BCOUNT = 1;
 @BOX 12.1
 ->DELIM;
+@BOX 12.2
+goto DELIM;
 @BOX13.1
+NLINE:
+@BOX13.2
 NLINE:
 @BOX14.1
 $IF MODE =0 AND [TAG OF LBUFF[1] /= 0
 $OR DLIST[IND OF LBUFF[1]] & %2000=0]
+@BOX14.2
+if (MODE==0 && LBUFF[1].TAG != 0 || DLIST[LBUFF[1].IND] & 0x2000==0)
 @BOX15.1
+SCOL:
+SCOLON:
+@BOX15.2
 SCOL:
 SCOLON:
 @BOX16.1
@@ -581,14 +828,30 @@ EOS => LBUFF[1+IPTR];
 0 => IPTR
 $IF CWORD & 1 /= 0 $TH
 PRINT.ITEMLINE() $FI
+@BOX16.2
+memcpy(&LBUFF[1+IPTR], &EOS, sizeof(ITYPE));
+IPTR = 0;
+if (CWORD & 1 != 0)
+{
+  PRINTITEMLINE();
+}
 @BOX17.1
 $EN
+@BOX17.2
+}
 @BOX 18.1
 EOL => LBUFF[1+>IPTR];
+@BOX 18.2
+IPTR++;
+memcpy(&LBUFF[IPTR], &EOL, sizeof(ITYPE));
 @BOX 21.1
+NPAGE:
+@BOX 21.2
 NPAGE:
 @BOX 22.1
 LINE.NO & %FFFF0000 + %10000 => LINE.NO;
+@BOX 22.2
+LINENO = LINENO & 0xFFFF0000 + 0x10000;
 @END
 @TITLE MSL03.1.1(1,11)
 @COL 3R-4R
@@ -633,6 +896,23 @@ DATAVEC SWCODE ($LO8)
 1[26] ::LC LETTERS
 8 8 8 8 8                :: { | } ~ ERASE
 $EN
+@BOX 3.2
+unsigned char SWCODE[] =
+{
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //CONTROL CHARS
+17,    //END OF LINE
+0, 18,
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //CONTROL CHARS
+8, 6, 8, 16, 10, 8, 7, 3,                                   // ! " # $ % & ' (
+4, 8, 8, 8, 14, 5, 8,                                       //) * + , - . /
+2, 2, 2, 2, 2, 2, 2, 2, 2, 2,                               //0 1 2 3 4 5 6 7 8 9
+9, 15, 13, 11, 12, 1, 8,                                    //: ; < = > ? @
+1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,                      //LETTERS
+1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+8, 8, 8, 8, 8, 8,                                           //[ \ ]  <- `
+1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //LC LETTERS
+8, 8, 8, 8, 8                                               // { | } ~ ERASE
+};
 @BOX 4.1
 DATAVEC STEMS($LO32)
 0
@@ -1070,28 +1350,28 @@ $IF CHLIST[LASTCH+1] = '? ,->FN;
 @FLOW 5-6-10
 @FLOW 7-10
 @FLOW 8-10
-@BOX 1
+@BOX 1.0
 CREATE MULTI-CHAR DELIMITER
 IF PREVIOUS ITEM AN OPERATOR
-@BOX 2
+@BOX 2.0
 LITERALS OF OPERATORS
-@BOX 3
+@BOX 3.0
 COLON
-@BOX 4
+@BOX 4.0
 COMPARATOR
-@BOX 5
+@BOX 5.0
 EQ (ALSO COLON)
 DATAVEC OF POSSIBLE PREVIOUS OPS
 AND RESULTING DELIMS FOR "=" OR ":"
-@BOX 6
+@BOX 6.0
 CHECK PREVIOUS OPERATOR
-@BOX 7
+@BOX 7.0
 GT
-@BOX 8
+@BOX 8.0
 LT
-@BOX 9
+@BOX 9.0
 MINUS
-@BOX 10
+@BOX 10.0
 WRITE NEW DELIM ON TOP OF
 PREVIOUS DELIM IN LBUFF
 @BOX 1.1
@@ -1321,18 +1601,18 @@ FINDN(PART(^CHLIST,
 LASTCH+2,PTR-1),0)=>INT;
 2 => CTYPE;
 @END
-@TITLE MSL03.1.3.1(1,10)
+@TITLE MSL03.1.3.1(1,10)
 @COL 1S-2R-3R-4R-5R-6F
 @FLOW 1-2-3-4-5-6
-@BOX 1
+@BOX 1.0
 REAL NUMBER
-@BOX 2
+@BOX 2.0
 READ IN FRACTIONAL PART
-@BOX 3
+@BOX 3.0
 READ EXPONENT
-@BOX 4
+@BOX 4.0
 FORM REAL NUMBER
-@BOX 5
+@BOX 5.0
 PROCESS UNARY MINUS,REMOVE FROM ITEMISED LINE.
 CONVERT REAL NUMBER TO LOGICAL
 @BOX 1.1
