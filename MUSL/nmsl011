@@ -949,7 +949,7 @@ $LA RESTART,CEXIT;
 int OLDIN,MSTR,ISTR,MUTLSTR;
 int CONSTK[CONSTKZ];
 int CONPTR, TEMP,IX,DIRYZ;
-char *RESFILE;
+FILE *RESFILE;
 jmp_buf START;
 void RESTART(void)
 {
@@ -1052,7 +1052,7 @@ RESFILE = PROG;
 DIRYZ = DIR;
 //RESTART = START;
 //CEXIT = OUT;
-CONPTR = NULL;
+CONPTR = 0;
 CONSTK[0] = 7;
 IX = 0x8000;
 CMODE = CMPMODE >> 8;
@@ -1121,7 +1121,7 @@ extern void SELECTINPUT(int);
 extern void SELECTOUTPUT(int);
 extern void CAPTION(void *[]);
 extern void OUTI(int,int);
-extern int DEFINEINPUT(int,void *[],int);
+extern int DEFINEINPUT(int,FILE *,int);
 extern int CURRENTOUTPUT(void);
 extern int CURRENTINPUT(void);
 extern void ENDINPUT(int, int);
@@ -1130,7 +1130,7 @@ extern void CREATESEGMENT(int, void *);
 extern void ENDOUTPUT(int, int);
 int CMODE;
 extern void TLPRINT(int);
-extern void TL(int, void *[],int);
+extern void TL(int, FILE *,int);
 extern void TLPL(int, int);
 extern void TLMODULE(void);
 @BOX2.1
@@ -1344,9 +1344,8 @@ $IF MUTLN(TEMP) => TEMP /= 0 /= %1002 $AN // NOT SURE WHAT SYNTAX HERE MEANS
 [K OF PLIST[TEMP] = KTYPE
 OR K OF PLIST[TEMP] = KTREF]
 @BOX 16.2
-if (MUTLN(TEMP) >= TEMP != 0 != 0x1002 &&
-(PLIST[TEMP].K == KTYPE
-|| PLIST[TEMP].K == KTREF))
+TEMP = MUTLN(TEMP);
+if (TEMP != 0 && TEMP != 0x1002 && (PLIST[TEMP].K == KTYPE || PLIST[TEMP].K == KTREF))
 @BOX 18.1
 ::PDP OVERLAY(2);
 TRANS.COMP(0);

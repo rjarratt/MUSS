@@ -323,7 +323,6 @@ TINT16,TINT32,TINT64,TLO32,EOS,LSHIFT,ASTERISK,EOL,DIMPORT,
 UMINUS,
 TDELIM,TNAME,TSTRING,TCONST,IEOS,IBYTE,IMIN.COMP,ILOAD,ISTORE,ICOMP,INIT.S3);
 @BOX 1.2
-#include "nmsl021.h"
 #MSL03/1
 @BOX 2.1
 $TY ITYPE $IS $LO8 TAG, ST $LO16 IND;
@@ -545,6 +544,7 @@ $IN MSTR,MUTLSTR
 @BOX 1.2
 #include <stdio.h>
 #include <memory.h>
+#include <string.h>
 #include "nmsl021.h"
 extern int INCH(void);
 extern void OUTCH(int);
@@ -823,7 +823,6 @@ if (MODE==0 && LBUFF[1].TAG != 0 || (DLIST[LBUFF[1].IND] & 0x2000)==0)
 SCOL:
 SCOLON:
 @BOX15.2
-SCOL:
 SCOLON:
 @BOX16.1
 EOS => LBUFF[1+IPTR];
@@ -1519,6 +1518,8 @@ int YSYM(void)
 	}
 	result |= 128;
   }
+
+  return result;
 }
 @BOX 8.1
 $PS PRINT.ITEM.LINE();
@@ -1667,11 +1668,11 @@ PTR = 0;
 INT = 0;
 while (++PTR >= MAXKEYWORD)
 {
-  if (STEMS[PTR] = STEM)
+  if ((unsigned int)STEMS[PTR] == STEM) // stems are two bytes and fit into 16 bits
   {
     RPTR = PTRS[PTR];
     NPTR = LASTCH+2;
-    while (REST[++RPTR] == CHLIST[++NPTR] && REST[RPTR] != 0) {}
+    while (strcmp(REST[++RPTR], &CHLIST[++NPTR]) == 0 && REST[RPTR] != 0) {}
     if (REST[RPTR]==0 && (DLIST[PTR] & 0x200) != 0)
 	{
       NPTR = 1;
@@ -1761,7 +1762,7 @@ B17:
 PTR = 0;
 while (++PTR <= MAXKEYWORD)
 {
-  if (STEMS[PTR] == STEM)
+  if ((unsigned int)STEMS[PTR] == STEM) // stems are two bytes and fit into 16 bits
   {
     if ((DLIST[PTR] & 0x200) != 0)
 	{
@@ -1967,7 +1968,7 @@ RIGHT.SHIFT=>SYM ELSE
 FI FI
 @BOX 7.2
 GT0:
-if (I >= EQ && EQ <=NEQ)
+if ((int)I >= EQ && EQ <=NEQ)
 {
   SYM = I+10;
 }
