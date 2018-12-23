@@ -84,7 +84,13 @@ PLIST.ENT[PLISTZ] PLIST;
 $LO8[CHLISTZ] CHLIST;
 $LO8[64] XNAME;
 @BOX 1.2
+#if !defined(NMSL021)
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
+typedef int                int32;
+typedef long long          t_int64;
+typedef unsigned int       uint32;
+typedef unsigned long long t_uint64;
+
 #define LBUFFZ 125
 #define CLISTZ 125
 #define PLISTZ 320
@@ -145,5 +151,8 @@ unsigned char CHLIST[CHLISTZ];
 unsigned char XNAME[64];
 @BOX 2.1
 *END
+@BOX 2.2
+#define NMSL021
+#endif
 @END
 

@@ -422,7 +422,7 @@ ITYPE DIMPORT = { 0, 0, 0x1B };
 
 #define IEOS 0
 #define IBYTE 29
-#define IMIN.COMP 46
+#define IMINCOMP 46
 #define ILOAD 51
 #define ISTORE 61
 #define ICOMP 71
@@ -502,7 +502,7 @@ void INITS3(void)
   TVST = TINT + 0x40;
   TLO = TINT + 0x40;
 
-  TRE = (CMODE & 0x30 == 0) ? 0x0C : ((CMODE & 0x10 != 0) ? 0x0C : 0x1C);
+  TRE = ((CMODE & 0x30) == 0) ? 0x0C : (((CMODE & 0x10) != 0) ? 0x0C : 0x1C);
   for ( ; IPTR < LBUFFZ; IPTR++)
   {
     memcpy(&LBUFF[IPTR], &EOS, sizeof(ITYPE));
@@ -543,6 +543,8 @@ $IN CWORD,LASTCH,CMODE;
 $IN32 LINE.NO;
 $IN MSTR,MUTLSTR
 @BOX 1.2
+#include <stdio.h>
+#include <memory.h>
 #include "nmsl021.h"
 extern int INCH(void);
 extern void OUTCH(int);
@@ -561,7 +563,7 @@ extern void** GENN(unsigned short);
 extern void MONITOR(int);
 int CWORD,LASTCH,CMODE;
 int LINENO;
-int MSTR,MUTLSTR
+int MSTR,MUTLSTR;
 @END
 @TITLE MSL03.1(1,11)
 @COL 8C-9R-10C-11R-12C
@@ -653,7 +655,7 @@ $LI/$IN TEN = 10, ZERO = 0;
 unsigned int STEM,PTR,RPTR,NPTR,ISYM,SYM,
     PPOS,BCOUNT,CSIZE,CTYPE,I,J,TY,SW;
 unsigned int INT;
-unsigned long L64;
+t_uint64 L64;
 double FP,POWERS;
 const int TEN = 10;
 const int ZERO = 0;
@@ -687,9 +689,9 @@ $FI
 if (memcmp(&SAVEDELIM, &EOS, sizeof(ITYPE)) != 0)
 {
   IPTR = 1;
-  memcpy(&LBUFF[IPTR], SAVEDELIM, sizeof(ITYPE));
+  memcpy(&LBUFF[IPTR], &SAVEDELIM, sizeof(ITYPE));
   memcpy(&SAVEDELIM, &EOS, sizeof(ITYPE));
-  if (DLIST[LBUFF[1].IND] & 64 != 0) goto SCOLON;
+  if ((DLIST[LBUFF[1].IND] & 64) != 0) goto SCOLON;
 }
 @BOX 4.1
 B4:
@@ -728,11 +730,11 @@ $FI
 @BOX 19.2
 LINENO++;
 TLLINE(LINENO);
-if (CWORD & 2 == 2)
+if ((CWORD & 2) == 2)
 {
   SELECTOUTPUT(MSTR);
   NEWLINES(1);OUTLINENO(LINENO);
-  OUTCH(9)
+  OUTCH(9);
 }
 @BOX 5.1
 IG: $IF SBUFF[SPTR]&%80 = 0 $TH
@@ -744,7 +746,7 @@ IG,ALPHA,DD,LBR,RBR,DOT,DQ,SQ,DELIM,COLON,PCENT,
 COMP,COMP,COMP,MINUS,SCOLON,DOLLAR,NLINE,NPAGE;
 @BOX 5.2
 IG:
-if (SBUFF[SPTR] & 0x80 == 0)
+if ((SBUFF[SPTR] & 0x80) == 0)
 {
   SPTR++;
   SBUFF[SPTR] = 128 + IPTR;
@@ -816,7 +818,7 @@ NLINE:
 $IF MODE =0 AND [TAG OF LBUFF[1] /= 0
 $OR DLIST[IND OF LBUFF[1]] & %2000=0]
 @BOX14.2
-if (MODE==0 && LBUFF[1].TAG != 0 || DLIST[LBUFF[1].IND] & 0x2000==0)
+if (MODE==0 && LBUFF[1].TAG != 0 || (DLIST[LBUFF[1].IND] & 0x2000)==0)
 @BOX15.1
 SCOL:
 SCOLON:
@@ -831,13 +833,14 @@ PRINT.ITEMLINE() $FI
 @BOX16.2
 memcpy(&LBUFF[1+IPTR], &EOS, sizeof(ITYPE));
 IPTR = 0;
-if (CWORD & 1 != 0)
+if ((CWORD & 1) != 0)
 {
   PRINTITEMLINE();
 }
 @BOX17.1
 $EN
 @BOX17.2
+;
 }
 @BOX 18.1
 EOL => LBUFF[1+>IPTR];
@@ -851,7 +854,7 @@ NPAGE:
 @BOX 22.1
 LINE.NO & %FFFF0000 + %10000 => LINE.NO;
 @BOX 22.2
-LINENO = LINENO & 0xFFFF0000 + 0x10000;
+LINENO = (LINENO & 0xFFFF0000) + 0x10000;
 @END
 @TITLE MSL03.1.1(1,11)
 @COL 3R-4R
@@ -962,6 +965,56 @@ DATAVEC STEMS($LO32)
 "OR"
 "FR"
 END
+@BOX 4.2
+char *STEMS[] =
+{
+0,
+"BE",
+"PR",
+"MO",
+"EN",
+"IF",
+"TH",
+"EL",
+"FI",
+"WH",
+"FO",
+"DO",
+"OD",
+"SW",
+"AL",
+"SP",
+"EX",
+"PS",
+"LI",
+"DA",
+"TY",
+"SE",
+"AD",
+"IN",
+"LO",
+"RE",
+"VS",
+"IM",
+"LS",
+"BY",
+"MA",
+"PO",
+"PA",
+"SI",
+"LL",
+"LP",
+"LE",
+"X1",
+"BS",
+"WI",
+"LA",
+"OF",
+"IS",
+"AN",
+"OR",
+"FR"
+};
 @BOX 5.1
 DATAVEC REST($LO8)
 0
@@ -1012,6 +1065,60 @@ DATAVEC REST($LO8)
 "OM" 0
 'T 'H 'I 'N 0
 END
+@BOX 5.2
+char *REST[] =
+{
+"",
+"GIN",
+"OC",
+"DULE",
+"D",
+"",
+"EN",
+"SE",
+"",
+"ILE",
+"R",
+"",
+"",
+"ITCH",
+"TERNATIVE",
+"ACE",
+"IT",
+"PEC",
+"TERAL",
+"TAVEC",
+"PE",
+"LECT",
+"DR",
+"TEGER",
+"GICAL",
+"AL",
+"TORE",
+"PORT",
+"PEC",
+"TE",
+"KE",
+"SN",
+"RT",
+"ZE",
+"ST",
+"ST",
+"NT",
+"XX",
+"XX",
+"XX",
+"BEL",
+"",
+"",
+"D",
+"",
+"OM",
+"T",
+"H",
+"I",
+"N"
+};
 @BOX 6.1
 DATAVEC PTRS($LO8)
 0
@@ -1061,6 +1168,56 @@ DATAVEC PTRS($LO8)
 3
 143
 END
+@BOX 6.2
+int PTRS[] =
+{
+0,
+0,
+4,
+7,
+12,
+3,
+14,
+17,
+3,
+20,
+24,
+3,
+3,
+26,
+31,
+41,
+45,
+48,
+52,
+58,
+64,
+67,
+72,
+75,
+81,
+87,
+90,
+95,
+100,
+104,
+107,
+110,
+113,
+116,
+119,
+122,
+125,
+128,
+48,
+146,
+137,
+3,
+3,
+141,
+3,
+143
+};
 @BOX 8.1
 DATAVEC VALCODE ($LO8)
 0[33]	::CONTROL CHARS
@@ -1075,6 +1232,21 @@ DATAVEC VALCODE ($LO8)
 127[13]
 84 84 84 84 84             ::{ 1 } ~ ERASE
 $EN
+@BOX 8.2
+int VALCODE[] =
+{
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 	//CONTROL CHARS
+59, 0, 86, 0, 0, 58, 0, 79,                                                                         // ! " # $ % & ' (
+80, 54, 52, 76, 53, 0, 55,                                                                          //) * + , - . /
+126, 126, 126, 126, 126, 126, 126, 126, 126, 126,                                                   //0 1 2 3 4 5 6 7 8 9
+75, 0, 49, 51, 48, 127, 84,                                                                         //:; < = > ? @
+127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127,                                    //LETTERS
+127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
+77, 81, 78, 74, 84, 84,                                                                             //[ \ ] ^ <- .
+127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127,                                    //LETTERS
+127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
+84, 84, 84, 84, 84                                                                                  //{ 1 } ~ ERASE
+};
 @END
 @TITLE MSL03.1.2(1,10)
 @COL 1R-2R-3R-4R-5R-6R
@@ -1101,6 +1273,12 @@ PSPEC YSYM()/$LO;
 PSPEC XINT($LO)/$LO32;
 PSPEC XHEX() /$LO64;
 PSPEC XBTYPE($LO,$IN)/$IN;
+@BOX2.2
+int XSYM(void);
+int YSYM(void);
+int32 XINT(int);
+t_uint64 XHEX(void);
+int XBTYPE(int, int);
 @BOX 3.1
 $PR XSYM;
 $LI EOT = 4;
@@ -1112,6 +1290,22 @@ $FI
 $FI
 XSYM => SBUFF[1+>SPTR];
 $EN
+@BOX 3.2
+int XSYM(void)
+{
+  const int EOT = 4;
+  int result = INCH();
+  if ((CWORD & 2) == 2)
+  {
+    if (result != EOT)
+	{
+      OUTCH(result);
+    }
+  }
+  SPTR++;
+  SBUFF[SPTR] = result;
+  return result;
+}
 @BOX 4.1
 $PR XINT(INIT.VAL);
 $LO32 VAL;$IN SYM;
@@ -1120,6 +1314,20 @@ $WH NEXTCH()=>SYM >= '0 $AN SYM =< '9 $DO
 VAL * 10 - '0 + XSYM() => VAL $OD
 VAL => XINT;
 $EN
+@BOX 4.2
+int32 XINT(int INITVAL)
+{
+  unsigned int VAL;
+  int SYM;
+  VAL = INITVAL;
+  SYM = NEXTCH();
+  while (SYM >= '0' && SYM <= '9')
+  {
+    VAL =  VAL * 10 - '0' + XSYM();
+    SYM = NEXTCH();
+  }
+  return VAL;
+}
 @BOX 5.1
 $PR XHEX;
 $LO64 ANS;$LO ISYM;
@@ -1138,6 +1346,40 @@ $EL ANS <<-4 ! (ISYM-'0) => ANS;
 $FI $FI $OD
 ANS => XHEX;
 $EN
+@BOX 5.2
+t_uint64 XHEX(void)
+{
+  t_uint64 ANS;
+  unsigned int ISYM;
+  ANS = 0;
+  ISYM = NEXTCH();
+  while ((ISYM >= '0' && ISYM <= '9') || (ISYM >= 'A' && ISYM <= 'F') || ISYM == '(')
+  {
+    if (ISYM == '(')
+	{
+      ISYM = ANS & 0xF;
+      XSYM();
+	  int n = XINT(XSYM()-'0')-1;
+	  for (int i = 0; i < n; i++)
+      {
+	    ANS = ANS << 4 | ISYM;
+      }
+      if (XSYM() != ')')
+	  {
+	    MONITOR(14);
+	  }
+	  else if  (XSYM() >= 'A')
+	  {
+        ANS = ANS << 4 | (ISYM-'A'+10);
+	  }
+	}
+	else
+	{
+      ANS = ANS << 4 | (ISYM-'0');
+    }
+  }
+  return ANS;
+}
 @BOX 6.1
 $PR XBTYPE(TSIZE,PTR);
 $IN T;
@@ -1168,6 +1410,74 @@ TLAB=>T;
 $EL MONITOR(3) FI FI
 T => XBTYPE;
 $EN
+@BOX 6.2
+int XBTYPE(int TSIZE, int PTR)
+{
+  int T;
+  if (PTR > 22 && PTR < 26)
+  {
+    switch (PTR-23)
+    {
+	  case 0: // INTEGER
+      {
+        if (TSIZE==0)
+		{
+		  T = TINT;
+		}
+		else if ((TSIZE & 0x7) == 0 && TSIZE <= 32)
+        {
+		  T = (TSIZE >> 1) + 60;
+		}
+        else
+		{
+		  MONITOR(3);
+		}
+		break;
+      }
+	  case 1: // LOGICAL
+	  {
+          if (TSIZE==0)
+	  	{
+	  	  T = TLO;
+	  	}
+	  	else if ((TSIZE & 0x7) == 0 && TSIZE <= 32 || TSIZE == 64)
+          {
+	  	  T = (TSIZE >> 1) + 124;
+	  	}
+          else
+	  	{
+	  	  MONITOR(3);
+	  	}
+	  	break;
+	  }
+	  case 2: // REAL
+	  {
+          if (TSIZE==0)
+	  	{
+	  	  T = TRE;
+	  	}
+	  	else if (TSIZE == 32 || TSIZE == 64 || TSIZE == 128)
+          {
+	  	  T = (TSIZE >> 1) - 4;
+	  	}
+          else
+	  	{
+	  	  MONITOR(3);
+	  	}
+	  	break;
+	  }
+	}
+  }
+  else if (TSIZE == 0)
+  {
+    T = TLAB;
+  }
+  else
+  {
+    MONITOR(3);
+  }
+  return T;
+}
 @BOX 7.1
 $PR YSYM;
 $IF XSYM() => YSYM = '$$ $TH
@@ -1180,6 +1490,36 @@ $FI $FI $FI $FI
 128 !> YSYM;
 $FI
 $EN
+@BOX 7.2
+int YSYM(void)
+{
+  int result = XSYM();
+  if (result == '$')
+  {
+    result = XSYM();
+	if (result == 'L')
+	{
+	  result = '\n';
+	}
+	else if (result == 'P')
+	{
+	  result = '\f';
+	}
+	else if (result == 'N')
+	{
+	  result = '\0';
+	}
+	else if (result == '$')
+	{
+	  result = '$';
+	}
+	else
+	{
+	  MONITOR(142);
+	}
+	result |= 128;
+  }
+}
 @BOX 8.1
 $PS PRINT.ITEM.LINE();
 $PR PRINT.ITEM.LINE;
@@ -1196,6 +1536,24 @@ IF I & 7 = 0 THEN
 NEWLINES(1) FI
 $OD
 END
+@BOX 8.2
+void PRINTITEMLINE(void);
+void PRINTITEMLINE(void)
+{
+  int I;
+  SELECTOUTPUT(MSTR);
+  NEWLINES(0);
+  I = 0;
+  while (memcmp(&LBUFF[++I], &EOS, sizeof(ITYPE)) != 0)
+  {
+    OUTHEX(LBUFF[I].TAG << 8 | LBUFF[I].ST << 16 | LBUFF[I].IND, 8);
+    SPACES(2);
+    if ((I & 7) == 0)
+	{
+      NEWLINES(1);
+	}
+  }
+}
 @END
 @TITLE MSL03.1.4(1,10)
 @COL 23F
@@ -1263,6 +1621,8 @@ END
 IF ? NAME GOTO FINDN
 @BOX 1.1
 ALPHA:
+@BOX 1.2
+ALPHA:
 @BOX 2.1
 ISYM => CHLIST[LASTCH+1=>PTR];
 NEXTCH() => ISYM;
@@ -1272,6 +1632,19 @@ ISYM => CHLIST[1+>PTR] $FI
 NEXTCH() => ISYM;
 $OD
 0 => CHLIST[1+>PTR];
+@BOX 2.2
+PTR = LASTCH+1;
+CHLIST[PTR] = ISYM;
+ISYM = NEXTCH();
+while (VALCODE[ISYM] >= 126 || ISYM == 0x2E)
+{
+  if (XSYM() != 0x2E)
+  {
+    CHLIST[++PTR] = ISYM;
+  }
+  ISYM = NEXTCH();
+}
+CHLIST[++PTR] = 0;
 @BOX 3.1
 CHLIST[LASTCH+1] <<- 8 + CHLIST[LASTCH+2] => STEM;
 0 => PTR => INT
@@ -1288,6 +1661,31 @@ INT *10 + CHLIST[NPTR] - '0 => INT $OD
 XBTYPE(INT,PTR) => TY $FI
 -> B3 $FI $OD
 B3:
+@BOX 3.2
+STEM = (CHLIST[LASTCH+1] << 8) + CHLIST[LASTCH+2];
+PTR = 0;
+INT = 0;
+while (++PTR >= MAXKEYWORD)
+{
+  if (STEMS[PTR] = STEM)
+  {
+    RPTR = PTRS[PTR];
+    NPTR = LASTCH+2;
+    while (REST[++RPTR] == CHLIST[++NPTR] && REST[RPTR] != 0) {}
+    if (REST[RPTR]==0 && (DLIST[PTR] & 0x200) != 0)
+	{
+      NPTR = 1;
+      while (VALCODE[CHLIST[++NPTR]] == 126)
+	  {
+        INT = INT *10 + CHLIST[NPTR] - '0'; 
+	  }
+      TY = XBTYPE(INT,PTR);
+	}
+    goto B3;
+  }
+}
+
+B3:
 @BOX4.1
 $IF PTR =< MAX.KEYWORD $AN
 CHLIST[NPTR] = 0 $AN REST[RPTR] = 0
@@ -1295,29 +1693,62 @@ CHLIST[NPTR] = 0 $AN REST[RPTR] = 0
 1 => TAG OF LBUFF[1+>IPTR];
 0 => ST OF LBUFF[IPTR] => TY;
 ADDN() => IND OF LBUFF[IPTR];
+@BOX4.2
+if (PTR <= MAXKEYWORD && CHLIST[NPTR] == 0 && REST[RPTR] == 0)
+@BOX14.1
+1 => TAG OF LBUFF[1+>IPTR];
+0 => ST OF LBUFF[IPTR] => TY;
+ADDN() => IND OF LBUFF[IPTR];
+@BOX14.2
+LBUFF[++IPTR].TAG = 1;
+LBUFF[IPTR].ST = 0;
+TY = 0;
+LBUFF[IPTR].IND = ADDN();
 @BOX 5.1
 PTR => IND OF LBUFF[1+>IPTR];
 TY => ST OF LBUFF[IPTR];
 0 => TY;
 TDELIM => TAG OF LBUFF[IPTR];
+@BOX 5.2
+LBUFF[++IPTR].IND = PTR;
+LBUFF[IPTR].ST = TY;
+TY = 0;
+LBUFF[IPTR].TAG = TDELIM;
 @BOX 6.1
 $IF BCOUNT /= 0 $AN DLIST[PTR] & %20 /= 0
+@BOX 6.2
+if (BCOUNT != 0 && (DLIST[PTR] & 0x20) != 0)
 @BOX 7.1
 $IF DLIST[PTR] & %80 /= 0
+@BOX 7.2
+if ((DLIST[PTR] & 0x80) != 0)
 @BOX 8.1
 $IF DLIST[PTR] & %40 = 0
+@BOX 8.2
+if ((DLIST[PTR] & 0x40) == 0)
 @BOX 9.1
 IF [IPTR = 1 AND MODE=0]
 OR LBUFF[1] = ASTERISK OR LBUFF[1] = DIMPORT
+@BOX 9.2
+if ((IPTR == 1 && MODE==0) || memcmp(&LBUFF[1], &ASTERISK, sizeof(ITYPE))==0 || memcmp(&LBUFF[1], &DIMPORT, sizeof(ITYPE))==0)
 @BOX 10.1
 LBUFF[IPTR] => SAVEDELIM;
 1 -> IPTR;
+@BOX 10.2
+memcpy(&SAVEDELIM, &LBUFF[IPTR], sizeof(ITYPE));
+IPTR = 1;
 @BOX 11.1
 -> SCOLON;
+@BOX 11.2
+goto SCOLON;
 @BOX 15.1
+DOLLAR:
+@BOX 15.2
 DOLLAR:
 @BOX 16.1
 XSYM() <<- 8 + XSYM() => STEM;
+@BOX 16.2
+STEM = (XSYM() << 8) + XSYM();
 @BOX 17.1
 0 => PTR
 $WH 1 +> PTR =< MAX.KEYWORD $DO
@@ -1326,20 +1757,48 @@ $IF DLIST[PTR] & %200 /= 0 $TH
 XBTYPE(XINT(0),PTR) => TY $FI
 -> B17 $FI $OD
 B17:
+@BOX 17.2
+PTR = 0;
+while (++PTR <= MAXKEYWORD)
+{
+  if (STEMS[PTR] == STEM)
+  {
+    if ((DLIST[PTR] & 0x200) != 0)
+	{
+      TY = XBTYPE(XINT(0),PTR);
+	}
+    goto B17;
+  } 
+}
+B17:
 @BOX18.1
 $IF PTR =< MAX.KEYWORD
+@BOX18.2
+if (PTR <= MAXKEYWORD)
 @BOX 19.1
+MONITOR(0);
+@BOX 19.2
 MONITOR(0);
 @BOX 20.1
 :: MULTI-CHARACTER DELIMITERS
+@BOX 20.2
+// MULTI-CHARACTER DELIMITERS
 @BOX 21.1
+#MSL03.1.4.1
+@BOX 21.2
 #MSL03.1.4.1
 @BOX 22.1
 DELIM:
 SYM=>PTR
+@BOX 22.2
+DELIM:
+PTR = SYM;
 @BOX 23.1
+@BOX 23.2
 @BOX 24.1
 $IF CHLIST[LASTCH+1] = '? ,->FN;
+@BOX 24.2
+if (CHLIST[LASTCH+1] == '?') goto FN;
 @END
 @TITLE MSL03.1.4.1(1,10)
 @COL 1S-2R-3R-4R-5R-6R-10F
@@ -1375,6 +1834,7 @@ MINUS
 WRITE NEW DELIM ON TOP OF
 PREVIOUS DELIM IN LBUFF
 @BOX 1.1
+@BOX 1.2
 @BOX 2.1
 $LI/$LO8
 GE = 46,
@@ -1394,6 +1854,25 @@ RIGHT.SHIFT = 72,
 LEFT.SHIFT = 73,
 RESTART.LABEL = 82,
 UNARY.MINUS = 85;
+@BOX 2.2
+const int
+GE = 46,
+LE = 47,
+GT = 48,
+LT = 49,
+NE = 50,
+EQ = 51,
+SUBTRACT = 53,
+DIVIDE = 55,
+REVERSESUBTRACT = 56,
+REVERSEDIVIDE = 57,
+NEQ = 60,
+MINUSSTORE = 63,
+LTLT = 71,
+RIGHTSHIFT = 72,
+LEFTSHIFT = 73,
+RESTARTLABEL = 82,
+UNARYMINUS = 85;
 @BOX 3.1
 COLON:
 IF NEXTCH()=': THEN
@@ -1402,12 +1881,32 @@ IF IPTR=0, ->BX3
 IF MODE/=0, ->NLINE;
 ->SCOLON FI
 11=>SW;
+@BOX 3.2
+COLON:
+if (NEXTCH()==':')
+{
+  while (XSYM()!='\f') {};
+  if (IPTR==0) goto BX3;
+  if (MODE!=0) goto NLINE;
+  goto SCOLON;
+}
+SW = 11;
 @BOX 4.1
 COMP:
 IF TAG OF LBUFF[IPTR]/=0, ->DELIM;
 IND OF LBUFF[IPTR]=>I;
 SWITCH SW-11\
 EQ0,GT0,LT0;
+@BOX 4.2
+COMP:
+if (LBUFF[IPTR].TAG !=0) goto DELIM;
+I = LBUFF[IPTR].IND;
+switch (SW-11)
+{
+case 0: goto EQ0;
+case 1: goto GT0;
+case 2: goto LT0;
+}
 @BOX 5.1
 EQ0:
 DATAVEC PREVIOUS($LO8)
@@ -1425,6 +1924,27 @@ REVERSE.SUBTRACT
 REVERSE.DIVIDE
 RESTART.LABEL
 END;
+@BOX 5.2
+EQ0:
+;
+int PREVIOUS[] =
+{
+SUBTRACT,
+DIVIDE,
+GT
+};
+int EQETC[] =
+{
+NEQ,
+NE,
+GE
+};
+int COLONETC[] = 
+{
+REVERSESUBTRACT,
+REVERSEDIVIDE,
+RESTARTLABEL
+};
 @BOX 6.1
 -1=>J;
 WHILE 1+>J<3 AND PREVIOUS[J]/=I
@@ -1432,6 +1952,11 @@ DO OD
 IF J=3,->DELIM;
 (IF SYM=EQ THEN EQ.ETC[J]
 ELSE COLON.ETC[J])=>SYM;
+@BOX 6.2
+J = -1;
+while (++J<3 && PREVIOUS[J]!= I) {}
+if (J==3) goto DELIM;
+SYM = (SYM==EQ)? EQETC[J] : COLONETC[J];
 @BOX 7.1
 GT0:
 IF I>=EQ=<NEQ THEN
@@ -1440,6 +1965,23 @@ IF I=MINUS.STORE THEN
 RIGHT.SHIFT=>SYM ELSE
 ->DELIM
 FI FI
+@BOX 7.2
+GT0:
+if (I >= EQ && EQ <=NEQ)
+{
+  SYM = I+10;
+}
+else
+{
+  if (I==MINUSSTORE)
+  {
+    SYM = RIGHTSHIFT;
+  }
+  else
+  {
+    goto DELIM;
+  }
+}
 @BOX 8.1
 LT0:
 IF I=LT THEN
@@ -1448,6 +1990,20 @@ IF I=EQ THEN
 LE=>SYM ELSE
 ->DELIM
 FI FI
+@BOX 8.2
+LT0:
+if (I==LT)
+{
+  SYM = LTLT;
+  if (I==EQ)
+  {
+    SYM = LE;
+  }
+  else
+  {
+    goto DELIM;
+  }
+}
 @BOX 9.1
 MINUS:
 IF LBUFF[IPTR]=LSHIFT THEN
@@ -1458,10 +2014,29 @@ AND DLIST[IND OF LBUFF[IPTR]]&%18/=0
 OR MODE=1 THEN
 UNARY.MINUS=>SYM FI FI
 ->DELIM;
+@BOX 9.2
+MINUS:
+if (memcmp(&LBUFF[IPTR], &LSHIFT,sizeof(ITYPE))==0)
+{
+  SYM = LEFTSHIFT;
+  goto MULTI;
+}
+else
+{
+  if (LBUFF[IPTR].TAG==0 && (DLIST[LBUFF[IPTR].IND] & 0x18)!=0 || MODE==1)
+  {
+    SYM = UNARYMINUS;
+  }
+}
+goto DELIM;
 @BOX 10.1
 MULTI:
 1->IPTR;
 SBUFF[SPTR]=>SBUFF[1->SPTR];
+@BOX 10.2
+MULTI:
+IPTR--;
+SBUFF[--SPTR] = SBUFF[SPTR];
 @END
 @TITLE MSL03.1.3(1,10)
 @COL 1S-2R-3C-17T-4R-18R-5C-19T-6R-8F
@@ -1529,19 +2104,39 @@ FINDN
 LOOK UP LIB NAME
 @BOX 1.1
 SQ:
+@BOX 1.2
+SQ:
 @BOX 2.1
 YSYM() & 127 => INT;
 2 => CTYPE;
+@BOX 2.2
+INT = YSYM() & 127;
+CTYPE = 2;
 @BOX 3.1
+DQ:
+@BOX 3.2
 DQ:
 @BOX 17.1
 $IF MODE = 2
+@BOX 17.2
+if (MODE == 2)
 @BOX 4.1
 0 => L64;
 $WH YSYM() => ISYM /= '$" $DO
 $IF ISYM = NL $TH MONITOR(14) $FI
 L64 <<- 8 ! (ISYM&127) => L64 $OD
 2 => CTYPE;
+@BOX 4.2
+L64 = 0;
+while ((ISYM = YSYM()) != '"')
+{
+  if (ISYM == NL)
+  {
+    MONITOR(14);
+  }
+  L64 = L64 << 8 | (ISYM&127);
+}
+CTYPE = 2;
 @BOX 18.1
 2 => TAG OF LBUFF[1+>IPTR];
 CFWDPTR + 1 => IND OF LBUFF[IPTR];
@@ -1549,14 +2144,33 @@ $WH YSYM() => ISYM /= '$" $DO
 $IF ISYM = NL $TH MONITOR(142) $FI
 ISYM&127 => CLIST[1+>CFWDPTR] $OD
 0 => CLIST[1+>CFWDPTR];
+@BOX 18.2
+LBUFF[++IPTR].TAG = 2;
+LBUFF[IPTR].IND = CFWDPTR + 1;
+while ((ISYM = YSYM()) != '"')
+{
+  if (ISYM == NL)
+  {
+    MONITOR(142);
+  }
+  CLIST[++CFWDPTR] = ISYM&127;
+}
+CLIST[++CFWDPTR] = 0;
 @BOX5.1
+PCENT:
+@BOX5.2
 PCENT:
 @BOX 19.1
 $IF NEXTCH()=>ISYM = '"
 $AN XSYM() = ISYM
+@BOX 19.2
+if ((ISYM = NEXTCH()) == '"' && XSYM() == ISYM)
 @BOX6.1
 XHEX() => L64;
 2 => CTYPE;
+@BOX6.2
+L64 = XHEX();
+CTYPE = 2;
 @BOX7.1
 0 => CSIZE
 $WH L64 /= 0 OR [CTYPE = 0 AND CSIZE < 8] $DO
@@ -1564,6 +2178,14 @@ L64 & %FF => CLIST[1->CBWDPTR];
 L64 ->> 8 => L64;
 1 +> CSIZE;
 $OD
+@BOX7.2
+CSIZE = 0;
+while (L64 != 0 || (CTYPE == 0 && CSIZE < 8))
+{
+  CLIST[--CBWDPTR] = L64 & 0xFF;
+  L64 = L64 >> 8;
+  CSIZE++;
+}
 @BOX 16.1
 $IF CSIZE = 0 $TH
 0 => CLIST[1->CBWDPTR];
@@ -1571,11 +2193,25 @@ $IF CSIZE = 0 $TH
 3 => TAG OF LBUFF[1+>IPTR];
 CTYPE <<- 4 + CSIZE - 1<<- 2 => ST OF LBUFF[IPTR];
 CBWDPTR => IND OF LBUFF[IPTR];
+@BOX 16.2
+if (CSIZE == 0)
+{
+  CLIST[--CBWDPTR] = 0;
+  CSIZE = 1;
+}
+LBUFF[++IPTR].TAG = 3;
+LBUFF[IPTR].ST = (CTYPE << 4) + ((CSIZE - 1)<<2);
+LBUFF[IPTR].IND = CBWDPTR;
 @BOX8.1
+@BOX8.2
 @BOX9.1
+DD:
+@BOX9.2
 DD:
 @BOX10.1
 XINT(ISYM - '0) => INT;
+@BOX10.2
+INT = XINT(ISYM - '0');
 @BOX14.1
 $IF LBUFF[IPTR] = UMINUS $TH
 1->IPTR;1=>CTYPE;
@@ -1583,23 +2219,63 @@ $IF INT<128 $TH 256-INT => INT
 $EL $IF INT=<%7FFF $TH %10000-INT=>INT
 $EL 0-INT => INT $FI $FI
 $EL 2 => CTYPE $FI
+@BOX14.2
+if (memcmp(&LBUFF[IPTR], &UMINUS, sizeof(ITYPE)) == 0)
+{
+  IPTR--;
+  CTYPE = 1;
+  if (INT<128)
+  {
+    INT = 256-INT;
+  }
+  else
+  {
+    if (INT<=0x7FFF)
+	{
+	  INT = 0x10000-INT;
+	}
+	else
+	{
+	  INT = 0-INT;
+	}
+  }
+}
+else
+{
+  CTYPE = 2;
+}
 @BOX 11.1
 $IF NEXTCH() => ISYM = '@ OR
 [ISYM = '. $AN XSYM() = ISYM]
+@BOX 11.2
+if ((ISYM = NEXTCH()) == '@' || (ISYM == '.' && XSYM() == ISYM))
 @BOX12.1
+DOT:
+@BOX12.2
 DOT:
 @BOX13.1
 0 => INT;
+@BOX13.2
+INT = 0;
 @BOX 15.1
+#MSL03.1.3.1
+@BOX 15.2
 #MSL03.1.3.1
 @BOX 20.1
 INT => L64;
+@BOX 20.2
+L64 = INT;
 @BOX 21.1
+FN:
+@BOX 21.2
 FN:
 @BOX 22.1
 FINDN(PART(^CHLIST,
 LASTCH+2,PTR-1),0)=>INT;
 2 => CTYPE;
+@BOX 22.2
+INT = FINDN(PART(&CHLIST, LASTCH+2,PTR-1),0);
+CTYPE = 2;
 @END
 @TITLE MSL03.1.3.1(1,10)
 @COL 1S-2R-3R-4R-5R-6F
@@ -1616,6 +2292,7 @@ FORM REAL NUMBER
 PROCESS UNARY MINUS,REMOVE FROM ITEMISED LINE.
 CONVERT REAL NUMBER TO LOGICAL
 @BOX 1.1
+@BOX 1.2
 @BOX 2.1
 (INT) => FP;
 0 => PPOS
@@ -1624,11 +2301,29 @@ $WH VALCODE[NEXTCH()=>ISYM] = 126 $DO
 FP * (TEN) + (XSYM() - '0) => FP;
 1 -> PPOS $OD
 $FI
+@BOX 2.2
+FP = (INT);
+PPOS = 0;
+if (ISYM == '.')
+{
+  while(VALCODE[(ISYM = NEXTCH())] == 126)
+  {
+    FP = FP * (TEN) + (XSYM() - '0');
+    PPOS = 1;
+  }
+}
 @BOX 3.1
 $IF ISYM ='@ $TH XSYM();
 (IF XSYM()=>ISYM = '- $TH 0 -XINT(0)
 $EL XINT(ISYM - '0))+>PPOS
 FI
+@BOX 3.2
+if (ISYM =='@')
+{
+  XSYM();
+  ISYM = XSYM();
+  PPOS += (ISYM == '-') ? 0 -XINT(0) : XINT(ISYM - '0');
+}
 @BOX 4.1
 TEN => POWERS;
 IF PPOS < 0 THEN 1 => J; 0 -:> PPOS;
@@ -1642,6 +2337,33 @@ FI FI
 PPOS ->> 1 => PPOS;
 POWERS *> POWERS;
 $OD
+@BOX 4.2
+POWERS = TEN;
+if (PPOS < 0)
+{
+  J = 1;
+  PPOS = -(int)PPOS;
+}
+else
+{
+  J = 0;
+}
+while (PPOS != 0)
+{
+  if ((PPOS & 1) != 0)
+  {
+    if (J == 0)
+	{
+	  FP *= 10;
+	}
+	else
+	{
+	  FP /= 10;
+	}
+  }
+  PPOS = PPOS >> 1;
+  POWERS *= POWERS;
+}
 @BOX 5.1
 IF LBUFF[IPTR] = UMINUS $TH
 ZERO -:>FP;
@@ -1649,5 +2371,13 @@ ZERO -:>FP;
 FI
 FP => L64;
 0 => CTYPE;
+@BOX 5.2
+if (memcmp(&LBUFF[IPTR], &UMINUS, sizeof(ITYPE))==0)
+{
+  FP = -FP;
+  IPTR--;
+}
+L64 = (t_uint64)FP;
+CTYPE = 0;
 @END
 
