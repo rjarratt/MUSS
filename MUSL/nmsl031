@@ -382,7 +382,6 @@ ITYPE SAVEDELIM;
 #define TLO8 0x80
 #define TLO0 0x80
 #define TLO1 0x20
-#define TADPROC 0x24
 #define STRINGTYPE 0x83
 #define TINT16 0x44
 #define TINT32 0x4C

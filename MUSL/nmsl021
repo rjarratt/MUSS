@@ -86,7 +86,10 @@ $LO8[64] XNAME;
 @BOX 1.2
 #if !defined(NMSL021)
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
+typedef short              int16;
+typedef unsigned short     uint16;
 typedef int                int32;
+typedef unsigned int       uint32;
 typedef long long          t_int64;
 typedef unsigned int       uint32;
 typedef unsigned long long t_uint64;
@@ -143,6 +146,8 @@ const ITYPE COLON = { 0, 0, 0x4B };
 #define KTREF 9
 #define KTYPE 6
 #define NIL NULL
+#define TADPROC 0x24
+#define CONSTKZ 500
 typedef struct { unsigned short MUTLN,MUSLN,HASH;} NLISTENT;
 typedef struct { unsigned short INTID,PREVN,K,T; int DETAIL; } PLISTENT;
 NLISTENT NLIST[NLISTZ];

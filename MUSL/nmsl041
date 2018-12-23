@@ -103,6 +103,8 @@ END
 #MSL04/1
 MODULE(CMODE,TRANS.DIRECTIVE,CWORD,CUR.GLB,INIT.S4);
 *GLOBAL 5;
+@BOX 1.2
+#MSL04/1
 @BOX 2.1
 $LI/ITYPE DEND = 0\0\%4,HASH = 0\0\%56,EOS=0\0\%0;
 ::PDP *CODE 2;
@@ -132,21 +134,51 @@ $DA DNAMES($LO8)
 "VTYPE"
 0
 $EN
+@BOX 2.2
+const ITYPE EOS=   { 0, 0, 0x0 };
+#define NODNAMES 11
+char *DNAMES[] =
+{
+"INFORM",
+"CODE",
+"GLOBAL",
+"INIT",
+"CMAP",
+"STOPD",
+"STOPC",
+"TLSEG",
+"TLLOAD",
+"TLMODE",
+"VTYPE"
+};
 @BOX 3.1
 *GLOBAL 5;
 $IN CWORD,CMODE,CURGLB;
+@BOX 3.2
+int CWORD,CMODE,CURGLB;
 @BOX 4.1
 $PS TRANS.DIRECTIVE();
 ::PDP *CODE 2;
 #MSL04.1
 ::PDP *CODE 1;
+@BOX 4.2
+void TRANSDIRECTIVE(void);
+#MSL04.1
 @BOX 5.1
 $PS INIT.S4();
 $PR INIT.S4;
 0 => CWORD => CUR.GLB;
 $EN
+@BOX 5.2
+void INITS4(void);
+void INITS4(void)
+{
+  CWORD = 0;
+  CURGLB = 0;
+}
 @BOX 6.1
 *END
+@BOX 6.2
 @END
 @TITLE MSL04/1(1,11)
 @COL 1S
@@ -189,6 +221,38 @@ $IN TINT,TBYADDR,TVST,TLO,TRE;
 $IM $LI TADPROC;
 $LA CEXIT;
 $LI/ADDR[$LO8] NIL=;
+@BOX 1.2
+#include <stdio.h>
+#include <string.h>
+#include "nmsl021.h"
+void LIB(FILE *,int);
+void TL(int,FILE *,int);
+void TLMODULE();
+void TLSEG(int,void *,uint32,void *,int);
+void TLLOAD(int,int);
+void TLMODE(int,int);
+void TLPRINT(int);
+void TLCODEAREA(int);
+void TLDATAAREA(int);
+void TLENDMODULE(int);
+void TLEND(void);
+void TLINSERT(int);
+int COMPTYPE(void);
+uint16 ADDN();
+void ** GENN(uint16);
+void PRINTSTATS(void);
+int CONPTR;
+int IPTR;
+void ENDCHECKS(void);
+extern int CONSTK[CONSTKZ];
+int IX,DIRYZ;
+extern ITYPE LBUFF[LBUFFZ];
+int32 EVALCONST(void);
+extern void MONITOR(int);
+int FAULTS;
+extern FILE *RESFILE;
+int TINT,TBYADDR,TVST,TLO,TRE;
+extern void CEXIT(void);
 @END
 @TITLE MSL04.1(1,11)
 @COL 1S-2R-3T-4T-5T-6T-8R-9R-14F
@@ -236,13 +300,13 @@ CHECKS
 CEXIT
 @BOX13.0
 FAULT
-@BOX 14
+@BOX 14.0
 END
-@BOX 15
+@BOX 15.0
 IS THE CONTEXT MODULE
-@BOX16
+@BOX16.0
 FAULT
-@BOX 17
+@BOX 17.0
 SIGNAL MODULE
 END TO MUTL
 SIGNAL COMPILE END
@@ -255,14 +319,34 @@ EVALUATE AND PLANT
 CONSTANT
 @BOX 1.1
 $PR TRANS.DIRECTIVE;
+@BOX 1.2
+void INIT(int);
+void INIT(int I)
+{
+  if ((I & 0x4000) != 0)
+  {
+    TL(I>>8,RESFILE,DIRYZ);
+  }
+}
+void TRANSDIRECTIVE(void)
+{
 @BOX 2.1
 $IN I,J,K,C;
 $AD[$LO8] NAME,LIBN;
 #MSL04.1.1
+@BOX 2.2
+int I,J,K,C;
+char **NAME;
+char **LIBN;
+#MSL04.1.1
 @BOX 3.1
 $IF TAG OF LBUFF[1+>IPTR] = 0
+@BOX 3.2
+if (LBUFF[++IPTR].TAG == 0)
 @BOX 4.1
 $IF TAG OF LBUFF[IPTR] /= 1
+@BOX 4.2
+if (LBUFF[IPTR].TAG != 1)
 @BOX 5.1
 %8000 &> IX;
 GENN(IND OF LBUFF[IPTR]) => NAME;
@@ -277,10 +361,29 @@ $WH DNAMES[1+>J] /= 0 DO OD
 ->DIR.LOOP;
 DONE:
 IF I = NO.DNAMES
+@BOX 5.2
+IX &= 0x8000;
+NAME = (char **)GENN(LBUFF[IPTR].IND);
+I = 0;
+J = -1;
+DIRLOOP:
+K = -1;
+CHARLOOP:
+if (DNAMES[++J] == 0) goto DONE;
+if (strcmp(DNAMES[J], NAME[++K]) == 0) goto CHARLOOP;
+if (++I == NODNAMES) goto DONE;
+while (DNAMES[++J] != 0) {};
+goto DIRLOOP;
+DONE:
+if (I == NODNAMES)
 @BOX 6.1
 $IF I > 3
+@BOX 6.2
+if (I > 3)
 @BOX 8.1
 EVAL.CONST() => C
+@BOX 8.2
+C = EVALCONST();
 @BOX 9.1
 $AL I $FR
 TL.PRINT(C => CWORD ->>8);
@@ -298,19 +401,99 @@ IF COMP.TYPE () => TVST
 TADPROC => TVST;
 FI
 $EN
+@BOX 9.2
+switch (I)
+{
+  case 0: 
+  {
+    CWORD = C;
+    TLPRINT(CWORD >> 8);
+    break;
+  }
+  case 1: 
+  {
+    TLCODEAREA(C);
+    break;
+  }
+  case 2: 
+  {
+    CURGLB = C;
+    TLDATAAREA(CURGLB);
+    break;
+  }
+  case 3: 
+  {
+    INIT(C);
+    break;
+  }
+  case 4: 
+  {
+    CWORD &= 0xDF;
+    break;
+  }
+  case 5: 
+  {
+    CWORD &= 0xEF;
+    break;
+  }
+  case 6: 
+  {
+    CWORD |= 0x20;
+    break;
+  }
+  case 7: 
+  {
+    TLSEG(EVALCONST(),(void *)EVALCONST(),EVALCONST(),(void *)EVALCONST(),EVALCONST());
+    break;
+  }
+  case 8: 
+  {
+    TLLOAD(EVALCONST(),EVALCONST());
+    break;
+  }
+  case 9: 
+  {
+    TLMODE(EVALCONST(),EVALCONST());
+    break;
+  }
+  case 10: 
+  {
+    TVST = COMPTYPE ();
+    if ((TVST & 0x8000) != 0)
+	{
+	  TVST = TADPROC;
+	}
+    break;
+  }
+}
 @BOX 10.1
 $IF LBUFF[IPTR] /= DEND
+@BOX 10.2
+if (memcmp(&LBUFF[IPTR], &DEND, sizeof(ITYPE))==0)
 @BOX 11.1
 END.CHECKS();
+@BOX 11.2
+ENDCHECKS();
 @BOX 12.1
 -> CEXIT;
+@BOX 12.2
+CEXIT();
 @BOX 14.1
 $EN
+@BOX 14.2
+;
+}
 @BOX 13.1
+MONITOR(0);
+@BOX 13.2
 MONITOR(0);
 @BOX 15.1
 $IF CONSTK[CONPTR] = 6
+@BOX 15.2
+if (CONSTK[CONPTR] == 6)
 @BOX 16.1
+MONITOR(138);
+@BOX 16.2
 MONITOR(138);
 @BOX 17.1
 TL.END.MODULE(0);
@@ -320,11 +503,29 @@ FI
 MONITOR(201);
 IF CWORD & %4 = 0 THEN
 PRINT.STATS() FI
+@BOX 17.2
+TLENDMODULE(0);
+if ((CMODE & 4) == 0 && FAULTS == 0)
+{
+  TLEND();
+}
+MONITOR(201);
+if ((CWORD & 0x4) == 0)
+{
+  PRINTSTATS();
+}
 @BOX 18.1
 $IF LBUFF[IPTR] /= HASH
+@BOX 18.2
+if (memcmp(&LBUFF[IPTR], &HASH, sizeof(ITYPE))== 0)
 @BOX 19.1
 $WH LBUFF[IPTR+1] /= EOS DO
 TL.INSERT(EVAL.CONST()) OD
+@BOX 19.2
+while (memcmp(&LBUFF[IPTR+1], &EOS, sizeof(ITYPE))!= 0)
+{
+  TLINSERT(EVALCONST());
+}
 @END
 @TITLE MSL04.1.1(1,6)
 @COL 1S-2R-3F
@@ -339,13 +540,19 @@ END
 @BOX1.1
 ::SUBPROCS OF
 ::TRANS DIRECTIVE
+@BOX1.2
+//SUBPROCS OF
+//TRANS DIRECTIVE
 @BOX2.1
 $PS INIT($IN);
 $PR INIT(I);
 IF I & %4000 /= 0 THEN
 TL(I->>8,RESFILE,DIRYZ) FI
 END
+@BOX2.2
+// SUBPROC MOVED AS C DOESN@T SUPPORT THEM
 @BOX 3.1
 ::END 4.1.1
+@BOX 3.2
+//END 4.1.1
 @END
-
