@@ -545,21 +545,8 @@ $IN MSTR,MUTLSTR
 #include <memory.h>
 #include <string.h>
 #include "nmsl021.h"
-extern int INCH(void);
-extern void OUTCH(int);
-extern void INBACKSPACE(int);
-extern int NEXTCH(void);
-extern void NEWLINES(int);
-extern void OUTLINENO(int);
-extern void PPCCMD(void);
-extern unsigned int FINDN(void *[],int);
-extern void SELECTOUTPUT(int);
-extern void SPACES(int);
-extern void OUTHEX(unsigned int,int);
-extern int TLLINE(int);
-extern unsigned short ADDN();
-extern void** GENN(unsigned short);
-extern void MONITOR(int);
+// LIBSPECs moved to NMSL021
+// PSPEC moved to NMSL021
 int CWORD,LASTCH,CMODE;
 int LINENO;
 int MSTR,MUTLSTR;
