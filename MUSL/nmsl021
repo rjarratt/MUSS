@@ -86,6 +86,7 @@ $LO8[64] XNAME;
 @BOX 1.2
 #if !defined(NMSL021)
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
+typedef unsigned char      uint8;
 typedef short              int16;
 typedef unsigned short     uint16;
 typedef int                int32;
@@ -137,6 +138,12 @@ const ITYPE RB = { 0, 0, 0x50 };
 const ITYPE BSLASH = { 0, 0, 0x51 };
 const ITYPE XCOLON = { 0, 0, 0x52 };
 const ITYPE COLON = { 0, 0, 0x4B };
+const ITYPE UMINUS = { 0, 0, 0x55 };
+const ITYPE EOS = { 0, 0, 0x0 };
+const ITYPE LSHIFT = { 0, 0, 0x47 };
+const ITYPE ASTERISK = { 0, 0, 0x36 };
+const ITYPE EOL = { 0, 0, 0x57 };
+const ITYPE DIMPORT = { 0, 0, 0x1B };
 #define KLAB 14
 #define KLABREF 15
 #define KVAR 4
@@ -154,6 +161,33 @@ NLISTENT NLIST[NLISTZ];
 PLISTENT PLIST[PLISTZ];
 unsigned char CHLIST[CHLISTZ];
 unsigned char XNAME[64];
+
+#define MAXKEYWORD 45
+#define TINT0 0x40
+#define TLO8 0x80
+#define TLO0 0x80
+#define TLO1 0x20
+#define STRINGTYPE 0x83
+#define TINT16 0x44
+#define TINT32 0x4C
+#define TINT64 0x5C
+#define TLO32 0x8C
+#define TRE0 0x00
+#define TLAB 0x30
+
+#define KEYWORD 44
+#define TDELIM 0
+#define TNAME 1
+#define TSTRING 2
+#define TCONST 3
+
+#define IEOS 0
+#define IBYTE 29
+#define IMINCOMP 46
+#define ILOAD 51
+#define ISTORE 61
+#define ICOMP 71
+
 @BOX 2.1
 *END
 @BOX 2.2
@@ -217,6 +251,10 @@ uint16 MUTLN(uint16);
 void EXPN(uint16);
 
 // END OF PSPECS FROM OTHER MODULES
+
+extern int CONSTK[CONSTKZ];
+extern int CONPTR;
+extern ITYPE LBUFF[LBUFFZ];
 
 #define NMSL021
 #endif
