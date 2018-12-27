@@ -320,6 +320,7 @@ LASTMN,CURLEV,CURRES,CURPROC,CURBLK,GLEV,EVAL.CONST,END.CHECKS,PROCLEV,EVAL.LIT)
 ;
 @BOX 1.2
 #include <stdio.h>
+#include <memory.h>
 #include "nmsl021.h"
 #MSL05/1
 @BOX 2.1
@@ -361,7 +362,6 @@ GLEV = PLISTZ;
 //#define KGLAB 13
 //#define KIMPLAB 16
 int PROCLEV,LASTT,LASTP;
-GLEV = PLISTZ;
 @BOX 4.1
 $PS MOD.HEAD();
 $PS DECL.PROC($IN);
@@ -704,6 +704,8 @@ if (memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0)
 @BOX 8.1
 $EN
 @BOX 8.2
+;
+// BOX 8.2
 }
 @BOX 9.1
 $IF CONSTK[CONPTR] /= 7
@@ -879,7 +881,7 @@ if (LASTP >= PARAMSZ)
   SELECTOUTPUT(MSTR);
   NEWLINES(0);
   CAPTION("PARAM LIST");
-  MONITOR(9)
+  MONITOR(9);
 }
 @BOX 8.1
 $IF LBUFF[1+>IPTR]=COMMA
@@ -1520,7 +1522,7 @@ DECLAREN (ID,KTREF,0);
 TLTYPE(GENN(ID),IX | 0x2000);
 @BOX 22.1
 IF LBUFF[IPTR] = EQUALS
-@BOX 22.1
+@BOX 22.2
 if (memcmp(&LBUFF[IPTR], &EQUALS, sizeof(ITYPE)) == 0)
 @BOX 23.1
 DECLARE.N (IND OF LBUFF[IPTR-1] => ID, KTREF, 0);
@@ -2599,6 +2601,8 @@ N = EVALLIT(1,DVT);
 @BOX4.1
 END
 @BOX4.2
+;
+// BOX 4.2
 }
 @BOX9.1
 IF TAG OF LBUFF[IPTR] /= 1
@@ -3377,7 +3381,7 @@ ELSE IF  LT & %FFC3 = TRE0 AND REQDT & %FFC3 = TRE0
 THEN 0 => CHECK.LIT
 ELSE 1 => CHECK.LIT FI FI
 @BOX2.2
-if ((LT & 0x3F) <= (REQDT & 0x3F) && (((((LT & 0xC0) == (REQDT & 0xC0) || (LT & 0xC1) == TLO0) && (REQDT & 0xC0) == TINT0) || LT == TLO0) && REQDT = TLO1))
+if ((LT & 0x3F) <= (REQDT & 0x3F) && (((((LT & 0xC0) == (REQDT & 0xC0) || (LT & 0xC1) == TLO0) && (REQDT & 0xC0) == TINT0) || LT == TLO0) && REQDT == TLO1))
 {
   result = 0;
 }
@@ -3510,7 +3514,7 @@ else
 FOR N + 1 DO
 EVAL.LIT <<- 8 + CLIST[1+>I] => EVAL.LIT OD
 @BOX7.2
-I==;
+I--;
 for (int i = 0; i < N + 1; i++)
 {
   result = (result << 8) + CLIST[++I];

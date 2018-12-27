@@ -1144,7 +1144,7 @@ $LO16[SDLIST] DLIST;
 $IN IPTR;
 ITYPE[LBUFFZ] LBUFF;
 @BOX2.2
-ITYPE EOS,ASTERISK; //LITERALS REALLY!
+//ITYPE EOS,ASTERISK; //LITERALS REALLY!
 PLISTENT PLIST[PLISTZ];
 short int DLIST[SDLIST];
 
@@ -1224,7 +1224,7 @@ void BEGINST(void);
 void PROCHEAD(void);
 void MODHEAD(void);
 void ENDST(void);
-unsigned int MUTLN(unsigned int);
+//unsigned int MUTLN(unsigned int);
 
 @BOX4.1
 ::END

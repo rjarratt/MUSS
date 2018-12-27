@@ -135,7 +135,7 @@ $DA DNAMES($LO8)
 0
 $EN
 @BOX 2.2
-const ITYPE EOS=   { 0, 0, 0x0 };
+//const ITYPE EOS=   { 0, 0, 0x0 };
 #define NODNAMES 11
 char *DNAMES[] =
 {
