@@ -642,7 +642,7 @@ $LI/$IN TEN = 10, ZERO = 0;
 @BOX 2.2
 unsigned int STEM,PTR,RPTR,NPTR,ISYM,SYM,
     PPOS,BCOUNT,CSIZE,CTYPE,I,J,TY,SW;
-unsigned int INT;
+uint32 INT;
 t_uint64 L64;
 double FP,POWERS;
 const int TEN = 10;

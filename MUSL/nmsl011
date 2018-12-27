@@ -1118,7 +1118,7 @@ $LS TL.MODULE();
 @BOX1.2
 extern void SELECTINPUT(int);
 extern void SELECTOUTPUT(int);
-extern void CAPTION(void *[]);
+extern void CAPTION(char *);
 extern void OUTI(int,int);
 extern int DEFINEINPUT(int,FILE *,int);
 extern int CURRENTOUTPUT(void);

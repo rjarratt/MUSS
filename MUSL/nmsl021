@@ -156,7 +156,7 @@ const ITYPE DIMPORT = { 0, 0, 0x1B };
 #define TADPROC 0x24
 #define CONSTKZ 500
 typedef struct { unsigned short MUTLN,MUSLN,HASH;} NLISTENT;
-typedef struct { unsigned short INTID,PREVN,K,T; int DETAIL; } PLISTENT;
+typedef struct { unsigned short INTID,PREVN,K,T; int32 DETAIL; } PLISTENT;
 NLISTENT NLIST[NLISTZ];
 PLISTENT PLIST[PLISTZ];
 unsigned char CHLIST[CHLISTZ];
@@ -192,7 +192,7 @@ unsigned char XNAME[64];
 *END
 @BOX 2.2
 // LIBSPECS FROM OTHER MODULES
-extern void CAPTION(void **);
+extern void CAPTION(char *);
 extern int INCH(void);
 extern void OUTCH(int);
 extern void INBACKSPACE(int);
@@ -200,7 +200,7 @@ extern int NEXTCH(void);
 extern void NEWLINES(int);
 extern void OUTLINENO(int);
 extern void PPCCMD(void);
-extern uint32 FINDN(void **,int);
+extern uint32 FINDN(char *,int);
 extern int FINDP(uint32,int,int);
 extern void SELECTOUTPUT(int);
 extern void SPACES(int);
@@ -211,34 +211,34 @@ extern void TLASSVALUE(int,int);
 extern void TLBLOCK();
 extern void TLCLIT32(int,int32);
 extern void TLCLIT16(int,int16);
-extern void TLCLITS(int,void **);
+extern void TLCLITS(int,void *);
 extern void TLCNULL(int);
 extern void TLDATAAREA(int);
 extern void TLENDBLOCK();
 extern void TLENDPROC();
 extern void TLENDTYPE(int);
 extern void TLLABEL(int);
-extern void TLLABELSPEC(void **,int);
+extern void TLLABELSPEC(char *,int);
 extern int TLLINE(int);
-extern void TLLIT(void **,int);
+extern void TLLIT(char *,int);
 extern void TLPL(int,int);
 extern void TLPROC(int);
 extern void TLPROCKIND(int);
 extern void TLPROCPARAM(int,void *);
 extern void TLPROCRESULT(int);
-extern void TLPROCSPEC(void **,int);
-extern void TLSDECL(void **,int,void *);
+extern void TLPROCSPEC(char *,int);
+extern void TLSDECL(char *,int,void *);
 extern void TLSELECTVAR();
 extern void TLSELECTFIELD(int,int,int);
 extern void TLSPACE(void *);
-extern void TLTYPE(void **,int);
-extern void TLTYPECOMP(int,void *,void **);
-extern void TLVDECL(void **,uint32,int,int,int,void *);
+extern void TLTYPE(char *,int);
+extern void TLTYPECOMP(int,void *,char *);
+extern void TLVDECL(char *,uint32,int,int,int,void *);
 // END OF LIBSPECS FROM OTHER MODULES
 
 // COMMON PSPECS FROM OTHER MODULES
 unsigned short ADDN();
-void** GENN(unsigned short);
+char *GENN(unsigned short);
 void MONITOR(int);
 void ITEMISE(int);
 int TRANSCOMP(int);

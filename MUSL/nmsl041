@@ -239,7 +239,7 @@ void TLEND(void);
 void TLINSERT(int);
 int COMPTYPE(void);
 uint16 ADDN();
-void ** GENN(uint16);
+char *GENN(uint16);
 void PRINTSTATS(void);
 int CONPTR;
 int IPTR;
@@ -337,7 +337,7 @@ $AD[$LO8] NAME,LIBN;
 @BOX 2.2
 int I,J,K,C;
 char **NAME;
-char **LIBN;
+//char **LIBN;
 #MSL04.1.1
 @BOX 3.1
 $IF TAG OF LBUFF[1+>IPTR] = 0

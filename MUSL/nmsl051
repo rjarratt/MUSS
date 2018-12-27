@@ -1017,7 +1017,7 @@ uint16 ADDLSPEC(uint16 LIBN)
 uint16 result;
 int J,K,M,N;
 uint32 F;
-void **LNAME;
+char *LNAME;
 @BOX3.1
 GENN(LIBN) => LNAME;
 IF FIND.N(LNAME,0) => F = 0
@@ -1605,7 +1605,7 @@ VDIM => DETAIL OF PLIST[MUTLN];
 N = LBUFF[IPTR].IND;
 MUTLN = DECLAREN(N,KVAR,VART);
 TLSDECL(GENN(N),VT | IX,VDIM);
-PLIST[MUTLN].DETAIL = VDIM;
+PLIST[MUTLN].DETAIL = (int32)VDIM;
 @BOX 11.1
 $IF LBUFF[1+>IPTR] = COMMA
 @BOX 11.2
@@ -1666,7 +1666,7 @@ void DECLFIELD(void)
 @BOX 2.1
 $IN CON.N,FIELD.N,PTR,I,ID,C.TYPE,ALT,SW;
 @BOX 2.2
-int CONN,FIELDN,PTR,I,ID,CTYPE,ALT,SW;
+int CONN,PTR,I,CTYPE,ALT,SW;
 @BOX 3.1
 KDUMMY => K OF PLIST[1+>LASTMN=>CON.N];
 TL.SELECT.VAR();
@@ -1697,7 +1697,7 @@ $FO I < T.LIST[PTR]&%FF $DO
 DECLARE.N(TLIST[2+>PTR],KFIELD,TLIST[PTR-1]);
 @BOX 7.2
 SW = TLIST[PTR] & 0x8000;
-for (I = 0; I < TLIST[PTR] & 0xFF; I++)
+for (I = 0; I < (TLIST[PTR] & 0xFF); I++)
 {
   PTR += 2;
   DECLAREN(TLIST[PTR],KFIELD,TLIST[PTR-1]);
@@ -1784,7 +1784,7 @@ if (memcmp(&LBUFF[++IPTR], &LSB, sizeof(ITYPE)) != 0)
 @BOX 5.1
 EVAL.CONST()=>SZ;
 @BOX 5.2
-SZ = EVALCONST();
+SZ = (void *)EVALCONST();
 @BOX 6.1
 $IF LBUFF[1+>IPTR]/=RSB
 @BOX 6.2
@@ -1865,7 +1865,7 @@ $OD
 OUT:I=>FIND;
 $EN
 @BOX 1.2
-int FIND(int V,void **L)
+int FIND(int V,int L[])
 {
 int I;
 for(I = 0; I < 6; I++)
@@ -2181,7 +2181,7 @@ PTR = 1;
 TL.S.DECL(GENN(ID),IX+LIT.T,-4096);
 TL.ASS(MN,-1);
 @BOX 3.2
-TLSDECL(GENN(ID),IX+LITT,-4096);
+TLSDECL(GENN(ID),IX+LITT,(void *)-4096);
 TLASS(MN,-1);
 @BOX 4.1
 EVAL.LIT(1,TLIST[2+>PTR]) => N;
@@ -2370,7 +2370,7 @@ else if (DVT == TLAB)
 {
   DVT = 0x2C;
 }
-TLSDECL(GENN(ID), DVT | IX, -1);
+TLSDECL(GENN(ID), DVT | IX, (void *)-1);
 TLASS(MN,(PROCLEV == 0)? -2 : -1);
 @BOX 9.1
 #MSL05.12.1
@@ -2459,9 +2459,9 @@ $IN CH.PTR,CH,C;
 ADDR D;
 $AD[$LO8]ADLIT;
 @BOX 2.2
-int CHPTR,CH,C;
+int CHPTR,C;
 void *D;
-void **ADLIT;
+//char *ADLIT;
 @BOX15.1
 $IF DVT = TLO8 $TH
 ITEMISE(2);
@@ -2491,12 +2491,12 @@ $IF COMP.DIM() => D = 0 $TH 1=>D $FI
 D = COMPDIM();
 if (D == 0)
 {
-  D = 1;
+  D = (void *)1;
 }
 @BOX9.1
 TL.ASS.VALUE(N,D);
 @BOX9.2
-TLASSVALUE(N,D);
+TLASSVALUE(N,(int)D);
 @BOX11.1
 $EN
 @BOX11.2
@@ -2774,7 +2774,7 @@ switch (IMPKIND)
 	{
 	  I = 0;
 	}
-    TLVDECL(GENN(ID),0,0,0,TV | 0x8000,I);
+    TLVDECL(GENN(ID),0,0,0,TV | 0x8000,(void *)I);
 	break;
     }
   case 2:
@@ -3329,7 +3329,7 @@ if (memcmp(&LBUFF[++IPTR], &LSB, sizeof(ITYPE)) != 0)
 @BOX 4.1
 EVAL.CONST()=>CONST;
 @BOX 4.2
-CONST = EVALCONST();
+CONST = (void *)EVALCONST();
 @BOX 5.1
 $IF LBUFF[1+>IPTR]/=RSB
 @BOX 5.1
@@ -3343,6 +3343,7 @@ $EN
 @BOX 7.2
 ;
 // BOX 7.2
+return result;
 }
 @BOX 8.1
 1 -> IPTR;
