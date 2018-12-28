@@ -455,6 +455,7 @@ $PS EVAL.LIT($IN,$IN)/$IN32;
 $LI BREQD = -1, DIND = %1004, AOPD = %3000;
 @BOX 1.2
 #include <stdio.h>
+#include <stdlib.h>
 #include <memory.h>
 #include "nmsl021.h"
 extern void TLLABELSPEC(char *,int);
@@ -497,22 +498,24 @@ int REGSIU;
 //$IM $LI KLAB;
 //$IM $LI KLABREF;
 //$IM $LI KVAR;
-//int TINT,TBYADDR;
+int TINT,TBYADDR;
 //$IM $LI TLAB,TADPROC,TINT32;
-//int CURBLK;
+int CURBLK;
 //$PS BEGINST();
 //$PS PREPROCESSCOND();
 //$IM $LI KGLAB;
 int STPTR;
-//int CURPROC;
-//int CURRES;
+int CURPROC;
+int CURRES;
 //$PS COMPILECOND(int,int,int);
 //$PS DECLAREN($LO16,int,int)/$LO16;
 //$PS DUMMY()/$LO16;
 //$PS MUTLN($LO16)/$LO16;
 //$PS EXPN($LO16);
-//$PS EVALLIT(int,int)/int32;
-//$LI BREQD = -1, DIND = %1004, AOPD = %3000;
+extern int32 EVALLIT(int, int);
+const int BREQD = -1;
+const int DIND = 0x1004;
+const int AOPD = 0x3000;
 @END
 @TITLE MSL06.1(1,6)
 @COL 1S-2R-3R-4R-5F
@@ -867,15 +870,15 @@ FAULT
 $PR TRANS.FOR;
 $PS EVAL.LIMIT($IN)/$IN;
 @BOX 1.2
+#MSL06.4.1
 void TRANSFOR(void)
 {
-extern int EVALLIMIT(int);
 @BOX 2.1
 $IN CV,T;
 #MSL06.4.1
 @BOX 2.2
 int CV,T;
-#MSL06.4.1
+// #MSL06.4.1 moved to before as C does not support nesting
 @BOX 3.1
 $IF LBUFF[IPTR+2] /= LTHAN
 @BOX 3.2
@@ -927,7 +930,7 @@ OR K OF PLIST[MUTLN(IND OF LBUFF[IPTR+1]) => CV] /= KVAR
 OR T OF PLIST[CV] => T /= TINT
 AND T /= TBYADDR
 @BOX 10.2
-if ((LBUFF[IPTR+1].TAG != 1 || (CV = PLIST[MUTLN(LBUFF[IPTR+1].IND)]).K != KVAR || (T = PLIST[CV].T)) != TINT && T != TBYADDR)
+if ((LBUFF[IPTR+1].TAG != 1 || (CV = PLIST[MUTLN(LBUFF[IPTR+1].IND)].K) != KVAR || (T = PLIST[CV].T)) != TINT && T != TBYADDR)
 @BOX 11.1
 MONITOR(0);
 @BOX 11.2
@@ -1026,7 +1029,8 @@ FAULT
 @BOX 1.1
 $PR TRANS.GOTO;
 @BOX 1.2
-void TRANSGOTO(void);
+void TRANSGOTO(void)
+{
 @BOX 2.1
 $IN DEST.LAB,ID,K;
 @BOX 2.2
@@ -1034,7 +1038,7 @@ int DESTLAB,ID,K;
 @BOX 3.1
 $IF TAG $OF LBUFF[1+>IPTR] /= 1
 @BOX 3.2
-if (LBUFF[++IPTR].TAG) != 1)
+if (LBUFF[++IPTR].TAG != 1)
 @BOX 10.1
 IND $OF LBUFF[IPTR] => ID;
 MUTLN(ID) => DEST.LAB;
@@ -1043,7 +1047,7 @@ OR K = KVAR AND T OF PLIST[DEST.LAB] = TLAB
 @BOX 10.2
 ID = LBUFF[IPTR].IND;
 DESTLAB = MUTLN(ID);
-if ((K = PLIST[DEST.LAB].K) == KGLAB || K == KVAR) && PLIST[DESTLAB].T == TLAB)
+if (((K = PLIST[DESTLAB].K) == KGLAB || K == KVAR) && PLIST[DESTLAB].T == TLAB)
 @BOX 4.1
 IF DEST.LAB < CUR.BLK
 @BOX 4.2
@@ -1072,9 +1076,9 @@ else
 }
 @BOX 8.1
 $EN
-@BOX 8.1
+@BOX 8.2
 ;
-// BOX 8.1
+// BOX 8.2
 }
 @BOX 9.1
 MONITOR(0);
@@ -1171,7 +1175,7 @@ if (LBUFF[++IPTR].TAG != 1)
 IND $OF LBUFF[IPTR] => ID;
 $IF MUTLN(ID) => N < CURBLK
 @BOX 8.2
-ID = LBUFF[IPTR]IND;
+ID = LBUFF[IPTR].IND;
 N = MUTLN(ID);
 if (N < CURBLK)
 @BOX 9.1
@@ -1405,7 +1409,6 @@ void TRANSFI(void)
 @BOX 3.1
 $IF CON.STK[CON.PTR] /= 1 /= 2
 @BOX 3.2
-if (CONSTK[CONPTR] != 1 && = 2
 if (CONSTK[CONPTR] != 1 && CONSTK[CONPTR] != 2)
 @BOX 5.1
 TL.LABEL(CON.STK[CON.PTR -1]);
@@ -1497,7 +1500,7 @@ $EN
 @BOX11.1
 IF CON.STK[CON.PTR] /= 8
 @BOX11.2
-if (CONSTK[CONPTR]) != 8)
+if (CONSTK[CONPTR] != 8)
 @BOX12.1
 TL.REPEAT();
 @BOX12.2
@@ -1545,11 +1548,11 @@ if (I != 0)
 {
   if ((I & 0x8000) != 0)
   {
-    I = TADPROCI;
+    I = TADPROC;
   }
   TLPL(0x46,I);
   TLPL(0x22,CURRES);
-  AOPD=>I;
+  I = AOPD;
 }
 TLPL(0x43,I);
 @BOX 3.1
@@ -1634,7 +1637,7 @@ TLLABEL(CONSTK[CONPTR -1]);
 @BOX 8.1
 3 -> CON.PTR;
 @BOX 8.2
-CON.PTR -= 3;
+CONPTR -= 3;
 @BOX 6.1
 $EN
 @BOX 6.2
@@ -1734,7 +1737,7 @@ EXIT
 @BOX 1.1
 $PR TRANS.COND(IF.OR.UN,DEST.LAB);
 @BOX 1.2
-void TRANS.COND(int IFORUN,int DESTLAB)
+void TRANSCOND(int IFORUN,int DESTLAB)
 {
 @BOX 2.1
 ::DECL & INIT
