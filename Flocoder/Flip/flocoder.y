@@ -100,6 +100,8 @@ row_directive: T_ROW T_OTHERDATA
 flow_directive: T_FLOW { start_flow_sequence(); } flow_box_refs { end_flow_sequence(); }
 
 box_directive: T_BOX T_INTEGER T_PERIOD T_INTEGER {start_box($2, $4); }
+               |
+			   T_BOX T_INTEGER {start_box($2, 0); }
 
 end_directive: T_END { end_box(); }
 
