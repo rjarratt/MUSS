@@ -47,6 +47,7 @@ INTEGER          [0-9]+
 {START_DIRECTIVE}X                       { BEGIN DIRECTIVE_IGNORE; lex_trace("x"); return T_X; }
 {START_DIRECTIVE}TITLE                   { BEGIN DIRECTIVE_TITLE; lex_trace("title"); return T_TITLE; }
 {START_DIRECTIVE}BOX                     { BEGIN DIRECTIVE_BOX; lex_trace("box"); return T_BOX; }
+{START_DIRECTIVE}BO                      { BEGIN DIRECTIVE_BOX; lex_trace("box"); return T_BOX; }
 {START_DIRECTIVE}B                       { BEGIN DIRECTIVE_BOX; lex_trace("box"); return T_BOX; }
 {START_DIRECTIVE}ROW                     { BEGIN DIRECTIVE_IGNORE; lex_trace("row"); return T_ROW; }
 {START_DIRECTIVE}COL                     { BEGIN DIRECTIVE_BOX_REFS; lex_trace("col"); return T_COL; }

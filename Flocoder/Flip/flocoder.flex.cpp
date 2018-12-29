@@ -427,8 +427,8 @@ static void yynoreturn yy_fatal_error ( const char* msg  );
 	(yy_hold_char) = *yy_cp; \
 	*yy_cp = '\0'; \
 	(yy_c_buf_p) = yy_cp;
-#define YY_NUM_RULES 25
-#define YY_END_OF_BUFFER 26
+#define YY_NUM_RULES 26
+#define YY_END_OF_BUFFER 27
 /* This struct is not used in this scanner,
    but its presence is necessary. */
 struct yy_trans_info
@@ -438,14 +438,14 @@ struct yy_trans_info
 	};
 static const flex_int16_t yy_accept[74] =
     {   0,
-        0,    0,   11,   11,   13,   13,    0,    0,   20,   20,
-       26,   25,   23,   24,   21,   22,   24,    9,   11,   10,
-       13,   14,   12,   13,   14,   12,   15,   17,   16,   18,
-       15,   17,   16,   18,   20,   19,   21,    9,    9,    4,
-        9,    9,    9,    9,    9,    1,   11,   10,   13,   12,
-       13,   12,   16,   18,   16,   18,   20,    9,    9,    9,
-        9,    9,    9,    3,    6,    8,    9,    5,    9,    7,
-        9,    2,    0
+        0,    0,   12,   12,   14,   14,    0,    0,   21,   21,
+       27,   26,   24,   25,   22,   23,   25,   10,   12,   11,
+       14,   15,   13,   14,   15,   13,   16,   18,   17,   19,
+       16,   18,   17,   19,   21,   20,   22,   10,   10,    5,
+       10,   10,   10,   10,   10,    1,   12,   11,   14,   13,
+       14,   13,   17,   19,   17,   19,   21,    4,   10,   10,
+       10,   10,   10,    3,    7,    9,   10,    6,   10,    8,
+       10,    2,    0
     } ;
 
 static const YY_CHAR yy_ec[256] =
@@ -916,94 +916,93 @@ YY_RULE_SETUP
 case 5:
 YY_RULE_SETUP
 #line 51 "flocoder.l"
-{ BEGIN DIRECTIVE_IGNORE; lex_trace("row"); return T_ROW; }
+{ BEGIN DIRECTIVE_BOX; lex_trace("box"); return T_BOX; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
 #line 52 "flocoder.l"
-{ BEGIN DIRECTIVE_BOX_REFS; lex_trace("col"); return T_COL; }
+{ BEGIN DIRECTIVE_IGNORE; lex_trace("row"); return T_ROW; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
 #line 53 "flocoder.l"
-{ BEGIN DIRECTIVE_BOX_REFS; lex_trace("flow"); return T_FLOW; }
+{ BEGIN DIRECTIVE_BOX_REFS; lex_trace("col"); return T_COL; }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
 #line 54 "flocoder.l"
-{ BEGIN INITIAL; lex_trace("end\n"); return T_END; }
+{ BEGIN DIRECTIVE_BOX_REFS; lex_trace("flow"); return T_FLOW; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
 #line 55 "flocoder.l"
-{ yyerror("Unexpected directive \'%s\'\n", yytext); }
+{ BEGIN INITIAL; lex_trace("end\n"); return T_END; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
 #line 56 "flocoder.l"
-{ BEGIN DIRECTIVE_IGNORE; yylval.nameval = _strdup(yytext); lex_trace(" name \"%s\"", yytext); return T_NAME;}
+{ yyerror("Unexpected directive \'%s\'\n", yytext); }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
 #line 57 "flocoder.l"
-{ ; }
+{ BEGIN DIRECTIVE_IGNORE; yylval.nameval = _strdup(yytext); lex_trace(" name \"%s\"", yytext); return T_NAME;}
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
 #line 58 "flocoder.l"
-{ yylval.unsignedval = atoi(yytext); lex_trace(" %s(%d)", yytext, yylval.unsignedval); return T_INTEGER;}
+{ ; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
 #line 59 "flocoder.l"
-{ ; }
+{ yylval.unsignedval = atoi(yytext); lex_trace(" %s(%d)", yytext, yylval.unsignedval); return T_INTEGER;}
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
 #line 60 "flocoder.l"
-{ lex_trace(" ."); return T_PERIOD;}
+{ ; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
 #line 61 "flocoder.l"
-{ ; }
+{ lex_trace(" ."); return T_PERIOD;}
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
 #line 62 "flocoder.l"
-{ yylval.unsignedval = atoi(yytext); lex_trace(" %s", yytext); return T_INTEGER;}
+{ ; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
 #line 63 "flocoder.l"
-{ lex_trace(" ."); return T_HYPHEN;}
+{ yylval.unsignedval = atoi(yytext); lex_trace(" %s", yytext); return T_INTEGER;}
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
 #line 64 "flocoder.l"
-{ yylval.nameval = _strdup(yytext); lex_trace(" label %s", yytext); return T_LABEL;}
+{ lex_trace(" ."); return T_HYPHEN;}
 	YY_BREAK
 case 19:
-/* rule 19 can match eol */
 YY_RULE_SETUP
 #line 65 "flocoder.l"
-{ BEGIN INITIAL; lex_trace(" no other data\n"); yylineno++; }
+{ yylval.nameval = _strdup(yytext); lex_trace(" label %s", yytext); return T_LABEL;}
 	YY_BREAK
 case 20:
+/* rule 20 can match eol */
 YY_RULE_SETUP
 #line 66 "flocoder.l"
-{ BEGIN INITIAL; lex_trace(" other data %s\n", yytext); return T_OTHERDATA;}
+{ BEGIN INITIAL; lex_trace(" no other data\n"); yylineno++; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
 #line 67 "flocoder.l"
-{ BEGIN INITIAL; yylval.lineval = _strdup(yytext); lex_trace("%d: %s\n", yylineno, yytext); return T_LINE;}
+{ BEGIN INITIAL; lex_trace(" other data %s\n", yytext); return T_OTHERDATA;}
 	YY_BREAK
 case 22:
-/* rule 22 can match eol */
 YY_RULE_SETUP
 #line 68 "flocoder.l"
-{ BEGIN INITIAL; yylineno++; }
+{ BEGIN INITIAL; yylval.lineval = _strdup(yytext); lex_trace("%d: %s\n", yylineno, yytext); return T_LINE;}
 	YY_BREAK
 case 23:
 /* rule 23 can match eol */
@@ -1012,16 +1011,22 @@ YY_RULE_SETUP
 { BEGIN INITIAL; yylineno++; }
 	YY_BREAK
 case 24:
+/* rule 24 can match eol */
 YY_RULE_SETUP
 #line 70 "flocoder.l"
-{ BEGIN INITIAL; }
+{ BEGIN INITIAL; yylineno++; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 72 "flocoder.l"
+#line 71 "flocoder.l"
+{ BEGIN INITIAL; }
+	YY_BREAK
+case 26:
+YY_RULE_SETUP
+#line 73 "flocoder.l"
 ECHO;
 	YY_BREAK
-#line 1024 "flocoder.flex.cpp"
+#line 1029 "flocoder.flex.cpp"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(DIRECTIVE_TITLE):
 case YY_STATE_EOF(DIRECTIVE_BOX):
@@ -2029,6 +2034,6 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 72 "flocoder.l"
+#line 73 "flocoder.l"
 
 
