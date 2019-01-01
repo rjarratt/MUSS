@@ -2211,47 +2211,85 @@ T OF PLIST[MTLN] => RTYPE;
 PARAMS[DETAIL OF PLIST[MTLN] => F] => N;
 @B6.2
 RTYPE = T OF PLIST[MTLN];
-PARAMS[DETAIL OF PLIST[MTLN] => F] => N;
+F = PLIST[MTLN].DETAIL;
+N = PARAMS[F];
 @B18.1
 U => AR[OK.AP];
 RTYPE => AR[AP+1];
 N => AR[3+>AP-1];
+@B18.2
+AR[OKAP] = U;
+AR[AP+1] = RTYPE;
+AP += 3;
+AR[AP-1] = N;
 @B7.1
+#MSL07.1.1.3.1
+@B7.2
 #MSL07.1.1.3.1
 @B8.1
 RTYPE => OPD.TYPE;
+@B8.2
+OPDTYPE = RTYPE;
 @B9.1
 IF RTYPE /= 0
+@B9.2
+if (RTYPE != 0)
 @B10.1
 IF CMP.TYPE /= 0
 OR LBUFF[IPTR+1] /= EOS
+@B10.2
+if (CMPTYPE != 0 || memcmp(&LBUFF[IPTR+1], &EOS, sizeof(ITYPE)) != 0)
 @B11.1
 END::7.1.1.3
+@B11.2
+}//7.1.1.3
 @B12.1
 MONITOR(6);
+@B12.2
+MONITOR(6);
 @B13.1
+MONITOR(10);
+@B13.2
 MONITOR(10);
 @B20.1
 K OF PLIST[MTLN] => I;
 IF U = 9
+@B20.2
+I = PLIST[MTLN].K;
+if (U==9)
 @B14.1
 IF I /= KPROC
 AND I /= KPSPEC
+@B14.2
+if (I != KPROC && I != KPSPEC)
 @B15.1
 ::OPERAND KIND SET
 ::IN MSL07.1.1 BOX 17
 MTLN => AR[AP];
+@B15.2
+//OPERAND KIND SET
+//IN MSL07.1.1 BOX 17
+AR[AP] = MTLN;
 @B21.1
 IF I /= KVAR /= KFIELD
 OR T OF PLIST[MTLN] => I
 & %C000 /= %8000
+@B21.2
+if ((I != KVAR && I != KFIELD) || ((I = PLIST[MTLN].T) && 0xC000) != 0x8000)
 @B22.1
 MTLN => AR[AP];
 I & %3FFF => MTLN;
+@B22.2
+AR[AP] = MTLN;
+MTLN = I & 0x3FFF;
 @B17.1
+MONITOR(10);
+@B17.2
 MONITOR(10);
 @BOX 19.1
 %170 !> COMP.KIND;
+@BOX 19.2
+COMPKIND |= 0x170;
 @END
 @TITLE MSL07.1.1.3.1(1,8)
 @COL 1S-2T-3R-4R-6T-7T-8R
@@ -2295,27 +2333,53 @@ END
 @B1.1
 BEGIN
 ::PREPROCESS ACTUAL PARAMETERS
+@B1.2
+BEGIN
+//PREPROCESS ACTUAL PARAMETERS
 @B2.1
 1 => I;
 $IF N = 0
+@B2.2
+I = 1;
+if (N == 0)
 @B3.1
 PARAMS[F+I]=>J;
 IF J & %8000 /= 0 THEN
 TADPROC => J FI
+@B3.2
+J = PARAMS[F+I];
+if ((J & 0x8000) != 0)
+{
+  J = TADPROC;
+}
 @B4.1
 PREPROCESS.COMP(J);
+@B4.2
+PREPROCESSCOMP(J);
 @B6.1
 IF 1 +> I > N
+@B6.2
+if (++I > N)
 @B7.1
 $IF LBUFF[IPTR] = COMMA
+@B7.2
+if (memcmp(&LBUFF[IPTR], &COMMA, sizeof(ITYPE)) == 0))
 @B8.1
+MONITOR(11);
+@B8.2
 MONITOR(11);
 @B9.1
 1 +> IPTR;
+@B9.2
+IPTR++;
 @B10.1
 IF LBUFF[IPTR] /= RB
+@B10.2
+if (memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0))
 @B11.1
 END::7.1.1.3.1
+@B11.2
+}//7.1.1.3.1
 @END
 @TITLE MSL07.1.1.4(1,6)
 @COL 1S-2R-3T-4R-5T-6R-7T-8T-9R-10F
@@ -2366,28 +2430,54 @@ FAULT 3
 @B1.1
 BEGIN
 ::PREPROCESS CONDITIONAL COMPUTATION
+@B1.2
+{
+//PREPROCESS CONDITIONAL COMPUTATION
 @B2.1
 1 +> IPTR;
 PREPROCESS.COND();
+@B2.2
+IPTR++;
+PREPROCESSCOND();
 @B3.1
 IF LBUFF[IPTR] /= DTHEN
+@B3.2
+if (memcmp(&LBUFF[IPTR], &DTHEN, sizeof(ITYPE)) != 0))
 @B4.1
 PREPROCESS.COMP(0) => OPD.TYPE;
+@B4.2
+OPDTYPE = PREPROCESSCOMP(0);
 @B5.1
 IF LBUFF[IPTR] /= DELSE
+@B5.1
+if (memcmp(&LBUFF[IPTR], &DELSE, sizeof(ITYPE)) != 0))
 @B6.1
 PREPROCESS.COMP(0) => J;
+@B6.2
+J = PREPROCESSCOMP(0);
 @B7.1
 IF LBUFF[IPTR] /= RB
+@B7.2
+if (memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0))
 @B8.1
 IF OPD.TYPE /= J
+@B8.2
+if (OPDTYPE != J)
 @B9.1
 6 => AR[OK.AP];
+@B9.2
+AR[OKAP] = 6;
 @B10.1
 END::7.1.1.4
+@B10.2
+}//7.1.1.4
 @B11.1
 MONITOR(0);
+@B11.2
+MONITOR(0);
 @B12.1
+MONITOR(3);
+@B12.2
 MONITOR(3);
 @END
 @TITLE MSL07.1.1.5(1,6)
@@ -2416,15 +2506,28 @@ FAULT 0
 @B1.1
 BEGIN
 ::PREPROCESS SUBEXPRESSION
+@B1.2
+{
+//PREPROCESS SUBEXPRESSION
 @B2.1
 PREPROCESS.COMP(0) => OPD.TYPE;
+@B2.2
+OPDTYPE = PREPROCESS.COMP(0);
 @B3.1
 IF LBUFF[IPTR] /= RB
+@B3.2
+if (memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0))
 @B4.1
 5 => AR[OK.AP]
+@B4.2
+AR[OKAP] = 5;
 @B5.1
 END::7.1.1.5
+@B5.2
+}//7.1.1.5
 @B6.1
+MONITOR(0);
+@B6.2
 MONITOR(0);
 @END
 @TITLE MSL07.1.1.6(1,6)
@@ -2465,6 +2568,9 @@ FAULT 0
 @B1.1
 BEGIN
 ::PREPROCESS BUILT IN FUNCTION
+@B1.1
+{
+//PREPROCESS BUILT IN FUNCTION
 @BOX9.1
 $DA BIF.START($LO8)
 0 2 6 9 13 15 16 19
@@ -2482,24 +2588,58 @@ END
 $DA BIF.REG.USE($LO8)
 %60 %50 %20 %70 %60 0 %60 %60
 END
+@BOX9.2
+uint8 BIFSTART[] = { 0, 2, 6, 9, 13, 15, 16, 19 };
+uint8 BIFACTIONS[] =
+{
+9, 0,         //BYTE
+2, 10, 7, 0,  //MAKE
+6, 8, 1,      //POSN
+3, 5, 5, 0,   //PART
+4, 0,         //SIZE
+1,            //LLST
+2, 5, 1,      //LPST
+12, 13, 0     //LENT
+};
+uint8 BIFREGUSE[] = { 0x60, 0x50, 0x20, 0x70, 0x60, 0, 0x60, 0x60 },
 @B2.1
 I - IBYTE => AR[AP] => U;
 1 +> AP;
+@B2.2
+AR[AP] = I - IBYTE;
+U = AR[AP];
+AP++;
 @BOX8.1
 BIF.REG.USE[U] !> COMP.KIND;
+@BOX8.2
+COMPKIND |= BIFREGUSE[U];
 @B3.1
 IF LBUFF[1+>IPTR+1] /= LB
+@B3.2
+if (memcmp(&LBUFF[++IPTR+1], &LB, sizeof(ITYPE)) != 0))
 @B4.1
 1 +> IPTR;
 #MSL07.1.1.6.1
 ->AROUND;
 #MSL07.1.1.6.2
 AROUND:
+@B4.2
+IPTR++;
+#MSL07.1.1.6.1
+goto AROUND;
+#MSL07.1.1.6.2
+AROUND:
 @B5.1
 7 => AR[OK.AP];
+@B5.2
+AR[OKAP] = 7;
 @B6.1
 END::7.1.1.6
+@B6.2
+}//7.1.1.6
 @B7.1
+MONITOR(0);
+@B7.2
 MONITOR(0);
 @END
 @TITLE MSL07.1.1.6.1(1,6)
@@ -2617,78 +2757,169 @@ NEXT
 ACTION
 @B1.1
 ::PREPROCESS FUNCTION PARAMETERS
+@B1.2
+//PREPROCESS FUNCTION PARAMETERS
 @B2.1
 BIF.START[U] => I;
+@B2.2
+I = BIFSTART[U];
 @B3.1
 SWITCH BIF.ACTIONS[I] => N
 \ A0,A1,A2,A3,A4,A5,A6,
 A7,A8,A9,A10,A11,A12,A13;
+@B3.2
+N = BIFACTIONS[I];
+switch (N)
+{
+case 0: goto A0;
+case 1: goto A1;
+case 2: goto A2;
+case 3: goto A3;
+case 4: goto A4;
+case 5: goto A5;
+case 6: goto A6;
+case 7: goto A7;
+case 8: goto A8;
+case 9: goto A9;
+case 10: goto A10;
+case 11: goto A11;
+case 12: goto A12;
+case 13: goto A13;
+}
 @B4.1
+A0:
+@B4.2
 A0:
 @B5.1
 IF LBUFF[IPTR] /= RB
+@B5.2
+if (memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0))
 @B6.1
 ::END 7.1.1.6.1
+@B6.2
+//END 7.1.1.6.1
 @B7.1
 A3:
 AP => F + 2 => AP;
+@B7.2
+A3:
+F = AP;
+AP = F + 2;
 @B8.1
 PREPROCESS.COMP(0) => RTYPE;
+@B8.1
+RTYPE = PREPROCESSCOMP(0);
 @B9.1
 IF RTYPE > %4000
 OR RTYPE & 3 /= 3
+@B9.2
+if (RTYPE > 0x4000 || (RTYPE & 3) != 3)
 @B10.1
 IF N = 4
+@B10.2
+if (N==4)
 @B11.1
 RTYPE => OPD.TYPE
+@B11.2
+OPDTYPE = RTYPE;
 @B12.1
 -> NEXT.ACTION;
+@B12.2
+goto NEXTACTION;
 @B20.1
+MONITOR(0);
+@B20.2
 MONITOR(0);
 @B21.1
 MONITOR(3);
+@B21.2
+MONITOR(3);
 @B23.1
 NEXT.ACTION:
+@B23.2
+NEXTACTION:
 @B24.1
 IF LBUFF[IPTR] /= COMMA /= RB
+@B24.2
+IF (memcmp(&LBUFF[IPTR], &COMMA, sizeof(ITYPE)) != 0 && memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0)
 @B25.1
 1 +> I;
+@B25.2
+I++;
 @B26.1
+A1:
+@B26.2
 A1:
 @B27.1
 0 => OPD.TYPE;
+@B27.2
+OPDTYPE = 0;
 @B28.1
 IF U = 5 THEN
 1 +> IPTR FI
 IF SINGLE.OPD /= 0
 AND LBUFF[IPTR+1] = EOS
+@B28.2
+if (U == 5)
+{
+  IPTR++;
+}
+if (SINGLEOPD != 0 && memcmp(&LBUFF[IPTR], &EOS, sizeof(ITYPE)) == 0)
 @B29.1
+MONITOR(10);
+@B29.2
 MONITOR(10);
 @B30.1
 A4:
+@B30.2
+A4:
 @B31.1
 TINT => OPD.TYPE;
+@B31.2
+OPDTYPE = TINT;
 @B36.1
+A2:
+@B36.2
 A2:
 @B37.1
 COMP.TYPE() => AR[AP] => RTYPE
 ! 3 => OPD.TYPE;
 1 +> AP;
+@B37.2
+AR[AP] = COMPTYPE();
+RTYPE = AR[AP];
+OPDTYPE = RTYPE | 3;
+AP++;
 @B38.1
 IF U /= 6 AND
 RTYPE & 3 /= 0
+@B38.2
+if (U != 6 && (RTYPE & 3) != 0)
 @B34.1
 IF LBUFF[IPTR+1] /= COMMA
+@B34.2
+if (memcmp(&LBUFF[IPTR+1], &COMMA, sizeof(ITYPE)) != 0)
 @B39.1
 1 +> IPTR;
 -> NEXT.ACTION;
+@B39.2
+IPTR++;
+goto NEXT.ACTION;
 @B40.1
+A5:
+@B40.2
 A5:
 @B50.1
 IF U = 3 THEN
 AP => AR[F];
 1 +> F;
 FI
+@B50.2
+if (U==3)
+{
+  AR[F] = AP;
+  F++;
+}
 @B41.1
 AP => N;
 IF U /= 6 THEN
@@ -2696,8 +2927,26 @@ TINT => J ELSE 0 => J FI
 PREPROCESS.COMP(J) => RTYPE;
 IF U = 6 THEN
 %100 !> AR[N] FI
+@B41.2
+N = AP;
+if (U != 6)
+{
+  J = TINT;
+}
+else
+{
+  J = 0;
+}
+ 
+RTYPE = PREPROCESSCOMP(J);
+if (U == 6)
+{
+  AR[N] |= 0x100;
+}
 @B43.1
 -> NEXT.ACTION;
+@B43.2
+goto NEXT.ACTION;
 @END
 @TITLE MSL07.1.1.6.2(1,8)
 @COL 21N-24R-6T-22R-7T-23R-8R-9C
