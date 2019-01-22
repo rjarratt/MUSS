@@ -1010,7 +1010,7 @@ if (memcmp(&LBUFF[IPTR+1], &MINUS, sizeof(ITYPE)) != 0 || SINGLEOPD == 0)
 IF TAG OF LBUFF[1+>IPTR+1] /= TCONST
 OR ST OF LBUFF[IPTR+1] ->> 6 = 1
 @B7.2
-if (LBUFF[++IPTR+1].TAG != TCONST) || (LBUFF[IPTR+1].ST >> 6) == 1)
+if (LBUFF[++IPTR+1].TAG != TCONST || (LBUFF[IPTR+1].ST >> 6) == 1)
 @B8.1
 2 => AR[OK.AP]
 @B8.2
@@ -1150,8 +1150,8 @@ IF OPD.TYPE & %C0 = TRE0 THEN
 TRE => OPD.TYPE FI
 @BOX 2.2
 OPDTYPE = LBUFF[++IPTR].ST;
- R[OK.AP] |= OPDTYPE << 4;
-if ((OPDTYPE & 0xC0 == TRE0)
+AR[OKAP] |= OPDTYPE << 4;
+if ((OPDTYPE & 0xC0) == TRE0)
 {
   OPDTYPE = TRE;
 }
@@ -2210,7 +2210,7 @@ AR[AP] = MTLN;
 T OF PLIST[MTLN] => RTYPE;
 PARAMS[DETAIL OF PLIST[MTLN] => F] => N;
 @B6.2
-RTYPE = T OF PLIST[MTLN];
+RTYPE = PLIST[MTLN].T;
 F = PLIST[MTLN].DETAIL;
 N = PARAMS[F];
 @B18.1
@@ -2363,7 +2363,7 @@ if (++I > N)
 @B7.1
 $IF LBUFF[IPTR] = COMMA
 @B7.2
-if (memcmp(&LBUFF[IPTR], &COMMA, sizeof(ITYPE)) == 0))
+if (memcmp(&LBUFF[IPTR], &COMMA, sizeof(ITYPE)) == 0)
 @B8.1
 MONITOR(11);
 @B8.2
@@ -2375,7 +2375,7 @@ IPTR++;
 @B10.1
 IF LBUFF[IPTR] /= RB
 @B10.2
-if (memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0))
+if (memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0)
 @B11.1
 END::7.1.1.3.1
 @B11.2
@@ -2442,7 +2442,7 @@ PREPROCESSCOND();
 @B3.1
 IF LBUFF[IPTR] /= DTHEN
 @B3.2
-if (memcmp(&LBUFF[IPTR], &DTHEN, sizeof(ITYPE)) != 0))
+if (memcmp(&LBUFF[IPTR], &DTHEN, sizeof(ITYPE)) != 0)
 @B4.1
 PREPROCESS.COMP(0) => OPD.TYPE;
 @B4.2
@@ -2450,7 +2450,7 @@ OPDTYPE = PREPROCESSCOMP(0);
 @B5.1
 IF LBUFF[IPTR] /= DELSE
 @B5.1
-if (memcmp(&LBUFF[IPTR], &DELSE, sizeof(ITYPE)) != 0))
+if (memcmp(&LBUFF[IPTR], &DELSE, sizeof(ITYPE)) != 0)
 @B6.1
 PREPROCESS.COMP(0) => J;
 @B6.2
@@ -2458,7 +2458,7 @@ J = PREPROCESSCOMP(0);
 @B7.1
 IF LBUFF[IPTR] /= RB
 @B7.2
-if (memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0))
+if (memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0)
 @B8.1
 IF OPD.TYPE /= J
 @B8.2
@@ -2512,11 +2512,11 @@ BEGIN
 @B2.1
 PREPROCESS.COMP(0) => OPD.TYPE;
 @B2.2
-OPDTYPE = PREPROCESS.COMP(0);
+OPDTYPE = PREPROCESSCOMP(0);
 @B3.1
 IF LBUFF[IPTR] /= RB
 @B3.2
-if (memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0))
+if (memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0)
 @B4.1
 5 => AR[OK.AP]
 @B4.2
@@ -2616,7 +2616,7 @@ COMPKIND |= BIFREGUSE[U];
 @B3.1
 IF LBUFF[1+>IPTR+1] /= LB
 @B3.2
-if (memcmp(&LBUFF[++IPTR+1], &LB, sizeof(ITYPE)) != 0))
+if (memcmp(&LBUFF[++IPTR+1], &LB, sizeof(ITYPE)) != 0)
 @B4.1
 1 +> IPTR;
 #MSL07.1.1.6.1
@@ -2793,7 +2793,7 @@ A0:
 @B5.1
 IF LBUFF[IPTR] /= RB
 @B5.2
-if (memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0))
+if (memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0)
 @B6.1
 ::END 7.1.1.6.1
 @B6.2
@@ -2841,7 +2841,7 @@ NEXTACTION:
 @B24.1
 IF LBUFF[IPTR] /= COMMA /= RB
 @B24.2
-IF (memcmp(&LBUFF[IPTR], &COMMA, sizeof(ITYPE)) != 0 && memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0)
+if (memcmp(&LBUFF[IPTR], &COMMA, sizeof(ITYPE)) != 0 && memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0)
 @B25.1
 1 +> I;
 @B25.2
@@ -2904,7 +2904,7 @@ if (memcmp(&LBUFF[IPTR+1], &COMMA, sizeof(ITYPE)) != 0)
 -> NEXT.ACTION;
 @B39.2
 IPTR++;
-goto NEXT.ACTION;
+goto NEXTACTION;
 @B40.1
 A5:
 @B40.2
@@ -2946,7 +2946,7 @@ if (U == 6)
 @B43.1
 -> NEXT.ACTION;
 @B43.2
-goto NEXT.ACTION;
+goto NEXTACTION;
 @END
 @TITLE MSL07.1.1.6.2(1,8)
 @COL 21N-24R-6T-22R-7T-23R-8R-9C
@@ -3122,7 +3122,7 @@ IF LBUFF[2 +> IPTR]
 /= COMMA /= RB
 @B20.2
 IPTR += 2;
-if (LBUFF[IPTR] != COMMA && LBUFF[IPTR] != RB)
+if (memcmp(&LBUFF[IPTR], &COMMA, sizeof(ITYPE)) != 0 && memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0)
 @B18.1
 MTLN => AR[AP];
 1 +> AP;
@@ -3172,7 +3172,7 @@ MONITOR(3);
 @B33.1
 IF LBUFF[IPTR] /= RB
 @B33.2
-if (LBUFF[IPTR] != RB)
+if (memcmp(&LBUFF[IPTR], &RB, sizeof(ITYPE)) != 0)
 @B34.1
 0 => MTLN;
 @B34.2
@@ -6732,7 +6732,7 @@ DREG => REG.FROM.TYPE;
 result = DREG;
 @BOX 9.1
 AREG => REG.FROM.TYPE;
-@BOX 9.A
+@BOX 9.2
 result = AREG;
 @BOX 10.1
 VEC => REG.FROM.TYPE;
