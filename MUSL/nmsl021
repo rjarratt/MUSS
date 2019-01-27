@@ -188,6 +188,23 @@ unsigned char XNAME[64];
 #define ISTORE 61
 #define ICOMP 71
 
+// FROM NMSL051
+#define KPSPEC 1
+#define KPROC 3
+#define KVAR 4
+#define KFIELD 5
+#define KTYPE 6
+#define KLIT 7
+#define KSPACE 8
+#define KTREF 9
+#define KEX 10
+#define KDVEC 11
+#define KDUMMY 0
+#define KLAB 14
+#define KLABREF 15
+#define KGLAB 13
+#define KIMPLAB 16
+
 @BOX 2.1
 *END
 @BOX 2.2
