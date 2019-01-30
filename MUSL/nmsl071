@@ -432,7 +432,13 @@ const int BREG=1;
 const int ABD=7;
 const int BD=5;
 //$LI/ITYPE DAND= 0\0\%2B, DOR= 0\0\%2C;
-//$LI B.REQD = -1,AOPD=%3000,BOPD=%2000,STK.SEL=%1005,UNSTK=%1003,DIND=%1004,CLIT=0;
+const int BREQD = -1;
+const int AOPD=0x3000;
+const int BOPD=0x2000;
+const int STKSEL=0x1005;
+const int UNSTK=0x1003;
+const int DIND=0x1004;
+const int CLIT=0;
 //PDP *CODE 2
 //*GLOBAL 1;
 uint8 REVOP[] = {51, 52, 56, 54, 57, 53, 55, 58, 59, 60};
@@ -4550,7 +4556,7 @@ if  (REG == BREG)
 @BOX10.1
 REG !> REGS.IU;
 @BOX10.2
-REGSI |= REG;
+REGSIU |= REG;
 @BOX11.1
 ->REVERSE.OP;
 @BOX11.2
@@ -5981,6 +5987,7 @@ if (LABAFTER != NEXTLAB)
 @B7.1
 $EN
 @B7.2
+;
 }
 @B8.1
 IF I + 1 /= N
@@ -6772,6 +6779,7 @@ result = VEC;
 @BOX 12.1
 $EN
 @BOX 12.2
+;
 }
 @END
 @TITLE MSL07.10(1,11)
@@ -6863,6 +6871,7 @@ $PR CHECK.TYPE(OP,OLD,NEW);
 @BOX1.2
 int CHECKTYPE(int OP, int OLD, int NEW)
 {
+int result;
 @BOX2.1
 ::DECL & INIT
 @BOX2.2
@@ -6911,6 +6920,7 @@ result = NEW;
 @BOX11.1
 END
 @BOX11.2
+;
 }
 @BOX12.1
 IF NEW <256 AND NEW & %C3 = TINT0
