@@ -209,6 +209,7 @@ unsigned char XNAME[64];
 *END
 @BOX 2.2
 // LIBSPECS FROM OTHER MODULES
+extern void RESTART(void);
 extern void CAPTION(char *);
 extern int INCH(void);
 extern void OUTCH(int);

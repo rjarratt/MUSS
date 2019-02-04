@@ -6,3 +6,4 @@
 ..\Flocoder\x64\debug\flip nmsl061 ..\..\nmsl\nmsl\nmsl061.c 2
 ..\Flocoder\x64\debug\flip nmsl071 ..\..\nmsl\nmsl\nmsl071.c 2
 ..\Flocoder\x64\debug\flip nmsl081 ..\..\nmsl\nmsl\nmsl081.c 2
+..\Flocoder\x64\debug\flip nmsl091 ..\..\nmsl\nmsl\nmsl091.c 2
