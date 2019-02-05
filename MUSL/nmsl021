@@ -84,7 +84,6 @@ PLIST.ENT[PLISTZ] PLIST;
 $LO8[CHLISTZ] CHLIST;
 $LO8[64] XNAME;
 @BOX 1.2
-#if !defined(NMSL021)
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 typedef unsigned char      uint8;
 typedef short              int16;
@@ -273,8 +272,5 @@ void EXPN(uint16);
 extern int CONSTK[CONSTKZ];
 extern int CONPTR;
 extern ITYPE LBUFF[LBUFFZ];
-
-#define NMSL021
-#endif
 @END
 

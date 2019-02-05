@@ -224,7 +224,127 @@ $LI/ADDR[$LO8] NIL=;
 @BOX 1.2
 #include <stdio.h>
 #include <string.h>
-#include "nmsl021.h"
+
+typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
+typedef unsigned char      uint8;
+typedef short              int16;
+typedef unsigned short     uint16;
+typedef int                int32;
+typedef unsigned int       uint32;
+typedef long long          t_int64;
+typedef unsigned int       uint32;
+typedef unsigned long long t_uint64;
+
+#define LBUFFZ 125
+#define CLISTZ 125
+#define PLISTZ 320
+#define PARAMSZ 270
+#define TLISTZ 250
+#define NLISTZ 340
+#define CHLISTZ 4100
+#define SDLIST 87
+extern ITYPE DIF;
+extern ITYPE DTHEN;
+extern ITYPE DELSE;
+extern ITYPE DDO;
+extern ITYPE DVSTORE;
+extern ITYPE DTY;
+extern ITYPE DEND;
+extern ITYPE DDATAVEC;
+extern ITYPE DADDR;
+extern ITYPE DLA;
+extern ITYPE DFROM;
+extern ITYPE DOF;
+extern ITYPE DIS;
+extern ITYPE DAND;
+extern ITYPE DOR;
+extern ITYPE LTHAN;
+extern ITYPE EQUALS;
+extern ITYPE GTHAN;
+extern ITYPE PLUS;
+extern ITYPE MINUS;
+extern ITYPE SLASH;
+extern ITYPE GOTO;
+extern ITYPE DAMPAND;
+extern ITYPE DBANG;
+extern ITYPE DEREF;
+extern ITYPE HASH;
+extern ITYPE REF;
+extern ITYPE COMMA;
+extern ITYPE LSB;
+extern ITYPE RSB;
+extern ITYPE LB;
+extern ITYPE RB;
+extern ITYPE BSLASH;
+extern ITYPE XCOLON;
+extern ITYPE COLON;
+extern ITYPE UMINUS;
+extern ITYPE EOS;
+extern ITYPE LSHIFT;
+extern ITYPE ASTERISK;
+extern ITYPE EOL;
+extern ITYPE DIMPORT;
+#define KLAB 14
+#define KLABREF 15
+#define KVAR 4
+#define KDUMMY 0
+#define KGLAB 13
+#define KIMPLAB 16
+#define KTREF 9
+#define KTYPE 6
+#define NIL NULL
+#define TADPROC 0x24
+#define CONSTKZ 500
+typedef struct { unsigned short MUTLN,MUSLN,HASH;} NLISTENT;
+typedef struct { unsigned short INTID,PREVN,K,T; int32 DETAIL; } PLISTENT;
+extern NLISTENT NLIST[NLISTZ];
+extern PLISTENT PLIST[PLISTZ];
+extern unsigned char CHLIST[CHLISTZ];
+extern unsigned char XNAME[64];
+
+#define MAXKEYWORD 45
+#define TINT0 0x40
+#define TLO8 0x80
+#define TLO0 0x80
+#define TLO1 0x20
+#define STRINGTYPE 0x83
+#define TINT16 0x44
+#define TINT32 0x4C
+#define TINT64 0x5C
+#define TLO32 0x8C
+#define TRE0 0x00
+#define TLAB 0x30
+
+#define KEYWORD 44
+#define TDELIM 0
+#define TNAME 1
+#define TSTRING 2
+#define TCONST 3
+
+#define IEOS 0
+#define IBYTE 29
+#define IMINCOMP 46
+#define ILOAD 51
+#define ISTORE 61
+#define ICOMP 71
+
+// FROM NMSL051
+#define KPSPEC 1
+#define KPROC 3
+#define KVAR 4
+#define KFIELD 5
+#define KTYPE 6
+#define KLIT 7
+#define KSPACE 8
+#define KTREF 9
+#define KEX 10
+#define KDVEC 11
+#define KDUMMY 0
+#define KLAB 14
+#define KLABREF 15
+#define KGLAB 13
+#define KIMPLAB 16
+
 void LIB(FILE *,int);
 void TL(int,FILE *,int);
 void TLMODULE();
