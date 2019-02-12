@@ -62,15 +62,41 @@ TL.PROC,TL.PROC.KIND,TL.END.PROC,TL.BLOCK,TL.END.BLOCK,TL.ENTRY,
 TL.LABEL.SPEC ,TL.LABEL,TL.PL,
 TL.D.TYPE,TL.INSERT,TL.CHECK,TL.REG,TL.LINE,TL.PRINT,TL,TL.END,
 TL.MODULE,TL.END.MODULE,TL.MODE);
+@BOX 1.2
+#include <stdio.h>
+#include <memory.h>
+#include <string.h>
+
+typedef unsigned char      uint8;
+typedef short              int16;
+typedef unsigned short     uint16;
+typedef int                int32;
+typedef unsigned int       uint32;
+typedef long long          t_int64;
+typedef unsigned int       uint32;
+typedef unsigned long long t_uint64;
+
+extern void OUTBINB(int);
+extern void SELECTOUTPUT(int);
+int MUTLSTR;
+extern int32 IPOS(void);
 @BOX 2.1
 ::PDP *CODE 1;
+#MSL10.1
+#MSL10.1/1
+@BOX 2.2
+//PDP *CODE 1;
 #MSL10.1
 #MSL10.1/1
 @BOX 3.1
 #MSL10.2
 #MSL10.3
+@BOX 3.2
+#MSL10.2
+#MSL10.3
 @BOX 4.1
 *END
+@BOX 4.2
 @END
 @TITLE MSL10.1(1,9)
 @COL 1S-2R-3R-4R-5R-6R-7R-8F
@@ -92,15 +118,26 @@ LABEL SECTION
 END
 @BOX 1.1
 ::PSPECS FOR MUTL
+@BOX 1.2
+//PSPECS FOR MUTL
 @BOX 2.1
 PSPEC TL.TYPE(ADDR[$LO8],$IN);
 PSPEC TL.TYPE.COMP($IN,ADDR,ADDR[$LO8]);
 PSPEC TL.END.TYPE($IN);
+@BOX 2.2
+void TLTYPE(char *,int);
+void TLTYPECOMP(int,void *,char *);
+void TLENDTYPE(int);
 @BOX 3.1
 PSPEC TL.SEG($IN,ADDR,$LO32,ADDR,$IN);
 PSPEC TL.LOAD($IN,$IN);
 PSPEC TL.CODE.AREA($IN);
 PSPEC TL.DATA.AREA($IN);
+@BOX 3.2
+void TLSEG(int,void *,uint32,void *,int);
+void TLLOAD(int,int);
+void TLCODEAREA(int);
+void TLDATAAREA(int);
 @BOX 4.1
 PSPEC TL.SPACE(ADDR);
 PSPEC TL.S.DECL(ADDR[$LO8],$IN,ADDR);
@@ -111,6 +148,16 @@ PSPEC TL.SELECT.FIELD($IN,$IN,$IN);
 PSPEC TL.ASS($IN,$IN);
 PSPEC TL.ASS.VALUE($IN,$IN);
 PSPEC TL.ASS.END();
+@BOX 42
+void TLSPACE(void *);
+void TLSDECL(char *,int,void *);
+void TLVDECL(char *,$LO32,int,int,int,void *);
+void TLMAKE(int,int,void *);
+void TLSELECTVAR();
+void TLSELECTFIELD(int,int,int);
+void TLASS(int,int);
+void TLASSVALUE(int,int);
+void TLASSEND();
 @BOX 5.1
 PSPEC TL.C.LIT.16($IN,$IN16);
 PSPEC TL.C.LIT.32 ($IN,$IN32);
@@ -119,6 +166,14 @@ PSPEC TL.C.NULL($IN);
 PSPEC TL.C.LIT.S($IN,$AD [$LO8]);
 PSPEC TL.C.LIT.128($IN,$RE128);
 PSPEC TL.LIT(ADDR[$LO8],$IN);
+@BOX 5.2
+void TLCLIT16(int,int16);
+void TLCLIT32 (int,int32);
+void TLCLIT64(int,uint64);
+void TLCNULL(int);
+void TLCLITS(int,char *);
+void TLCLIT128(int,double);
+void TLLIT(char *,int);
 @BOX 6.1
 PSPEC TL.PROC.SPEC(ADDR[$LO8],$IN);
 PSPEC TL.PROC.PARAM($IN,ADDR);
@@ -129,9 +184,22 @@ PSPEC TL.END.PROC();
 PSPEC TL.BLOCK();
 PSPEC TL.END.BLOCK();
 PSPEC TL.ENTRY($IN);
+@BOX 6.2
+void TLPROCSPEC(char *,int);
+void TLPROCPARAM(int,void *);
+void TLPROCRESULT(int);
+void TLPROC(int);
+void TLPROCKIND(int);
+void TLENDPROC(void);
+void TLBLOCK(void);
+void TLENDBLOCK(void);
+void TLENTRY(int);
 @BOX 7.1
 PSPEC TL.LABEL.SPEC (ADDR[$LO8],$IN);
 PSPEC TL.LABEL($IN);
+@BOX 7.2
+void TLLABELSPEC (char *,int);
+void TLLABEL(int);
 @END
 @TITLE MSL10.1/1(1,6)
 @COL 1S-2R-3R-4R-5F
@@ -146,21 +214,37 @@ INITIALISATION SECTION
 @BOX 5.0
 END
 @BOX 1.1
+@BOX 1.2
 @BOX 2.1
 PSPEC TL.PL($IN,$IN);
 PSPEC TL.D.TYPE($IN,$IN);
 PSPEC TL.INSERT($IN);
 PSPEC TL.CHECK($IN);
 PSPEC TL.REG($IN);
+@BOX 2.2
+void TLPL(int,int);
+void TLDTYPE(int,int);
+void TLINSERT(int);
+void TLCHECK(int);
+void TLREG(int);
 @BOX 3.1
 PSPEC TL.LINE($IN32)/$IN;
 PSPEC TL.PRINT($IN);
+@BOX 3.2
+int TLLINE(int32);
+void TLPRINT(int);
 @BOX 4.1
 PSPEC TL($IN,ADDR[$LO8], $IN);
 PSPEC TL.END();
 PSPEC TL.MODULE();
 PSPEC TL.END.MODULE($IN);
 PSPEC TL.MODE($IN,$IN);
+@BOX 4.2
+void TL(int,char *, int);
+void TLEND();
+void TLMODULE();
+void TLENDMODULE(int);
+void TLMODE(int,int);
 @END
 @TITLE MSL10.2(1,6)
 @COL 1S-2R-3R-4R-8R
@@ -189,6 +273,15 @@ PSPEC MUBLUV($IN32);
 PSPEC MUBLIV($IN32);
 PSPEC MUBLS(ADDR[$LO8]);
 PSPEC MUBLCODE($IN);
+@BOX 1.2
+
+void MUBLU16(uint16);
+void MUBLU64(uint64);
+void MUBLV(uint32,int);
+void MUBLUV(int32);
+void MUBLIV(int32);
+void MUBLS(char *);
+void MUBLCODE(int);
 @BOX 2.1
 PROC MUBLCODE(CODE);
 SELECTOUTPUT(MUTL.STR);
@@ -198,7 +291,18 @@ PROC MUBLU16(HEX);
    OUT.BIN.B(HEX ->>8 & %FF);
    OUT.BIN.B(HEX & %FF );
 
-END;
+}
+@BOX 2.2
+void MUBLCODE(int CODE)
+{
+  SELECTOUTPUT(MUTLSTR);
+  OUTBINB(CODE);
+}
+void MUBLU16(uint16 HEX)
+{
+   OUTBINB((HEX>>8) & 0xFF);
+   OUTBINB(HEX & 0xFF );
+}
 @BOX 3.1
 PROC MUBLU64(HEX);
    $IN T;
@@ -212,6 +316,20 @@ PROC MUBLU64(HEX);
    HEX&%FFFF => T;
    MUBLU16(T);
 END;
+@BOX 3.2
+void MUBLU64(uint64 HEX)
+{
+   int T;
+   MUBLU16(0xFF80);
+   T = (HEX >>48) & 0xFFFF;
+   MUBLU16(T);
+   T = (HEX>>32) & 0xFFFF;
+   MUBLU16(T);
+   T = (HEX>>16) & 0xFFFF;
+   MUBLU16(T);
+   T = (HEX & 0xFFFF);
+   MUBLU16(T);
+}
 @BOX 4.1
 PROC MUBLV(N,I);
  ALTERNATIVE I FROM
@@ -587,4 +705,3 @@ PROC TL.MODE(I,J);
       MUBLCODE(%30); MUBLU16(I);MUBLUV(J);;
 END;
 @END
-
