@@ -350,6 +350,42 @@ PROC MUBLV(N,I);
    END
   END;
 END;
+@BOX 4.2
+void MUBLV(uint32 N,int I)
+{
+switch (I)
+{
+  case 0:
+  {
+      OUTBINB(N);
+	  break;
+  }
+  case 1:
+  {
+      MUBLU16(N | 0x8000);
+	  break;
+  }
+  case 2:
+  {
+      OUTBINB((N >> 16) | 0xC0);
+      MUBLU16(N & 0xFFFF);
+	  break;
+  }
+  case 3:
+  {
+      MUBLU16((N >> 16) | 0xE000);
+      MUBLU16(N & 0xFFFF);
+	  break;
+  }
+  case 4:
+  {
+      OUTBINB(0xF0);
+      MUBLU16(N >> 16 );
+      MUBLU16(N & 0xFFFF);
+	  break;
+  }
+}
+}
 @BOX 5.1
 PROC MUBLUV(N);
  $IN T;
@@ -372,6 +408,41 @@ PROC MUBLUV(N);
    FI;
    MUBLV(N,T);
 END;
+@BOX 5.2
+void MUBLUV(int32 N)
+{
+    int T;
+    if ((N & 0xFFFFFF80) == 0)
+    {
+        T = 0;
+    }
+    else
+    {
+        if ((N & 0xFFFFC000) == 0)
+        {
+            T = 1;
+        }
+        else
+        {
+            if ((N & 0xFFE00000) == 0)
+            {
+                T = 2;
+            }
+            else
+            {
+                if ((N & 0xF0000000) == 0)
+                {
+                    T = 3;
+                }
+                else
+                {
+                    T = 4;
+                }
+            }
+        }
+    }
+   MUBLV(N,T);
+}
 @BOX 7.1
 PROC MUBLIV(N);
 $IN T;
@@ -399,6 +470,46 @@ FI
 FI
 MUBLV(N,T);
 END;
+@BOX 7.2
+void MUBLIV(int32 N)
+{
+  int T;
+  int32 J;
+  if (( J =  N & 0xFFFFFC0) == 0 || (J == 0xFFFFFFC0))
+  {
+    T = 0;
+    N =  N & 0x7F;
+  }
+  else
+   {
+     if ((J = N & 0xFFFFE000) == 0 || J == 0xFFFFE000)
+     {
+	   T = 1;
+       N = N & 0x3FFF;
+     }
+     else
+      {
+        if ((J = N & 0xFFF00000) == 0 || J == 0xFFF00000)
+        {
+	      T = 2;
+          N = N & 0x1FFFFF;
+	    }
+        else 
+	    {
+	      if ((J = N & 0xF8000000) == 0 || J == 0xF8000000)
+          {
+	        T = 3;
+            N = N & 0xFFFFFF;
+	      }
+          else
+          {
+	        T = 4;
+	      }
+        }
+      }
+  }
+  MUBLV(N,T);
+}
 @BOX 8.1
 PROC MUBLS(STR);
 $IN TEMP,I;
@@ -410,6 +521,18 @@ SIZE(STR) => TEMP;
    OD
 
 END;
+@BOX 8.2
+void MUBLS(char *STR)
+{
+int TEMP,I;
+TEMP = strlen(STR);
+   OUTBINB(TEMP);
+   I = -1;
+   while (++I < TEMP)
+   {
+    OUTBINB(STR[I]);
+   }
+}
 @END
 @TITLE MSL10.3(1,6)
 @COL 1S-2R-3R-4R-5R-6R-7R-11R-8R-9R-10F
@@ -446,25 +569,46 @@ MSL10.3.7
 @BOX 10.0
 END
 @BOX1.1
+@BOX1.2
 @BOX 2.1
+#MSL10.3.1
+@BOX 2.2
 #MSL10.3.1
 @BOX 3.1
 #MSL10.3.2
+@BOX 3.2
+#MSL10.3.2
 @BOX 4.1
+#MSL10.3.3
+@BOX 4.2
 #MSL10.3.3
 @BOX 5.1
 #MSL10.3.4
+@BOX 5.2
+#MSL10.3.4
 @BOX 6.1
+#MSL10.3.5
+@BOX 6.2
 #MSL10.3.5
 @BOX 7.1
 #MSL10.3.6
+@BOX 7.2
+#MSL10.3.6
 @BOX 8.1
+#MSL10.3.8
+@BOX 8.2
 #MSL10.3.8
 @BOX 9.1
 #MSL10.3.9
+@BOX 9.2
+#MSL10.3.9
 @BOX 10.1
 ::END
+@BOX 10.2
+//END
 @BOX 11.1
+#MSL10.3.7
+@BOX 11.2
 #MSL10.3.7
 @END
 @TITLE MSL10.3.1(1,6)
@@ -483,6 +627,20 @@ END;
 PROC TL.END.TYPE(STAT);
    MUBLCODE(2); OUT.BIN.B(STAT); ;
 END;
+@BOX 1.2
+void TLTYPE(char *N, int NAT)
+{
+     MUBLCODE(0); MUBLS(N) ; MUBLUV(NAT);
+}
+void TLTYPECOMP(int T, void *D, char *NM)
+{
+   MUBLCODE(1); MUBLUV(T); MUBLIV(D);MUBLS(NM);
+}
+
+void TLENDTYPE(int STAT)
+{
+   MUBLCODE(2); OUTBINB(STAT); ;
+}
 @END
 @TITLE MSL10.3.2(1,6)
 @COL 1S
