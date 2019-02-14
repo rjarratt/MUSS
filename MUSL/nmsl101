@@ -148,16 +148,16 @@ PSPEC TL.SELECT.FIELD($IN,$IN,$IN);
 PSPEC TL.ASS($IN,$IN);
 PSPEC TL.ASS.VALUE($IN,$IN);
 PSPEC TL.ASS.END();
-@BOX 42
+@BOX 4.2
 void TLSPACE(void *);
 void TLSDECL(char *,int,void *);
-void TLVDECL(char *,$LO32,int,int,int,void *);
+void TLVDECL(char *,uint32,int,int,int,void *);
 void TLMAKE(int,int,void *);
-void TLSELECTVAR();
+void TLSELECTVAR(void);
 void TLSELECTFIELD(int,int,int);
 void TLASS(int,int);
 void TLASSVALUE(int,int);
-void TLASSEND();
+void TLASSEND(void);
 @BOX 5.1
 PSPEC TL.C.LIT.16($IN,$IN16);
 PSPEC TL.C.LIT.32 ($IN,$IN32);
@@ -169,7 +169,7 @@ PSPEC TL.LIT(ADDR[$LO8],$IN);
 @BOX 5.2
 void TLCLIT16(int,int16);
 void TLCLIT32 (int,int32);
-void TLCLIT64(int,uint64);
+void TLCLIT64(int,t_uint64);
 void TLCNULL(int);
 void TLCLITS(int,char *);
 void TLCLIT128(int,double);
@@ -241,8 +241,8 @@ PSPEC TL.END.MODULE($IN);
 PSPEC TL.MODE($IN,$IN);
 @BOX 4.2
 void TL(int,char *, int);
-void TLEND();
-void TLMODULE();
+void TLEND(void);
+void TLMODULE(void);
 void TLENDMODULE(int);
 void TLMODE(int,int);
 @END
@@ -276,7 +276,7 @@ PSPEC MUBLCODE($IN);
 @BOX 1.2
 
 void MUBLU16(uint16);
-void MUBLU64(uint64);
+void MUBLU64(t_uint64);
 void MUBLV(uint32,int);
 void MUBLUV(int32);
 void MUBLIV(int32);
@@ -317,7 +317,7 @@ PROC MUBLU64(HEX);
    MUBLU16(T);
 END;
 @BOX 3.2
-void MUBLU64(uint64 HEX)
+void MUBLU64(t_uint64 HEX)
 {
    int T;
    MUBLU16(0xFF80);
@@ -525,7 +525,7 @@ END;
 void MUBLS(char *STR)
 {
 int TEMP,I;
-TEMP = strlen(STR);
+TEMP = (int)strlen(STR);
    OUTBINB(TEMP);
    I = -1;
    while (++I < TEMP)
@@ -664,6 +664,28 @@ END;
 PROC TL.DATA.AREA(AN);
    MUBLCODE(4); OUT.BIN.B(AN); ;
 END;
+@BOX 1.2
+void TLSEG(int N, void *S, uint32 RTA, void *CTA, int NL)
+{
+uint32 I; I = (RTA << 16) | (uint32)CTA;
+MUBLCODE(0x15);OUTBINB(N);MUBLUV(S);MUBLIV(I);
+MUBLUV(NL);MUBLS("A");;
+}
+
+void TLLOAD(int SN, int AN)
+{
+   MUBLCODE(0x2C); OUTBINB(SN); OUTBINB(AN); ;
+}
+
+void TLCODEAREA(int AN)
+{
+   MUBLCODE(3); OUTBINB(AN); ;
+}
+
+void TLDATAAREA(int AN)
+{
+   MUBLCODE(4); OUTBINB(AN); ;
+}
 @END
 @TITLE MSL10.3.4(1,6)
 @COL 1S
@@ -699,6 +721,43 @@ END;
 PROC TL.LIT (SN, K);
    MUBLCODE(%B); MUBLS(SN); MUBLUV (K) ;
 END;
+@BOX 1.2
+void TLCLIT16(int BT, int16 VAL)
+{
+   MUBLCODE(0x10); OUTBINB(BT); MUBLUV(VAL); ;
+}
+
+void TLCLIT32(int BT,int32 VAL)
+{   
+   MUBLCODE(0x35); OUTBINB(BT); MUBLUV(VAL); ;
+}
+
+void TLCLIT64(int BT, t_uint64 VAL)
+{
+int I;
+I = VAL;
+   MUBLCODE(0x36); OUTBINB(BT); MUBLU64(VAL); ;
+}
+
+void TLCNULL(int PT)
+{
+   MUBLCODE(0x39);MUBLU16(PT);;
+}
+
+void TLCLITS(int BT, char *VAL)
+{
+   MUBLCODE(0x3C); OUTBINB(BT); MUBLS(VAL); ;
+}
+
+void TLCLIT128(int BT, double VAL)
+{
+   MUBLCODE(0x37); OUTBINB(BT); MUBLUV(VAL); ;
+}
+
+void TLLIT (char *SN, int K)
+{
+   MUBLCODE(0xB); MUBLS(SN); MUBLUV (K) ;
+}
 @END
 @TITLE MSL10.3.3(1,6)
 @COL 1S
@@ -741,6 +800,52 @@ END;
 PROC TL.ASS.END;
     MUBLCODE(%D);;
 END;
+@BOX 1.2
+
+void TLSPACE(void *SI)
+{
+   MUBLCODE(0x07); MUBLUV(SI); ;
+}
+
+void TLSDECL(char *SN, int T,void *D)
+{
+   MUBLCODE(0x08); MUBLS(SN); MUBLIV(T); MUBLUV(D); ;
+}
+
+void TLVDECL(char *SN, uint32 SA, int RS, int WS, int T, void *D)
+{
+   MUBLCODE(0x09);MUBLS(SN); MUBLUV(SA); MUBLU16(RS);
+MUBLU16(WS); MUBLUV(T); MUBLIV(D); ;
+}
+
+void TLSELECTVAR(void)
+{
+    MUBLCODE(0x3B);;
+}
+
+void TLSELECTFIELD(int N, int F, int A)
+{
+      MUBLCODE(0x28);MUBLUV(N);MUBLUV(F);MUBLUV(A);
+}
+
+void TLMAKE(int S, int T, void *D)
+{
+   MUBLCODE(0x0A); MUBLU16(S); MUBLU16(T); MUBLIV(D);
+}
+void TLASS(int VL, int AN)
+{
+     MUBLCODE(0x26);MUBLUV(VL); MUBLIV(AN);;
+}
+
+void TLASSVALUE(int N, int R)
+{
+    MUBLCODE(0xF);MUBLUV(N);MUBLUV(R);;
+}
+
+void TLASSEND(void)
+{
+    MUBLCODE(0xD);;
+}
 @END
 @TITLE MSL10.3.5(1,6)
 @COL 1S
@@ -782,6 +887,50 @@ PROC TL.ENTRY(N);
       MUBLCODE(%31);MUBLU16(N);;
 END;
 
+@BOX 1.2
+void TLPROCSPEC(char *NAM, int NAT)
+{
+   MUBLCODE(0x11); MUBLS(NAM); MUBLUV(NAT); ;
+}
+
+void TLPROCPARAM(int T, void *D)
+{
+   MUBLCODE(0x12); MUBLU16(T); MUBLIV(D) ;
+}
+
+void TLPROCRESULT(int R, int D)
+{
+   MUBLCODE(0x27); MUBLUV(R);
+}
+
+void TLPROC(int P)
+{
+   MUBLCODE(0x13); MUBLUV(P); ;
+}
+
+void TLPROCKIND(int K)
+{
+   MUBLCODE(0x29); OUTBINB(K); ;
+}
+
+void TLENDPROC(void)
+{
+   MUBLCODE(0x14); ;
+}
+
+void TLBLOCK(void)
+{
+   MUBLCODE(0x19); ;
+}
+
+void TLENDBLOCK(void)
+{
+   MUBLCODE(0x1A); ;
+}
+void TLENTRY(int N)
+{
+      MUBLCODE(0x31);MUBLU16(N);;
+}
 @END
 @TITLE MSL10.3.6(1,6)
 @COL 1S
@@ -795,6 +944,16 @@ END;
 PROC TL.LABEL(L);
    MUBLCODE(%1C); MUBLU16(L); ;
 END;
+@BOX 1.2
+void TLLABELSPEC(char *N, int U)
+{
+   MUBLCODE(0x1B); MUBLS(N); OUTBINB(U); ;
+}
+
+void TLLABEL(int L)
+{
+   MUBLCODE(0x1C); MUBLU16(L); ;
+}
 @END
 @TITLE MSL10.3.7(1,6)
 @COL 1S
@@ -822,6 +981,37 @@ END;
 PROC TL.REG(RU);
    MUBLCODE(%1E); OUT.BIN.B(RU); ;
 END;
+@BOX 1.2
+void TLPL(int F, int N)
+{
+   if (N==0)
+   {
+      MUBLCODE(0x80 | F);
+   }
+   else
+   {
+      MUBLCODE((F>>1) | 0x40);MUBLU16( ((F & 1) << 15) | N);
+   }
+}
+
+void TLDTYPE(int T, int D)
+{
+     MUBLCODE(0x8); MUBLU16(T); MUBLIV(D);
+}
+void TLINSERT(int BIN)
+{
+      MUBLCODE(0x2B);MUBLUV(BIN);;
+}
+
+void TLCHECK(int S)
+{
+   MUBLCODE(0x34); MUBLU16(S); ;
+}
+
+void TLREG(int RU)
+{
+   MUBLCODE(0x1E); OUTBINB(RU); ;
+}
 @END
 @TITLE MSL10.3.8(1,6)
 @COL 1S
@@ -838,6 +1028,20 @@ END;
 PROC TL.PRINT(M);
    MUBLCODE(%18); MUBLUV(M);;
 END;
+@BOX 12
+
+void TLLINE(LN)
+{
+  if (LN == 0)
+  {
+    LN = IPOS();
+  }
+   MUBLCODE(0x21); MUBLUV(LN); ;
+}
+void TLPRINT(int M)
+{
+   MUBLCODE(0x18); MUBLUV(M);;
+}
 @END
 @TITLE MSL10.3.9(1,6)
 @COL 1S
@@ -862,4 +1066,28 @@ END;
 PROC TL.MODE(I,J);
       MUBLCODE(%30); MUBLU16(I);MUBLUV(J);;
 END;
+@BOX 1.2
+void TL(int M, char *FN, int DZ)
+{
+   MUBLCODE(0x22); OUTBINB(M); MUBLS(FN); MUBLUV(DZ) ;
+}
+
+void TLEND(void)
+{
+   MUBLCODE(0x23); ;
+}
+
+void TLMODULE(void)
+{
+   MUBLCODE(0x24); ;
+}
+
+void TLENDMODULE(int ST)
+{
+   MUBLCODE(0x25); MUBLUV(ST);
+}
+void TLMODE(int I, int J)
+{
+      MUBLCODE(0x30); MUBLU16(I);MUBLUV(J);;
+}
 @END
