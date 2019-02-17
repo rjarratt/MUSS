@@ -925,6 +925,7 @@ $IN PW0,PW1;
 #include <stdio.h>
 #include <memory.h>
 #include <setjmp.h>
+#include "..\..\MUSS\musl\support.h"
 
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 typedef unsigned char      uint8;
@@ -1240,10 +1241,9 @@ extern void SELECTINPUT(int);
 extern void SELECTOUTPUT(int);
 extern void CAPTION(char *);
 extern void OUTI(int,int);
-extern int DEFINEINPUT(int,FILE *,int);
-extern int CURRENTOUTPUT(void);
-extern int CURRENTINPUT(void);
-extern void ENDINPUT(int, int);
+extern FILE *CURRENTOUTPUT(void);
+extern FILE *CURRENTINPUT(void);
+extern void ENDINPUT(FILE *, int);
 extern void RELEASESEGMENT(int);
 extern void CREATESEGMENT(int, void *);
 extern void ENDOUTPUT(int, int);
