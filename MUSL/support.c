@@ -103,3 +103,67 @@ void OUTLINENO(int n)
 {
     printf("OUTLINENO %d", n);
 }
+
+char *FINDN(char *name, int kind)
+{
+    // see lib022
+    return NULL;
+}
+
+char *PART(char *vec, int first, int last)
+{
+    return NULL;
+}
+
+void TLPRINT(int mode)
+{
+    printf("TLPRINT %d\n", mode);
+}
+
+void CAPTION(char *msg)
+{
+    printf("%s\n", msg);
+}
+
+int FINDP(char *name, int first, int last)
+{
+    return 0;
+}
+
+void TLCYCLE(int limit)
+{
+
+}
+
+void TLCVCYCLE(int cv, int init, int mode)
+{
+
+}
+
+void TLCVLIMIT(int limit, int test)
+{
+
+}
+
+void TLREPEAT(void)
+{
+
+}
+
+int BOPD;
+int AOPD;
+
+void OUTI(int32 number, int field)
+{
+
+}
+
+void OUTBINB(int n)
+{
+}
+
+extern void MUSL(char *file, char *PROG, int CMPMODE, int DIR);
+int main(int argc, char *argv[])
+{
+    MUSL(argv[1], argv[2], 0, 0);
+}

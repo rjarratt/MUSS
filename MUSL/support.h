@@ -20,3 +20,20 @@ void PPCCMD(void);
 void INBACKSPACE(int);
 void TLLINE(int);
 void OUTLINENO(int);
+
+char *FINDN(char *, int);
+char *PART(char *, int, int);
+void TLPRINT(int);
+void CAPTION(char *);
+int FINDP(char *, int, int);
+void TLCYCLE(int);
+void TLCVCYCLE(int, int, int);
+void TLCVLIMIT(int, int);
+void TLREPEAT(void);
+
+extern int BOPD;
+extern int AOPD;
+typedef int                int32;
+
+void OUTI(int32, int);
+void OUTBINB(int);

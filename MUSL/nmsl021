@@ -218,7 +218,7 @@ extern void NEWLINES(int);
 extern void OUTLINENO(int);
 extern void PPCCMD(void);
 extern uint32 FINDN(char *,int);
-extern int FINDP(uint32,int,int);
+extern int FINDP(char *,int,int);
 extern void SELECTOUTPUT(int);
 extern void SPACES(int);
 extern void OUTHEX(unsigned int,int);
