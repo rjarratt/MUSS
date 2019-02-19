@@ -66,8 +66,8 @@ void OUTCH(int ch)
 }
 int NEXTCH(void)
 {
-    char result;
-    fscanf(CurrentInputStream, "%c", &result);
+    char result = INCH();
+    INBACKSPACE(1);
     return result;
 }
 
