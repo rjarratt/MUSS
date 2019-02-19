@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "support.h"
-static FILE *CurrentInputStream;
-static FILE *CurrentOutputStream;
+static FILE *CurrentInputStream = NULL;
+static FILE *CurrentOutputStream = NULL;
 static int LastCh;
 
 void SELECTINPUT(FILE *f)
@@ -16,12 +16,25 @@ void SELECTOUTPUT(FILE *f)
 
 FILE *DEFINEINPUT(int StreamNumber, char *FileName, int Mode)
 {
-    return fopen(FileName, "r");
+    FILE *result = fopen(FileName, "r");
+    if (result == NULL)
+    {
+        perror("Input file could not be opened");
+        exit(0);
+    }
+
+    return result;
 }
 
 FILE *CURRENTOUTPUT(void)
 {
-    return CurrentOutputStream;
+    FILE *result = CurrentOutputStream;
+    if (CurrentOutputStream == NULL)
+    {
+        result = stderr;
+    }
+
+    return result;
 }
 
 FILE *CURRENTINPUT(void)

@@ -862,25 +862,25 @@ SYM = VALCODE[ISYM];
 SW = SWCODE[ISYM];
 switch (SW)
 {
-case 0: goto IG;
-case 1: goto ALPHA;
-case 2: goto DD;
-case 3: goto LBR;
-case 4: goto RBR;
-case 5: goto DOT;
-case 6: goto DQ;
-case 7: goto SQ;
-case 8: goto DELIM;
-case 9: goto COLON;
-case 10: goto PCENT;
-case 11: goto COMP;
-case 12: goto COMP;
-case 13: goto COMP;
-case 14: goto MINUS;
-case 15: goto SCOLON;
-case 16: goto DOLLAR;
-case 17: goto NLINE;
-case 18: goto NPAGE;
+case 0:  printf("IG\n");     goto IG;
+case 1:  printf("ALPHA\n");  goto ALPHA;
+case 2:  printf("DD\n");     goto DD;
+case 3:  printf("LBR\n");    goto LBR;
+case 4:  printf("RBR\n");    goto RBR;
+case 5:  printf("DOR\n");    goto DOT;
+case 6:  printf("DQ\n");     goto DQ;
+case 7:  printf("SQ\n");     goto SQ;
+case 8:  printf("DELIM\n");  goto DELIM;
+case 9:  printf("COLON\n");  goto COLON;
+case 10: printf("PCENT\n");  goto PCENT;
+case 11: printf("COMP\n");   goto COMP;
+case 12: printf("COMP\n");   goto COMP;
+case 13: printf("COMP\n");   goto COMP;
+case 14: printf("MINUS\n");  goto MINUS;
+case 15: printf("SCOLON\n"); goto SCOLON;
+case 16: printf("DOLLAR\n"); goto DOLLAR;
+case 17: printf("NLINE\n");  goto NLINE;
+case 18: printf("NPAGE\n");  goto NPAGE;
 }
 @BOX 6.1
 :: PROCESS CONSTANTS
@@ -1772,9 +1772,9 @@ B3:
 STEM = (CHLIST[LASTCH+1] << 8) + CHLIST[LASTCH+2];
 PTR = 0;
 INT = 0;
-while (++PTR >= MAXKEYWORD)
+while (++PTR <= MAXKEYWORD)
 {
-  if ((unsigned int)STEMS[PTR] == STEM) // stems are two bytes and fit into 16 bits
+  if (STEMS[PTR][0] == (STEM >> 8) && STEMS[PTR][1] == (STEM & 0xFF)) // stems are two bytes and fit into 16 bits
   {
     RPTR = PTRS[PTR];
     NPTR = LASTCH+2;
@@ -1868,7 +1868,7 @@ B17:
 PTR = 0;
 while (++PTR <= MAXKEYWORD)
 {
-  if ((unsigned int)STEMS[PTR] == STEM) // stems are two bytes and fit into 16 bits
+  if (STEMS[PTR][0] == (STEM >> 8) && STEMS[PTR][1] == (STEM & 0xFF)) // stems are two bytes and fit into 16 bits
   {
     if ((DLIST[PTR] & 0x200) != 0)
 	{
@@ -1992,7 +1992,7 @@ IF MODE/=0, ->NLINE;
 COLON:
 if (NEXTCH()==':')
 {
-  while (XSYM()!='\f') {};
+  while (XSYM()!='\n') {};
   if (IPTR==0) goto BX3;
   if (MODE!=0) goto NLINE;
   goto SCOLON;
