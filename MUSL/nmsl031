@@ -1473,15 +1473,18 @@ t_uint64 XHEX(void)
 	  {
 	    MONITOR(14);
 	  }
-	  else if  (XSYM() >= 'A')
-	  {
-        ANS = ANS << 4 | (ISYM-'A'+10);
-	  }
 	}
 	else
 	{
-      ANS = ANS << 4 | (ISYM-'0');
-    }
+	  if  (XSYM() >= 'A')
+	  {
+        ANS = ANS << 4 | (ISYM-'A'+10);
+	  }
+      else
+	  {
+        ANS = ANS << 4 | (ISYM-'0');
+      }
+	}
 	ISYM = NEXTCH();
   }
   return ANS;
