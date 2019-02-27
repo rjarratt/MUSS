@@ -1966,24 +1966,23 @@ LEFT.SHIFT = 73,
 RESTART.LABEL = 82,
 UNARY.MINUS = 85;
 @BOX 2.2
-const int
-GE = 46,
-LE = 47,
-GT = 48,
-LT = 49,
-NE = 50,
-EQ = 51,
-SUBTRACT = 53,
-DIVIDE = 55,
-REVERSESUBTRACT = 56,
-REVERSEDIVIDE = 57,
-NEQ = 60,
-MINUSSTORE = 63,
-LTLT = 71,
-RIGHTSHIFT = 72,
-LEFTSHIFT = 73,
-RESTARTLABEL = 82,
-UNARYMINUS = 85;
+#define GE 46
+#define LE 47
+#define GT 48
+#define LT 49
+#define NE 50
+#define EQ 51
+#define SUBTRACT 53
+#define DIVIDE 55
+#define REVERSESUBTRACT 56
+#define REVERSEDIVIDE 57
+#define NEQ 60
+#define MINUSSTORE 63
+#define LTLT 71
+#define RIGHTSHIFT 72
+#define LEFTSHIFT 73
+#define RESTARTLABEL 82
+#define UNARYMINUS 85
 @BOX 3.1
 COLON:
 IF NEXTCH()=': THEN
@@ -2134,7 +2133,7 @@ if (memcmp(&LBUFF[IPTR], &LSHIFT,sizeof(ITYPE))==0)
 }
 else
 {
-  if (LBUFF[IPTR].TAG==0 && (DLIST[LBUFF[IPTR].IND] & 0x18)!=0 || MODE==1)
+  if ((LBUFF[IPTR].TAG==0 && (DLIST[LBUFF[IPTR].IND] & 0x18)!=0) || MODE==1)
   {
     SYM = UNARYMINUS;
   }
