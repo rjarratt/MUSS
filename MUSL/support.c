@@ -54,16 +54,16 @@ void OVERLAY(int n)
 
 int INCH(void)
 {
-    char result;
-    fscanf(CurrentInputStream, "%c", &result);
+    int result = fgetc(CurrentInputStream);
     return result;
 }
 
 void OUTCH(int ch)
 {
     LastCh = ch;
-    fprintf(CurrentOutputStream, "%c", ch);
+    fputc(ch, CurrentOutputStream);
 }
+
 int NEXTCH(void)
 {
     char result = INCH();
