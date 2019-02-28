@@ -710,11 +710,19 @@ int main(int argc, char *argv[])
     }
     else
     {
+        box_selection_level = atoi(argv[3]);
+
         label_format = "LB%05d:\n";
-        //goto_format = " -> LB%05d;\n";
-        goto_format = " goto LB%05d;\n";
-        //conditional_goto_format = ",-> LB%05d;";
-        conditional_goto_format = " goto LB%05d;";
+        if (box_selection_level == 1)
+        {
+            goto_format = " -> LB%05d;\n";
+            conditional_goto_format = ",-> LB%05d;";
+        }
+        else
+        {
+            goto_format = " goto LB%05d;\n";
+            conditional_goto_format = " goto LB%05d;";
+        }
         yyin = fopen(argv[1], "r");
         if (yyin == NULL)
         {
@@ -726,8 +734,6 @@ int main(int argc, char *argv[])
         {
             fprintf(stderr, "cannot open %s\n", argv[2]);
         }
-
-        box_selection_level = atoi(argv[3]);
 
         if (yyin != NULL && output != NULL)
         {
