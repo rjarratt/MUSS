@@ -1066,7 +1066,7 @@ $IN CON.PTR, TEMP,IX,DIRYZ;
 ADDR[$LO8] RES.FILE;
 $LA RESTART,CEXIT;
 @BOX 3.2
-int OLDIN,MSTR,ISTR,MUTLSTR;
+FILE *OLDIN,*MSTR,*ISTR,*MUTLSTR;
 int CONSTK[CONSTKZ];
 int CONPTR, TEMP,IX,DIRYZ;
 FILE *RESFILE;
@@ -1237,12 +1237,8 @@ $LS TL($IN,ADDR[$LO8],$IN);
 $LS TL.PL($IN,$IN);
 $LS TL.MODULE();
 @BOX1.2
-extern void SELECTINPUT(int);
-extern void SELECTOUTPUT(int);
 extern void CAPTION(char *);
 extern void OUTI(int,int);
-extern FILE *CURRENTOUTPUT(void);
-extern FILE *CURRENTINPUT(void);
 extern void ENDINPUT(FILE *, int);
 extern void RELEASESEGMENT(int);
 extern void CREATESEGMENT(int, void *);
