@@ -569,7 +569,7 @@ $PR GENN(INTID);
 @BOX 1.2
 char *GENN(uint16 INTID)
 {
-char *result;
+char *result = NULL;
 @BOX 2.1
 $IN FSTCH,LSTCH,I,N;
 @BOX 2.2

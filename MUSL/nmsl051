@@ -1134,7 +1134,7 @@ ADDR[$LO8] LNAME;
 @BOX1.2
 uint16 ADDLSPEC(uint16 LIBN)
 {
-uint16 result;
+uint16 result = 0;
 int J,K,M,N;
 uint32 F;
 char *LNAME;

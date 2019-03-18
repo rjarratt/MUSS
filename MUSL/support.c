@@ -12,6 +12,7 @@ void SELECTINPUT(FILE *f)
 void SELECTOUTPUT(FILE *f)
 {
     CurrentOutputStream = f;
+    CurrentOutputStream = stderr;
 }
 
 FILE *DEFINEINPUT(int StreamNumber, char *FileName, int Mode)

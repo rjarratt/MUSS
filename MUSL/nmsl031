@@ -1177,14 +1177,14 @@ char *REST = \
 "OC\0"\
 "DULE\0"\
 "D\0"\
-"\0"\
+
 "EN\0"\
 "SE\0"\
-"\0"\
+
 "ILE\0"\
 "R\0"\
-"\0"\
-"\0"\
+
+
 "ITCH\0"\
 "TERNATIVE\0"\
 "ACE\0"\
@@ -1213,10 +1213,10 @@ char *REST = \
 "XX\0"\
 "XX\0"\
 "BEL\0"\
-"\0"\
-"\0"\
+
+
 "D\0"\
-"\0"\
+
 "OM\0"\
 "T\0"\
 "H\0"\
@@ -1780,7 +1780,7 @@ while (++PTR <= MAXKEYWORD)
   {
     RPTR = PTRS[PTR];
     NPTR = LASTCH+2;
-    while (strcmp(REST[++RPTR], &CHLIST[++NPTR]) == 0 && REST[RPTR] != 0) {}
+    while (strcmp(&REST[++RPTR], &CHLIST[++NPTR]) == 0 && REST[RPTR] != 0) {}
     if (REST[RPTR]==0 && (DLIST[PTR] & 0x200) != 0)
 	{
       NPTR = 1;
