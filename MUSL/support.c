@@ -126,7 +126,7 @@ char *FINDN(char *name, int kind)
 
 char *PART(char *vec, int first, int last)
 {
-    return NULL;
+    return &vec[first];
 }
 
 void TLPRINT(int mode)
