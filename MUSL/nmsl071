@@ -386,6 +386,7 @@ MODULE(PREPROCESS.COMP,PREPROCESS.COND,COMPILE.COMP,COMPILE.COND,COMPILE.AND,
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
+#include "..\..\MUSS\musl\support.h"
 
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 typedef unsigned char      uint8;
