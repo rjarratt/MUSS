@@ -1453,7 +1453,7 @@ $OR LBUFF[2] = XCOLON]
 @BOX 14.2
 if (LBUFF[1].TAG == 1
 && (memcmp(&LBUFF[2], &COLON, sizeof(ITYPE)==0)
-|| memcmp(&LBUFF[2], &XCOLON, sizeof(ITYPE)==0)))
+|| memcmp(&LBUFF[2], &XCOLON, sizeof(ITYPE))==0))
 @BOX 16.1
 $IF MUTLN(TEMP) => TEMP /= 0 /= %1002 $AN // NOT SURE WHAT SYNTAX HERE MEANS
 [K OF PLIST[TEMP] = KTYPE
@@ -1471,7 +1471,7 @@ TRANSCOMP(0);
 $IF LBUFF[1+>IPTR] = EOS
 @BOX 20.2
 IPTR = 1;
-if (memcmp(&LBUFF[IPTR], &EOS, sizeof(ITYPE)==0))
+if (memcmp(&LBUFF[IPTR], &EOS, sizeof(ITYPE))==0)
 @BOX 22.1
 MONITOR(0);
 @BOX 22.2
@@ -1489,7 +1489,7 @@ if (LBUFF[1].TAG == 0 && (DLIST[TEMP] & 2) != 0)
 $IF LBUFF[1=>IPTR] /= GOTO
 @BOX 30.2
 IPTR = 1;
-if (memcmp(&LBUFF[IPTR], &GOTO, sizeof(ITYPE)!=0))
+if (memcmp(&LBUFF[IPTR], &GOTO, sizeof(ITYPE))!=0)
 @BOX 32.1
 TRANS.GOTO();
 @BOX 32.2
@@ -1497,7 +1497,7 @@ TRANSGOTO();
 @BOX 34.1
 $IF LBUFF[1] /= ASTERISK
 @BOX 34.2
-if (memcmp(&LBUFF[1], &ASTERISK, sizeof(ITYPE)!=0))
+if (memcmp(&LBUFF[1], &ASTERISK, sizeof(ITYPE))!=0)
 @BOX 36.1
 ::PDP OVERLAY(1);
 TRANS.DIRECTIVE();
