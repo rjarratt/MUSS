@@ -1780,7 +1780,7 @@ while (++PTR <= MAXKEYWORD)
   {
     RPTR = PTRS[PTR];
     NPTR = LASTCH+2;
-    while (strcmp(&REST[++RPTR], &CHLIST[++NPTR]) == 0 && REST[RPTR] != 0) {}
+    while ((REST[++RPTR] == CHLIST[++NPTR]) && REST[RPTR] != 0) {}
     if (REST[RPTR]==0 && (DLIST[PTR] & 0x200) != 0)
 	{
       NPTR = 1;
@@ -1798,10 +1798,6 @@ B3:
 @BOX4.1
 $IF PTR =< MAX.KEYWORD $AN
 CHLIST[NPTR] = 0 $AN REST[RPTR] = 0
-@BOX14.1
-1 => TAG OF LBUFF[1+>IPTR];
-0 => ST OF LBUFF[IPTR] => TY;
-ADDN() => IND OF LBUFF[IPTR];
 @BOX4.2
 if (PTR <= MAXKEYWORD && CHLIST[NPTR] == 0 && REST[RPTR] == 0)
 @BOX14.1

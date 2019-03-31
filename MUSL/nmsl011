@@ -1452,7 +1452,7 @@ $AN [LBUFF[2] = COLON
 $OR LBUFF[2] = XCOLON]
 @BOX 14.2
 if (LBUFF[1].TAG == 1
-&& (memcmp(&LBUFF[2], &COLON, sizeof(ITYPE)==0)
+&& (memcmp(&LBUFF[2], &COLON, sizeof(ITYPE))==0
 || memcmp(&LBUFF[2], &XCOLON, sizeof(ITYPE))==0))
 @BOX 16.1
 $IF MUTLN(TEMP) => TEMP /= 0 /= %1002 $AN // NOT SURE WHAT SYNTAX HERE MEANS
