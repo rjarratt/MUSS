@@ -456,7 +456,7 @@ $IN I,J,K,C;
 $AD[$LO8] NAME,LIBN;
 #MSL04.1.1
 @BOX 2.2
-int I,J,K,C;
+int I,C;
 char *NAME;
 //char **LIBN;
 #MSL04.1.1
@@ -485,17 +485,10 @@ IF I = NO.DNAMES
 @BOX 5.2
 IX &= 0x8000;
 NAME = GENN(LBUFF[IPTR].IND);
-I = 0;
-J = -1;
-DIRLOOP:
-K = -1;
-CHARLOOP:
-if (DNAMES[++J][0] == 0) goto DONE;
-if (strcmp(DNAMES[J], NAME[++K]) == 0) goto CHARLOOP;
-if (++I == NODNAMES) goto DONE;
-while (DNAMES[++J][0] != 0) {};
-goto DIRLOOP;
-DONE:
+for (I = 0; I < NODNAMES; I++)
+{
+  if (strcmp(DNAMES[I], NAME) == 0) break;
+}
 if (I == NODNAMES)
 @BOX 6.1
 $IF I > 3
