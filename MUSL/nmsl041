@@ -456,7 +456,7 @@ $AD[$LO8] NAME,LIBN;
 #MSL04.1.1
 @BOX 2.2
 int I,J,K,C;
-char **NAME;
+char *NAME;
 //char **LIBN;
 #MSL04.1.1
 @BOX 3.1
@@ -483,7 +483,7 @@ DONE:
 IF I = NO.DNAMES
 @BOX 5.2
 IX &= 0x8000;
-NAME = (char **)GENN(LBUFF[IPTR].IND);
+NAME = GENN(LBUFF[IPTR].IND);
 I = 0;
 J = -1;
 DIRLOOP:
