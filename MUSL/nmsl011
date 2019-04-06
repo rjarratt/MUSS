@@ -1470,8 +1470,7 @@ TRANSCOMP(0);
 @BOX 20.1
 $IF LBUFF[1+>IPTR] = EOS
 @BOX 20.2
-IPTR = 1;
-if (memcmp(&LBUFF[IPTR], &EOS, sizeof(ITYPE))==0)
+if (memcmp(&LBUFF[++IPTR], &EOS, sizeof(ITYPE))==0)
 @BOX 22.1
 MONITOR(0);
 @BOX 22.2
@@ -1763,6 +1762,7 @@ char OLN[] = {
 2,2,2,2,2,2,2,2
 };
 OVERLAY(OLN[LBUFF[1].IND-1]);
+IPTR = 1;
 switch (LBUFF[IPTR].IND -1)
 {
     case 0:

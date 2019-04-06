@@ -150,6 +150,7 @@ char *DNAMES[] =
 "TLLOAD",
 "TLMODE",
 "VTYPE"
+""
 };
 @BOX 3.1
 *GLOBAL 5;
@@ -489,10 +490,10 @@ J = -1;
 DIRLOOP:
 K = -1;
 CHARLOOP:
-if (DNAMES[++J] == 0) goto DONE;
+if (DNAMES[++J][0] == 0) goto DONE;
 if (strcmp(DNAMES[J], NAME[++K]) == 0) goto CHARLOOP;
 if (++I == NODNAMES) goto DONE;
-while (DNAMES[++J] != 0) {};
+while (DNAMES[++J][0] != 0) {};
 goto DIRLOOP;
 DONE:
 if (I == NODNAMES)

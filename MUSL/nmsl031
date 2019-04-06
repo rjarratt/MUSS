@@ -911,7 +911,7 @@ RBR:
 @BOX 11.1
 1 -> BCOUNT;
 @BOX 11.2
-BCOUNT = 1;
+--BCOUNT;
 @BOX 12.1
 ->DELIM;
 @BOX 12.2
@@ -1783,7 +1783,7 @@ while (++PTR <= MAXKEYWORD)
     while ((REST[++RPTR] == CHLIST[++NPTR]) && REST[RPTR] != 0) {}
     if (REST[RPTR]==0 && (DLIST[PTR] & 0x200) != 0)
 	{
-      NPTR = 1;
+      --NPTR;
       while (VALCODE[CHLIST[++NPTR]] == 126)
 	  {
         INT = INT *10 + CHLIST[NPTR] - '0'; 
