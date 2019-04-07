@@ -583,7 +583,7 @@ switch (I)
 @BOX 10.1
 $IF LBUFF[IPTR] /= DEND
 @BOX 10.2
-if (memcmp(&LBUFF[IPTR], &DEND, sizeof(ITYPE))==0)
+if (memcmp(&LBUFF[IPTR], &DEND, sizeof(ITYPE))!=0)
 @BOX 11.1
 END.CHECKS();
 @BOX 11.2
