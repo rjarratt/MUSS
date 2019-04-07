@@ -169,7 +169,7 @@ int AOPD;
 
 void OUTI(int32 number, int field)
 {
-
+    printf("%*d", field, number);
 }
 
 void OUTBINB(int n)
