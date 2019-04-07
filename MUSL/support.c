@@ -87,7 +87,7 @@ void NEWLINES(int n)
 
 void OUTHEX(int number, int digits)
 {
-    fprintf(CurrentOutputStream, "%*X", digits, number);
+    fprintf(CurrentOutputStream, "%0*X", digits, number);
 }
 
 void SPACES(int n)
