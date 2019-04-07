@@ -5848,7 +5848,7 @@ if ((DLIST[I] & 0x4) != 0 || OP == ICOMP)
     }
   }
 
-  if (((DLIST[I] & 0x8) !=0 || OP != ICOMP) && I != IEOS)
+  if ((DLIST[I] & 0x8) !=0 || (OP != ICOMP && I != IEOS))
   {
     TLREG(REG);
   }
@@ -6394,7 +6394,7 @@ OR AR[AP+2] & %F => J > 2
 OR J = 0 AND I & A.B.D & REGS.IU /= 0
 @BOX8.2
 I = AR[AP] >> 4;
-if (((I & 0x8) == 0 || (J = AR[AP+2] & 0xF) > 2 || J == 0) && (I & ABD & REGSIU) != 0)
+if ((I & 0x8) == 0 || (J = AR[AP+2] & 0xF) > 2 || (J == 0 && (I & ABD & REGSIU) != 0))
 @BOX 11.1
 COMPILE.COMP(ICOMP,CMP.TYPE);
 @BOX 11.2
@@ -7072,7 +7072,7 @@ IF NEW & %3 = 0
 OR OP /= ISTORE
 AND DLIST[OP] & %800 = 0
 @BOX 19.2
-if (((NEW & 0x3) == 0 || OP != ISTORE) && (DLIST[OP] & 0x800) == 0)
+if ((NEW & 0x3) == 0 || (OP != ISTORE && (DLIST[OP] & 0x800) == 0))
 @BOX 20.1
 NEW -TINT0 => NEW;
 @BOX 20.2
@@ -7085,7 +7085,7 @@ IF OLD & %3 = 0
 OR OP /= ISTORE
 AND DLIST[OP] & %800 = 0
 @BOX 22.2
-if (((OLD & 0x3) == 0 || OP != ISTORE) && (DLIST[OP] & 0x800) == 0)
+if ((OLD & 0x3) == 0 || (OP != ISTORE && (DLIST[OP] & 0x800) == 0))
 @BOX 23.1
 OLD => CHECK.TYPE;
 @BOX 23.2
