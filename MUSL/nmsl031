@@ -862,25 +862,25 @@ SYM = VALCODE[ISYM];
 SW = SWCODE[ISYM];
 switch (SW)
 {
-case 0:  /*printf("IG\n");    */ goto IG;
-case 1:  /*printf("ALPHA\n"); */ goto ALPHA;
-case 2:  /*printf("DD\n");    */ goto DD;
-case 3:  /*printf("LBR\n");   */ goto LBR;
-case 4:  /*printf("RBR\n");   */ goto RBR;
-case 5:  /*printf("DOR\n");   */ goto DOT;
-case 6:  /*printf("DQ\n");    */ goto DQ;
-case 7:  /*printf("SQ\n");    */ goto SQ;
-case 8:  /*printf("DELIM\n"); */ goto DELIM;
-case 9:  /*printf("COLON\n"); */ goto COLON;
-case 10: /*printf("PCENT\n"); */ goto PCENT;
-case 11: /*printf("COMP\n");  */ goto COMP;
-case 12: /*printf("COMP\n");  */ goto COMP;
-case 13: /*printf("COMP\n");  */ goto COMP;
-case 14: /*printf("MINUS\n"); */ goto MINUS;
-case 15: /*printf("SCOLON\n");*/ goto SCOLON;
-case 16: /*printf("DOLLAR\n");*/ goto DOLLAR;
-case 17: /*printf("NLINE\n"); */ goto NLINE;
-case 18: /*printf("NPAGE\n"); */ goto NPAGE;
+case 0:  /* printf("IG, IPTR=%d\n", IPTR);     */ goto IG;
+case 1:  /* printf("ALPHA, IPTR=%d\n", IPTR);  */ goto ALPHA;
+case 2:  /* printf("DD, IPTR=%d\n", IPTR);     */ goto DD;
+case 3:  /* printf("LBR, IPTR=%d\n", IPTR);    */ goto LBR;
+case 4:  /* printf("RBR, IPTR=%d\n", IPTR);    */ goto RBR;
+case 5:  /* printf("DOR, IPTR=%d\n", IPTR);    */ goto DOT;
+case 6:  /* printf("DQ, IPTR=%d\n", IPTR);     */ goto DQ;
+case 7:  /* printf("SQ, IPTR=%d\n", IPTR);     */ goto SQ;
+case 8:  /* printf("DELIM, IPTR=%d\n", IPTR);  */ goto DELIM;
+case 9:  /* printf("COLON, IPTR=%d\n", IPTR);  */ goto COLON;
+case 10: /* printf("PCENT, IPTR=%d\n", IPTR);  */ goto PCENT;
+case 11: /* printf("COMP, IPTR=%d\n", IPTR);   */ goto COMP;
+case 12: /* printf("COMP, IPTR=%d\n", IPTR);   */ goto COMP;
+case 13: /* printf("COMP, IPTR=%d\n", IPTR);   */ goto COMP;
+case 14: /* printf("MINUS, IPTR=%d\n", IPTR);  */ goto MINUS;
+case 15: /* printf("SCOLON, IPTR=%d\n", IPTR); */ goto SCOLON;
+case 16: /* printf("DOLLAR, IPTR=%d\n", IPTR); */ goto DOLLAR;
+case 17: /* printf("NLINE, IPTR=%d\n", IPTR);  */ goto NLINE;
+case 18: /* printf("NPAGE, IPTR=%d\n", IPTR);  */ goto NPAGE;
 }
 @BOX 6.1
 :: PROCESS CONSTANTS
@@ -1841,7 +1841,7 @@ LBUFF[IPTR] => SAVEDELIM;
 1 -> IPTR;
 @BOX 10.2
 memcpy(&SAVEDELIM, &LBUFF[IPTR], sizeof(ITYPE));
-IPTR = 1;
+IPTR--;
 @BOX 11.1
 -> SCOLON;
 @BOX 11.2
