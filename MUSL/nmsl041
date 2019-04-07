@@ -363,7 +363,7 @@ uint16 ADDN();
 char *GENN(uint16);
 void PRINTSTATS(void);
 int CONPTR;
-int IPTR;
+extern int IPTR;
 void ENDCHECKS(void);
 extern int CONSTK[CONSTKZ];
 int IX,DIRYZ;
