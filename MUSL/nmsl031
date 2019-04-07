@@ -2304,7 +2304,7 @@ if (CSIZE == 0)
   CSIZE = 1;
 }
 LBUFF[++IPTR].TAG = 3;
-LBUFF[IPTR].ST = (CTYPE << 4) + ((CSIZE - 1)<<2);
+LBUFF[IPTR].ST = ((CTYPE << 4) + (CSIZE - 1))<<2;
 LBUFF[IPTR].IND = CBWDPTR;
 @BOX8.1
 @BOX8.2
