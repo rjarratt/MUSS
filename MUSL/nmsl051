@@ -3502,7 +3502,7 @@ ELSE IF  LT & %FFC3 = TRE0 AND REQDT & %FFC3 = TRE0
 THEN 0 => CHECK.LIT
 ELSE 1 => CHECK.LIT FI FI
 @BOX2.2
-if ((LT & 0x3F) <= (REQDT & 0x3F) && (((((LT & 0xC0) == (REQDT & 0xC0) || (LT & 0xC1) == TLO0) && (REQDT & 0xC0) == TINT0) || LT == TLO0) && REQDT == TLO1))
+if ((LT & 0x3F) <= (REQDT & 0x3F) && ((LT & 0xC0) == (REQDT & 0xC0) || ((LT & 0xC1) == TLO0) && (REQDT & 0xC0) == TINT0) || ((LT == TLO0) && (REQDT == TLO1)))
 {
   result = 0;
 }
