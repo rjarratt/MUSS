@@ -353,7 +353,7 @@ $PR MONITOR(MNO);
 void MONITOR(int MNO)
 {
 @BOX 2.1
-$IN QPOS,I,J,CH;
+$IN QPOS,I,CH;
 @BOX 2.2
 int QPOS,I,J,CH;
 @BOX 14.1
@@ -426,8 +426,7 @@ char *FMESS[] =
   "LEXICAL!",
   "NO OD!  "
 };
-J = (MNO & 15) * 8;
-CAPTION(PART(FMESS,J,J+7));
+CAPTION(FMESS[MNO & 15]);
 QPOS = IPTR;
 @BOX 8.1
 0 => I
