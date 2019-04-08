@@ -126,7 +126,7 @@ PSPEC TL.TYPE.COMP($IN,ADDR,ADDR[$LO8]);
 PSPEC TL.END.TYPE($IN);
 @BOX 2.2
 void TLTYPE(char *,int);
-void TLTYPECOMP(int,void *,char *);
+void TLTYPECOMP(int,int,char *);
 void TLENDTYPE(int);
 @BOX 3.1
 PSPEC TL.SEG($IN,ADDR,$LO32,ADDR,$IN);
@@ -134,7 +134,7 @@ PSPEC TL.LOAD($IN,$IN);
 PSPEC TL.CODE.AREA($IN);
 PSPEC TL.DATA.AREA($IN);
 @BOX 3.2
-void TLSEG(int,void *,uint32,void *,int);
+void TLSEG(int,int,uint32,void *,int);
 void TLLOAD(int,int);
 void TLCODEAREA(int);
 void TLDATAAREA(int);
@@ -149,10 +149,10 @@ PSPEC TL.ASS($IN,$IN);
 PSPEC TL.ASS.VALUE($IN,$IN);
 PSPEC TL.ASS.END();
 @BOX 4.2
-void TLSPACE(void *);
-void TLSDECL(char *,int,void *);
-void TLVDECL(char *,uint32,int,int,int,void *);
-void TLMAKE(int,int,void *);
+void TLSPACE(int);
+void TLSDECL(char *,int,int);
+void TLVDECL(char *,uint32,int,int,int,int);
+void TLMAKE(int,int,int);
 void TLSELECTVAR(void);
 void TLSELECTFIELD(int,int,int);
 void TLASS(int,int);
@@ -186,7 +186,7 @@ PSPEC TL.END.BLOCK();
 PSPEC TL.ENTRY($IN);
 @BOX 6.2
 void TLPROCSPEC(char *,int);
-void TLPROCPARAM(int,void *);
+void TLPROCPARAM(int,int);
 void TLPROCRESULT(int);
 void TLPROC(int);
 void TLPROCKIND(int);
@@ -632,7 +632,7 @@ void TLTYPE(char *N, int NAT)
 {
      MUBLCODE(0); MUBLS(N) ; MUBLUV(NAT);
 }
-void TLTYPECOMP(int T, void *D, char *NM)
+void TLTYPECOMP(int T, int D, char *NM)
 {
    MUBLCODE(1); MUBLUV(T); MUBLIV(D);MUBLS(NM);
 }
@@ -665,7 +665,7 @@ PROC TL.DATA.AREA(AN);
    MUBLCODE(4); OUT.BIN.B(AN); ;
 END;
 @BOX 1.2
-void TLSEG(int N, void *S, uint32 RTA, void *CTA, int NL)
+void TLSEG(int N, int S, uint32 RTA, void *CTA, int NL)
 {
 uint32 I; I = (RTA << 16) | (uint32)CTA;
 MUBLCODE(0x15);OUTBINB(N);MUBLUV(S);MUBLIV(I);
@@ -734,7 +734,7 @@ void TLCLIT32(int BT,int32 VAL)
 
 void TLCLIT64(int BT, t_uint64 VAL)
 {
-int I;
+t_uint64 I;
 I = VAL;
    MUBLCODE(0x36); OUTBINB(BT); MUBLU64(VAL); ;
 }
@@ -802,17 +802,17 @@ PROC TL.ASS.END;
 END;
 @BOX 1.2
 
-void TLSPACE(void *SI)
+void TLSPACE(int SI)
 {
    MUBLCODE(0x07); MUBLUV(SI); ;
 }
 
-void TLSDECL(char *SN, int T,void *D)
+void TLSDECL(char *SN, int T,int D)
 {
    MUBLCODE(0x08); MUBLS(SN); MUBLIV(T); MUBLUV(D); ;
 }
 
-void TLVDECL(char *SN, uint32 SA, int RS, int WS, int T, void *D)
+void TLVDECL(char *SN, uint32 SA, int RS, int WS, int T, int D)
 {
    MUBLCODE(0x09);MUBLS(SN); MUBLUV(SA); MUBLU16(RS);
 MUBLU16(WS); MUBLUV(T); MUBLIV(D); ;
@@ -828,7 +828,7 @@ void TLSELECTFIELD(int N, int F, int A)
       MUBLCODE(0x28);MUBLUV(N);MUBLUV(F);MUBLUV(A);
 }
 
-void TLMAKE(int S, int T, void *D)
+void TLMAKE(int S, int T, int D)
 {
    MUBLCODE(0x0A); MUBLU16(S); MUBLU16(T); MUBLIV(D);
 }
@@ -893,7 +893,7 @@ void TLPROCSPEC(char *NAM, int NAT)
    MUBLCODE(0x11); MUBLS(NAM); MUBLUV(NAT); ;
 }
 
-void TLPROCPARAM(int T, void *D)
+void TLPROCPARAM(int T, int D)
 {
    MUBLCODE(0x12); MUBLU16(T); MUBLIV(D) ;
 }

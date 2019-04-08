@@ -241,22 +241,22 @@ extern void TLLIT(char *,int);
 extern void TLPL(int,int);
 extern void TLPROC(int);
 extern void TLPROCKIND(int);
-extern void TLPROCPARAM(int,void *);
+extern void TLPROCPARAM(int,int);
 extern void TLPROCRESULT(int);
 extern void TLPROCSPEC(char *,int);
-extern void TLSDECL(char *,int,void *);
+extern void TLSDECL(char *,int,int);
 extern void TLSELECTVAR();
 extern void TLSELECTFIELD(int,int,int);
-extern void TLSPACE(void *);
+extern void TLSPACE(int);
 extern void TLTYPE(char *,int);
-extern void TLTYPECOMP(int,void *,char *);
-extern void TLVDECL(char *,uint32,int,int,int,void *);
+extern void TLTYPECOMP(int,int,char *);
+extern void TLVDECL(char *,uint32,int,int,int,int);
 // END OF LIBSPECS FROM OTHER MODULES
 
 // COMMON PSPECS FROM OTHER MODULES
 unsigned short ADDN();
 char *GENN(unsigned short);
-void MONITOR(int);
+extern void MONITOR(int);
 void ITEMISE(int);
 int TRANSCOMP(int);
 void TRANSENDALT(void);

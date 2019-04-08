@@ -1335,7 +1335,7 @@ int TRANSCOMP(int);
 void TRANSDIRECTIVE(void);
 void TRANSGOTO(void);
 void ALTLABEL(void);
-void MONITOR(int);
+extern void MONITOR(int);
 void BEGINST(void);
 void PROCHEAD(void);
 void MODHEAD(void);

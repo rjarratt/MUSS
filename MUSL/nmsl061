@@ -580,7 +580,7 @@ extern unsigned char XNAME[64];
 
 extern void TLLABELSPEC(char *,int);
 extern void TLLABEL(int);
-extern void TLSDECL(char *,int,void *);
+extern void TLSDECL(char *,int,int);
 extern void TLPL(int,int);
 extern void TLCLIT32(int,int32);
 extern void TLCLIT16(int,int16);
@@ -609,7 +609,7 @@ int CONPTR;
 //$TY PLISTENT IS $LO16 INTID,PREVN,K,T int32 DETAIL;
 //$IM $LI PLISTZ;
 //PLISTENT[PLISTZ] PLIST;
-//$PS MONITOR(int);
+extern void MONITOR(int);
 int CURLEV;
 //int GLEV;
 int FPTR;
