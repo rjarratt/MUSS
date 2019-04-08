@@ -360,7 +360,7 @@ int QPOS,I,J,CH;
 IF MNO = 200 THEN
 4 +> MESS.IND FI
 @BOX 14.2
-if (MNO = 200)
+if (MNO == 200)
 {
   MESSIND += 4;
 }
