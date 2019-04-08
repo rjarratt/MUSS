@@ -1880,7 +1880,8 @@ B17:
 @BOX18.1
 $IF PTR =< MAX.KEYWORD
 @BOX18.2
-if (PTR <= MAXKEYWORD)
+/* another case where the condition appears to need to be inverted */
+/**/if (PTR > MAXKEYWORD)
 @BOX 19.1
 MONITOR(0);
 @BOX 19.2
