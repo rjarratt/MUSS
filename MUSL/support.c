@@ -12,7 +12,7 @@ void SELECTINPUT(FILE *f)
 void SELECTOUTPUT(FILE *f)
 {
     CurrentOutputStream = f;
-    CurrentOutputStream = stderr;
+    //CurrentOutputStream = stderr;
 }
 
 FILE *DEFINEINPUT(int StreamNumber, char *FileName, int Mode)
@@ -92,7 +92,7 @@ void OUTHEX(int number, int digits)
 
 void SPACES(int n)
 {
-    for (size_t i = 0; i < n; i++)
+    for (int i = 0; i < n; i++)
     {
         fprintf(CurrentOutputStream, " ");
     }
@@ -171,6 +171,7 @@ void OUTI(int32 number, int field)
 
 void OUTBINB(int n)
 {
+    printf("%02X", n & 0xFF);
 }
 
 extern void MUSL(char *file, char *PROG, int CMPMODE, int DIR);
