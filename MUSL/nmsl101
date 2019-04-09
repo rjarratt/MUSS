@@ -807,10 +807,10 @@ void TLSPACE(int SI)
    MUBLCODE(0x07); MUBLUV(SI); ;
 }
 
-void TLSDECL(char *SN, int T,int D)
-{
-   MUBLCODE(0x08); MUBLS(SN); MUBLIV(T); MUBLUV(D); ;
-}
+//void TLSDECL(char *SN, int T,int D)
+//{
+//   MUBLCODE(0x08); MUBLS(SN); MUBLIV(T); MUBLUV(D); ;
+//}
 
 void TLVDECL(char *SN, uint32 SA, int RS, int WS, int T, int D)
 {
@@ -982,17 +982,17 @@ PROC TL.REG(RU);
    MUBLCODE(%1E); OUT.BIN.B(RU); ;
 END;
 @BOX 1.2
-void TLPL(int F, int N)
-{
-   if (N==0)
-   {
-      MUBLCODE(0x80 | F);
-   }
-   else
-   {
-      MUBLCODE((F>>1) | 0x40);MUBLU16( ((F & 1) << 15) | N);
-   }
-}
+//void TLPL(int F, int N)
+//{
+//   if (N==0)
+//   {
+//      MUBLCODE(0x80 | F);
+//   }
+//   else
+//   {
+//      MUBLCODE((F>>1) | 0x40);MUBLU16( ((F & 1) << 15) | N);
+//   }
+//}
 
 void TLDTYPE(int T, int D)
 {
@@ -1067,25 +1067,25 @@ PROC TL.MODE(I,J);
       MUBLCODE(%30); MUBLU16(I);MUBLUV(J);;
 END;
 @BOX 1.2
-void TL(int M, char *FN, int DZ)
-{
-   MUBLCODE(0x22); OUTBINB(M); MUBLS(FN); MUBLUV(DZ) ;
-}
-
-void TLEND(void)
-{
-   MUBLCODE(0x23); ;
-}
-
-void TLMODULE(void)
-{
-   MUBLCODE(0x24); ;
-}
-
-void TLENDMODULE(int ST)
-{
-   MUBLCODE(0x25); MUBLUV(ST);
-}
+//void TL(int M, char *FN, int DZ)
+//{
+//   MUBLCODE(0x22); OUTBINB(M); MUBLS(FN); MUBLUV(DZ) ;
+//}
+//
+//void TLEND(void)
+//{
+//   MUBLCODE(0x23); ;
+//}
+//
+//void TLMODULE(void)
+//{
+//   MUBLCODE(0x24); ;
+//}
+//
+//void TLENDMODULE(int ST)
+//{
+//   MUBLCODE(0x25); MUBLUV(ST);
+//}
 void TLMODE(int I, int J)
 {
       MUBLCODE(0x30); MUBLU16(I);MUBLUV(J);;

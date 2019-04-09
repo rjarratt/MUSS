@@ -1,4 +1,14 @@
 #include <stdio.h>
+
+typedef unsigned char      uint8;
+typedef short              int16;
+typedef unsigned short     uint16;
+typedef int                int32;
+typedef unsigned int       uint32;
+typedef long long          t_int64;
+typedef unsigned int       uint32;
+typedef unsigned long long t_uint64;
+
 void SELECTINPUT(FILE *f);
 void SELECTOUTPUT(FILE *f);
 FILE *DEFINEINPUT(int StreamNumber, char *FileName, int Mode); /* CH3UM */
