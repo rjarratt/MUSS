@@ -100,7 +100,6 @@ void SPACES(int n)
 
 void PPCCMD(void)
 {
-    printf("PPCCMD\n");
 }
 
 void INBACKSPACE(int n)
@@ -110,12 +109,10 @@ void INBACKSPACE(int n)
 
 void TLLINE(int line)
 {
-    printf("TLLINE %d\n", line);
 }
 
 void OUTLINENO(int n)
 {
-    printf("OUTLINENO %d", n);
 }
 
 char *FINDN(char *name, int kind)
