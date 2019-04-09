@@ -753,7 +753,8 @@ else
 @BOX 13.1
 $IF DECLARE.N < CUR.BLK
 @BOX 13.2
-if (result < CURBLK)
+/* possible FLIP error requires translation to invert the condition below */
+/**/if (result >= CURBLK)
 @BOX 14.1
 %4000 => IX;
 @BOX 14.2
