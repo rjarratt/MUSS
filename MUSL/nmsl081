@@ -522,7 +522,7 @@ NEWLINES(0);CAPTION(%"NLIST");MONITOR(9);FI
 NLIST[++LASTN].MUTLN = 0;
 NLIST[LASTN].MUSLN = LASTCH + 1;
 NLIST[LASTN].HASH = HASH1;
-/**/printf("ADDN added at %d, name=%s, hash=0x%x\n", LASTN, &CHLIST[LASTCH+1], HASH1);
+/*printf("ADDN added at %d, name=%s, hash=0x%x\n", LASTN, &CHLIST[LASTCH+1], HASH1);*/
 LASTCH += N;
 if (LASTN >= NLISTZ || LASTCH >= CHLISTZ)
 {
