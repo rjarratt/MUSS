@@ -2354,7 +2354,9 @@ else
 $IF NEXTCH() => ISYM = '@ OR
 [ISYM = '. $AN XSYM() = ISYM]
 @BOX 11.2
-if ((ISYM = NEXTCH()) == '@' || (ISYM == '.' && XSYM() == ISYM))
+ISYM = NEXTCH();
+/* another condition inversion? */
+/**/if (!(ISYM == '@' || (ISYM == '.' && XSYM() == ISYM)))
 @BOX12.1
 DOT:
 @BOX12.2
