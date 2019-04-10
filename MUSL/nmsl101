@@ -744,10 +744,10 @@ void TLCNULL(int PT)
    MUBLCODE(0x39);MUBLU16(PT);;
 }
 
-void TLCLITS(int BT, char *VAL)
-{
-   MUBLCODE(0x3C); OUTBINB(BT); MUBLS(VAL); ;
-}
+//void TLCLITS(int BT, char *VAL)
+//{
+//   MUBLCODE(0x3C); OUTBINB(BT); MUBLS(VAL); ;
+//}
 
 void TLCLIT128(int BT, double VAL)
 {

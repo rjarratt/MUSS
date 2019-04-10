@@ -2,9 +2,10 @@
 #include <string.h>
 #include "support.h"
 
-#define FIRSTNAME 2
-#define MAXNAMES 4031
-#define MAXNAMELEN 32
+#define FIRST_NAME 2
+#define MAX_NAMES 4031
+#define MAX_NAME_LEN 32
+#define MAX_LITERAL_LEN 256
 
 #define CR_ORG 0
 #define CR_B 1
@@ -195,14 +196,30 @@
 #define NP_NB_REF 6
 #define NP_XNB_REF 7
 
+#define BT_SIZE(n) (((n >> 2) & 0xF) +1 )
+#define BT_MODE(n) ((n >> 6) & 0x3)
+
+#define BT_MODE_REAL 0
+#define BT_MODE_SIGNED_INTEGER 1
+#define BT_MODE_UNSIGNED_INTEGER 2
+#define BT_MODE_DECIMAL 3
+
 typedef struct { void(*op)(int); } MUTLOP;
 
-typedef struct { char name[MAXNAMELEN]; int type; int dimension; } MUTLVAR;
+typedef struct { char name[MAX_NAME_LEN]; int type; int dimension; } MUTLVAR;
 
 static FILE *out_file;
 static int amode = 0;
-static MUTLVAR mutl_var[MAXNAMES + 1];
-static int last_mutl_var = FIRSTNAME - 1;
+static MUTLVAR mutl_var[MAX_NAMES + 1];
+static int last_mutl_var = FIRST_NAME - 1;
+static uint8 current_literal[MAX_LITERAL_LEN];
+static int current_literal_basic_type; /* gives length */
+
+static void print_basic_type(int bt)
+{
+    char *modes[] = { "Real", "Signed Int", "Unsigned Int", "Decimal" };
+    printf("Mode=%s bytes=%d", modes[BT_MODE(bt)], BT_SIZE(bt));
+}
 
 static void write_16_bit_word(unsigned int word)
 {
@@ -213,19 +230,119 @@ static void write_16_bit_word(unsigned int word)
     fwrite(&byte, 1, 1, out_file);
 }
 
-static void order_extended(uint8 cr, uint8 f, uint8 kp, uint8 np)
+static uint8 get_operand(uint8 n)
+{
+    uint8 kp = 0;
+    uint8 np = 0;
+
+    if (n == 0)
+    {
+        kp = KP_LITERAL;
+        switch (BT_MODE(current_literal_basic_type))
+        {
+            case BT_MODE_UNSIGNED_INTEGER:
+            {
+                int len = BT_SIZE(current_literal_basic_type);
+                if (len <= 2)
+                {
+                    np = NP_16_BIT_UNSIGNED_LITERAL;
+                }
+                else if (len <= 4)
+                {
+                    np = NP_32_BIT_UNSIGNED_LITERAL;
+                }
+                else
+                {
+                    np = NP_64_BIT_LITERAL;
+                }
+                break;
+            }
+            default:
+            {
+                printf("Cannot yet generate literal of ");
+                print_basic_type(current_literal_basic_type);
+                printf("\n");
+                exit(1);
+                break;
+            }
+        }
+    }
+
+    return kp << 3 | np;
+}
+
+static void plant_operand(uint8 n)
+{
+    if (n == 0)
+    {
+        switch (BT_MODE(current_literal_basic_type))
+        {
+            case BT_MODE_UNSIGNED_INTEGER:
+            {
+                int len = BT_SIZE(current_literal_basic_type);
+                t_uint64 literal = 0;
+                int i;
+                for (i = 0; i < len; i++)
+                {
+                    literal = literal << 8 | current_literal[i];
+                }
+
+                if (len <= 2)
+                {
+                    write_16_bit_word(literal & 0xFFFF);
+                }
+                else if (len <= 4)
+                {
+                    write_16_bit_word((literal >> 16) & 0xFFFF);
+                    write_16_bit_word(literal & 0xFFFF);
+                }
+                else
+                {
+                    write_16_bit_word((literal >> 48) & 0xFFFF);
+                    write_16_bit_word((literal >> 32) & 0xFFFF);
+                    write_16_bit_word((literal >> 16) & 0xFFFF);
+                    write_16_bit_word(literal & 0xFFFF);
+                }
+                break;
+            }
+            default:
+            {
+                printf("Cannot yet generate literal of ");
+                print_basic_type(current_literal_basic_type);
+                printf("\n");
+                exit(1);
+                break;
+            }
+        }
+    }
+}
+
+static void plant_order_extended(uint8 cr, uint8 f, uint8 kp, uint8 np)
+{
+    uint16 plant_order;
+
+    plant_order = (cr & 0x7) << 13;
+    plant_order |= (f & 0xF) << 9;
+    plant_order |= 0x7 << 6;
+    plant_order |= (kp & 0x7) << 3;
+    plant_order |= np & 0x7;
+    write_16_bit_word(plant_order);
+}
+
+static void plant_order_extended_operand(uint8 cr, uint8 f, uint8 n)
 {
     uint16 order;
+    uint8 operand = get_operand(n);
 
     order = (cr & 0x7) << 13;
     order |= (f & 0xF) << 9;
     order |= 0x7 << 6;
-    order |= (kp & 0x7) << 3;
-    order |= np & 0x7;
+    order |= operand & 0x3F;
     write_16_bit_word(order);
+    plant_operand(n);
 }
 
-static void order(uint8 cr, uint8 f, uint8 k, uint8 n)
+static void plant_order(uint8 cr, uint8 f, uint8 k, uint8 n)
 {
     uint16 order;
 
@@ -243,22 +360,13 @@ void op_a_store(int N)
 
 void op_a_load(int N)
 {
-    if (N == 0)
-    {
-        order_extended(CR_AU, F_LOAD_64, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
-        write_16_bit_word(0); /* needs to be literal, need to fix issue with literal */
-    }
-    else
-    {
-        order_extended(CR_AU, F_LOAD_AOD, K_V32, NP_XNB);
-        write_16_bit_word(N - FIRSTNAME);
-    }
+    plant_order_extended_operand(CR_AU, F_LOAD_64, N);
     printf("A load 0x%X\n", N);
 }
 
 void op_a_add(int N)
 {
-    printf("A add 0x%X\n", N);
+    plant_order_extended_operand(CR_AU, F_ADD_A, N);
 }
 
 void op_org_aconv(int N)
@@ -329,9 +437,23 @@ void TLENDMODULE(int ST)
 void TLSDECL(char *SN, int T, int D)
 {
     last_mutl_var++;
-    strncpy(mutl_var[last_mutl_var].name, SN, MAXNAMELEN - 1);
+    strncpy(mutl_var[last_mutl_var].name, SN, MAX_NAME_LEN - 1);
     mutl_var[last_mutl_var].type = T;
     mutl_var[last_mutl_var].dimension = D;
+}
+
+void TLCLITS(int BT, char *VAL)
+{
+    int len = BT_SIZE(BT);
+    int i;
+    memcpy(current_literal, VAL, len);
+    current_literal_basic_type = BT;
+    printf("Current literal is");
+    for (i = 0; i < len; i++)
+    {
+        printf(" %02X", current_literal[i]);
+    }
+    printf("\n");
 }
 
 void TLPL(int F, int N)
