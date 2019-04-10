@@ -128,7 +128,7 @@ char *PART(char *vec, int first, int last)
 
 void TLPRINT(int mode)
 {
-    printf("TLPRINT %d\n", mode);
+//    printf("TLPRINT %d\n", mode);
 }
 
 void CAPTION(char *msg)
@@ -171,7 +171,7 @@ void OUTI(int32 number, int field)
 
 void OUTBINB(int n)
 {
-    printf("%02X", n & 0xFF);
+    //printf("%02X", n & 0xFF);
 }
 
 extern void MUSL(char *file, char *PROG, int CMPMODE, int DIR);
