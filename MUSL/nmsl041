@@ -360,7 +360,7 @@ void TLEND(void);
 void TLINSERT(int);
 int COMPTYPE(void);
 uint16 ADDN();
-char *GENN(uint16);
+extern char *GENN(uint16);
 void PRINTSTATS(void);
 int CONPTR;
 extern int IPTR;

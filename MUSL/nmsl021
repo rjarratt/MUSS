@@ -255,7 +255,7 @@ extern void TLVDECL(char *,uint32,int,int,int,int);
 
 // COMMON PSPECS FROM OTHER MODULES
 unsigned short ADDN();
-char *GENN(unsigned short);
+extern char *GENN(unsigned short);
 extern void MONITOR(int);
 void ITEMISE(int);
 int TRANSCOMP(int);

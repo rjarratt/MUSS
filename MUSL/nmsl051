@@ -735,6 +735,8 @@ int TVST,TBYADDR;
 uint16 DLIST[SDLIST];
 int MAXMUTLN,MAXN,MAXCH;
 //$IM $LI TLO0;
+extern char *GENN(uint16);
+
 #define AOPD 0x3000;
 @END
 @TITLE MSL05.1(1,7)
