@@ -177,5 +177,5 @@ void OUTBINB(int n)
 extern void MUSL(char *file, char *PROG, int CMPMODE, int DIR);
 int main(int argc, char *argv[])
 {
-    MUSL(argv[1], argv[2], 0, 0);
+    MUSL(argv[1], argv[2], 0x200 /* 32 bit */, 0);
 }

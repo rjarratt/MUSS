@@ -360,7 +360,7 @@ void op_a_store(int N)
 
 void op_a_load(int N)
 {
-    plant_order_extended_operand(CR_AU, F_LOAD_64, N);
+    plant_order_extended_operand(CR_FLOAT, F_LOAD_32, N);
     printf("A load 0x%X\n", N);
 }
 
@@ -436,6 +436,7 @@ void TLENDMODULE(int ST)
 
 void TLSDECL(char *SN, int T, int D)
 {
+    printf("Declare static %s ", SN); print_basic_type(T); printf(" dim=%d\n", D);
     last_mutl_var++;
     strncpy(mutl_var[last_mutl_var].name, SN, MAX_NAME_LEN - 1);
     mutl_var[last_mutl_var].type = T;
