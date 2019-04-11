@@ -888,10 +888,10 @@ PROC TL.ENTRY(N);
 END;
 
 @BOX 1.2
-void TLPROCSPEC(char *NAM, int NAT)
-{
-   MUBLCODE(0x11); MUBLS(NAM); MUBLUV(NAT); ;
-}
+//void TLPROCSPEC(char *NAM, int NAT)
+//{
+//   MUBLCODE(0x11); MUBLS(NAM); MUBLUV(NAT); ;
+//}
 
 void TLPROCPARAM(int T, int D)
 {

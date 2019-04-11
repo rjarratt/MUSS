@@ -206,12 +206,13 @@
 
 typedef struct { void(*op)(int); } MUTLOP;
 
-typedef struct { char name[MAX_NAME_LEN]; int type; int dimension; } MUTLVAR;
+typedef struct { char name[MAX_NAME_LEN]; int type; int dimension; int offset;  } MUTLVAR;
 
 static FILE *out_file;
 static int amode = 0;
 static MUTLVAR mutl_var[MAX_NAMES + 1];
 static int last_mutl_var = FIRST_NAME - 1;
+static int last_mutl_var_offset = -1;
 static uint8 current_literal[MAX_LITERAL_LEN];
 static int current_literal_basic_type; /* gives length */
 
@@ -267,6 +268,11 @@ static uint8 get_operand(uint8 n)
             }
         }
     }
+    else
+    {
+        kp = K_V32;
+        np = NP_XNB;
+    }
 
     return kp << 3 | np;
 }
@@ -315,6 +321,11 @@ static void plant_operand(uint8 n)
             }
         }
     }
+    else
+    {
+        MUTLVAR var = mutl_var[n];
+        write_16_bit_word(var.offset);
+    }
 }
 
 static void plant_order_extended(uint8 cr, uint8 f, uint8 kp, uint8 np)
@@ -355,6 +366,7 @@ static void plant_order(uint8 cr, uint8 f, uint8 k, uint8 n)
 
 void op_a_store(int N)
 {
+    plant_order_extended_operand(CR_FLOAT, F_STORE, N);
     printf("A store to %s\n", mutl_var[N].name);
 }
 
@@ -436,11 +448,18 @@ void TLENDMODULE(int ST)
 
 void TLSDECL(char *SN, int T, int D)
 {
-    printf("Declare static %s ", SN); print_basic_type(T); printf(" dim=%d\n", D);
+    printf("Declare var %s ", SN); print_basic_type(T); printf(" dim=%d\n", D);
     last_mutl_var++;
     strncpy(mutl_var[last_mutl_var].name, SN, MAX_NAME_LEN - 1);
     mutl_var[last_mutl_var].type = T;
     mutl_var[last_mutl_var].dimension = D;
+    mutl_var[last_mutl_var].offset = ++last_mutl_var_offset;
+}
+
+void TLPROCSPEC(char *NAM, int NAT)
+{
+    printf("Declare proc %s\n", NAM);
+    last_mutl_var++;
 }
 
 void TLCLITS(int BT, char *VAL)
