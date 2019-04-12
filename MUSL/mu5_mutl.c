@@ -545,6 +545,18 @@ void TLPROCSPEC(char *NAM, int NAT)
     last_mutl_var++;
 }
 
+void TLLABELSPEC(char *N, int U)
+{
+    if (U > 1)
+    {
+        printf("Compiler label spec\n");
+    }
+    else
+    {
+        printf("Label spec %s\n", N);
+    }
+}
+
 void TLCLITS(int BT, char *VAL)
 {
     int len = BT_SIZE(BT);

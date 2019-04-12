@@ -945,10 +945,10 @@ PROC TL.LABEL(L);
    MUBLCODE(%1C); MUBLU16(L); ;
 END;
 @BOX 1.2
-void TLLABELSPEC(char *N, int U)
-{
-   MUBLCODE(0x1B); MUBLS(N); OUTBINB(U); ;
-}
+//void TLLABELSPEC(char *N, int U)
+//{
+//   MUBLCODE(0x1B); MUBLS(N); OUTBINB(U); ;
+//}
 
 void TLLABEL(int L)
 {
