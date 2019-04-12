@@ -372,7 +372,14 @@ void op_a_store(int N)
 
 void op_a_load(int N)
 {
-    plant_order_extended_operand(CR_FLOAT, F_LOAD_32, N);
+    if (BT_SIZE(amode) <= 4)
+    {
+        plant_order_extended_operand(CR_FLOAT, F_LOAD_32, N);
+    }
+    else
+    {
+        plant_order_extended_operand(CR_FLOAT, F_LOAD_64, N);
+    }
     printf("A load 0x%X\n", N);
 }
 
@@ -383,13 +390,13 @@ void op_a_add(int N)
 
 void op_org_aconv(int N)
 {
-    printf("Aconv 0x%X\n", N);
+    printf("Aconv "); print_basic_type(N); printf("\n");
 }
 
 void op_org_set_amode(int N)
 {
     amode = N;
-    printf("Amode set to 0x%X\n", N);
+    printf("Amode set to "); print_basic_type(N); printf("\n");
 }
 
 static MUTLOP mutl_ops[32][4] =
