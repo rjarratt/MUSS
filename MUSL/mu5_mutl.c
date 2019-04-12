@@ -407,6 +407,26 @@ void op_a_load(int N)
     //printf("A load 0x%X\n", N);
 }
 
+void op_a_xor(int N)
+{
+    plant_order_extended_operand(cr(), F_XOR_A, N);
+}
+
+void op_a_and(int N)
+{
+    plant_order_extended_operand(cr(), F_AND_A, N);
+}
+
+void op_a_or(int N)
+{
+    plant_order_extended_operand(cr(), F_OR_A, N);
+}
+
+void op_a_left_shift(int N)
+{
+    plant_order_extended_operand(cr(), F_SHIFT_L_A, N);
+}
+
 void op_a_add(int N)
 {
     plant_order_extended_operand(cr(), F_ADD_A, N);
@@ -427,9 +447,20 @@ void op_a_div(int N)
     plant_order_extended_operand(cr(), F_DIV_A, N);
 }
 
+void op_a_compare(int N)
+{
+    plant_order_extended_operand(cr(), F_COMP_A, N);
+}
+
 void op_a_add_store(int N)
 {
     op_a_add(N);
+    op_a_store(N);
+}
+
+void op_a_sub_store(int N)
+{
+    op_a_sub(N);
     op_a_store(N);
 }
 
@@ -449,10 +480,10 @@ static MUTLOP mutl_ops[32][4] =
     { NULL, op_a_store, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, op_a_load, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, NULL, op_org_aconv, NULL },
-    { NULL, NULL, op_org_set_amode, NULL },
+    { NULL, op_a_xor, NULL, NULL },
+    { NULL, op_a_and, NULL, NULL },
+    { NULL, op_a_or, op_org_aconv, NULL },
+    { NULL, op_a_left_shift, op_org_set_amode, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, op_a_add, NULL, NULL },
     { NULL, op_a_sub, NULL, NULL },
@@ -461,7 +492,7 @@ static MUTLOP mutl_ops[32][4] =
     { NULL, op_a_div, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
+    { NULL, op_a_compare, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
@@ -471,7 +502,7 @@ static MUTLOP mutl_ops[32][4] =
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, op_a_add_store, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
+    { NULL, op_a_sub_store, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
