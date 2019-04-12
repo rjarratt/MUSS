@@ -364,28 +364,73 @@ static void plant_order(uint8 cr, uint8 f, uint8 k, uint8 n)
     write_16_bit_word(order);
 }
 
+uint8 cr(void)
+{
+    uint8 result = 0;
+    switch (BT_MODE(amode))
+    {
+        case BT_MODE_SIGNED_INTEGER:
+        {
+            result = CR_XS;
+            break;
+        }
+        case BT_MODE_UNSIGNED_INTEGER:
+        {
+            result = CR_AU;
+            break;
+        }
+        default:
+        {
+            printf("Cannot handle Real and Decimal\n");
+            exit(1);
+        }
+    }
+    return result;
+}
+
 void op_a_store(int N)
 {
-    plant_order_extended_operand(CR_FLOAT, F_STORE, N);
-    printf("A store to %s\n", mutl_var[N].name);
+    plant_order_extended_operand(cr(), F_STORE, N);
+    //printf("A store to %s\n", mutl_var[N].name);
 }
 
 void op_a_load(int N)
 {
     if (BT_SIZE(amode) <= 4)
     {
-        plant_order_extended_operand(CR_FLOAT, F_LOAD_32, N);
+        plant_order_extended_operand(cr(), F_LOAD_32, N);
     }
     else
     {
-        plant_order_extended_operand(CR_FLOAT, F_LOAD_64, N);
+        plant_order_extended_operand(cr(), F_LOAD_64, N); /* can generate a 64-bit signed load on MU5 which is not valid */
     }
-    printf("A load 0x%X\n", N);
+    //printf("A load 0x%X\n", N);
 }
 
 void op_a_add(int N)
 {
-    plant_order_extended_operand(CR_AU, F_ADD_A, N);
+    plant_order_extended_operand(cr(), F_ADD_A, N);
+}
+
+void op_a_sub(int N)
+{
+    plant_order_extended_operand(cr(), F_SUB_A, N);
+}
+
+void op_a_mul(int N)
+{
+    plant_order_extended_operand(cr(), F_MUL_A, N);
+}
+
+void op_a_div(int N)
+{
+    plant_order_extended_operand(cr(), F_DIV_A, N);
+}
+
+void op_a_add_store(int N)
+{
+    op_a_add(N);
+    op_a_store(N);
 }
 
 void op_org_aconv(int N)
@@ -396,7 +441,7 @@ void op_org_aconv(int N)
 void op_org_set_amode(int N)
 {
     amode = N;
-    printf("Amode set to "); print_basic_type(N); printf("\n");
+    //printf("Amode set to "); print_basic_type(N); printf("\n");
 }
 
 static MUTLOP mutl_ops[32][4] =
@@ -410,6 +455,10 @@ static MUTLOP mutl_ops[32][4] =
     { NULL, NULL, op_org_set_amode, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, op_a_add, NULL, NULL },
+    { NULL, op_a_sub, NULL, NULL },
+    { NULL, NULL, NULL, NULL },
+    { NULL, op_a_mul, NULL, NULL },
+    { NULL, op_a_div, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
@@ -421,11 +470,7 @@ static MUTLOP mutl_ops[32][4] =
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
+    { NULL, op_a_add_store, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
