@@ -231,7 +231,7 @@ void TLREG(int);
 PSPEC TL.LINE($IN32)/$IN;
 PSPEC TL.PRINT($IN);
 @BOX 3.2
-int TLLINE(int32);
+void TLLINE(int32);
 void TLPRINT(int);
 @BOX 4.1
 PSPEC TL($IN,ADDR[$LO8], $IN);
@@ -950,10 +950,10 @@ END;
 //   MUBLCODE(0x1B); MUBLS(N); OUTBINB(U); ;
 //}
 
-void TLLABEL(int L)
-{
-   MUBLCODE(0x1C); MUBLU16(L); ;
-}
+//void TLLABEL(int L)
+//{
+//   MUBLCODE(0x1C); MUBLU16(L); ;
+//}
 @END
 @TITLE MSL10.3.7(1,6)
 @COL 1S
@@ -1028,15 +1028,15 @@ END;
 PROC TL.PRINT(M);
    MUBLCODE(%18); MUBLUV(M);;
 END;
-@BOX 12
+@BOX 1.2
 
 void TLLINE(LN)
 {
-  if (LN == 0)
-  {
-    LN = IPOS();
-  }
-   MUBLCODE(0x21); MUBLUV(LN); ;
+//  if (LN == 0)
+//  {
+//    LN = IPOS();
+//  }
+//   MUBLCODE(0x21); MUBLUV(LN); ;
 }
 void TLPRINT(int M)
 {

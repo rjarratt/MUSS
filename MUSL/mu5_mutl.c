@@ -1,11 +1,16 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 #include "support.h"
+
+#define LOG_PLANT 0x1
+#define LOG_SYMBOLS 0x2
 
 #define FIRST_NAME 2
 #define MAX_NAMES 4031
 #define MAX_NAME_LEN 32
 #define MAX_LITERAL_LEN 256
+#define MAX_FORWARD_LOCATIONS 64
 
 #define CR_ORG 0
 #define CR_B 1
@@ -206,20 +211,64 @@
 
 typedef struct { void(*op)(int); } MUTLOP;
 
-typedef struct { char name[MAX_NAME_LEN]; int type; int dimension; int offset;  } MUTLVAR;
+typedef enum { SYM_VARIABLE, SYM_LABEL } SYMBOLTYPE;
 
+typedef struct
+{
+    int data_type;
+    int dimension;
+    int offset;
+} VARSYMBOL;
+
+typedef struct
+{
+    int address_defined;
+    uint32 address;
+    int num_forward_refs;
+    uint32 forward_ref_locations[MAX_FORWARD_LOCATIONS];
+} LABELSYMBOL;
+
+typedef struct
+{
+    SYMBOLTYPE symbol_type;
+    char name[MAX_NAME_LEN];
+    union
+    {
+        VARSYMBOL var;
+        LABELSYMBOL label;
+    } data;
+} MUTLSYMBOL;
+
+static int logging = 3;
 static FILE *out_file;
 static int amode = 0;
-static MUTLVAR mutl_var[MAX_NAMES + 1];
+static MUTLSYMBOL mutl_var[MAX_NAMES + 1];
 static int last_mutl_var = FIRST_NAME - 1;
 static int last_mutl_var_offset = -1;
 static uint8 current_literal[MAX_LITERAL_LEN];
 static int current_literal_basic_type; /* gives length */
+static int next_instruction_address = 0;
 
-static void print_basic_type(int bt)
+void log(int source, char *format, ...)
 {
+    va_list va;
+
+    va_start(va, format);
+
+    if (logging & source)
+    {
+        vprintf(format, va);
+    }
+
+    va_end(va);
+}
+
+static char *format_basic_type(int bt)
+{
+    static char buf[80];
     char *modes[] = { "Real", "Signed Int", "Unsigned Int", "Decimal" };
-    printf("Mode=%s bytes=%d", modes[BT_MODE(bt)], BT_SIZE(bt));
+    sprintf(buf, "Mode=%s bytes=%d", modes[BT_MODE(bt)], BT_SIZE(bt));
+    return buf;
 }
 
 static void write_16_bit_word(unsigned int word)
@@ -229,6 +278,21 @@ static void write_16_bit_word(unsigned int word)
     fwrite(&byte, 1, 1, out_file);
     byte = word & 0xFF;
     fwrite(&byte, 1, 1, out_file);
+    next_instruction_address++;
+}
+
+static void update_16_bit_word(unsigned int address, unsigned int word)
+{
+    unsigned char byte;
+    fpos_t cur_pos;
+    fgetpos(out_file, &cur_pos);
+    fseek(out_file, address * 2, SEEK_SET);
+    byte = (word >> 8) & 0xFF;
+    fwrite(&byte, 1, 1, out_file);
+    byte = word & 0xFF;
+    fwrite(&byte, 1, 1, out_file);
+    fsetpos(out_file, &cur_pos);
+    printf("Fixing address %08X to contain %04X\n", address, word);
 }
 
 static uint8 get_operand(uint8 n)
@@ -260,9 +324,7 @@ static uint8 get_operand(uint8 n)
             }
             default:
             {
-                printf("Cannot yet generate literal of ");
-                print_basic_type(current_literal_basic_type);
-                printf("\n");
+                printf("Cannot yet generate literal of %s\n", format_basic_type(current_literal_basic_type));
                 exit(1);
                 break;
             }
@@ -313,9 +375,7 @@ static void plant_operand(uint8 n)
             }
             default:
             {
-                printf("Cannot yet generate literal of ");
-                print_basic_type(current_literal_basic_type);
-                printf("\n");
+                printf("Cannot yet generate literal of %s\n", format_basic_type(current_literal_basic_type));
                 exit(1);
                 break;
             }
@@ -323,8 +383,8 @@ static void plant_operand(uint8 n)
     }
     else
     {
-        MUTLVAR var = mutl_var[n];
-        write_16_bit_word(var.offset);
+        MUTLSYMBOL var = mutl_var[n];
+        write_16_bit_word(var.data.var.offset);
     }
 }
 
@@ -364,6 +424,26 @@ static void plant_order(uint8 cr, uint8 f, uint8 k, uint8 n)
     write_16_bit_word(order);
 }
 
+static void plant_org_order_extended(uint8 f, uint8 kp, uint8 np)
+{
+    uint16 plant_order;
+
+    plant_order = (f & 0x3F) << 7;
+    plant_order |= 0x1 << 6;
+    plant_order |= (kp & 0x7) << 3;
+    plant_order |= np & 0x7;
+    write_16_bit_word(plant_order);
+}
+
+static void plant_org_order(uint8 f, uint8 k, uint8 n)
+{
+    uint16 order;
+
+    order = (f & 0x3F) << 7;
+    order |= (k & 0x1) << 6;
+    order |= n & 0x3F;
+    write_16_bit_word(order);
+}
 uint8 cr(void)
 {
     uint8 result = 0;
@@ -388,14 +468,40 @@ uint8 cr(void)
     return result;
 }
 
+void register_forward_label_ref(int N)
+{
+    LABELSYMBOL *label = &mutl_var[N].data.label;
+    if (label->num_forward_refs >= MAX_FORWARD_LOCATIONS)
+    {
+        printf("Forward ref list for %s is full\n", mutl_var[N].name);
+        exit(1);
+    }
+    else
+    {
+        label->forward_ref_locations[label->num_forward_refs++] = next_instruction_address;
+        printf("Forward ref for %s at 0x%08X\n", mutl_var[N].name, next_instruction_address);
+    }
+}
+
+void fixup_forward_label_refs(int N)
+{
+    LABELSYMBOL *label = &mutl_var[N].data.label;
+    int i;
+    for (i = 0; i < label->num_forward_refs; i++)
+    {
+        update_16_bit_word(label->forward_ref_locations[i], label->address - label->forward_ref_locations[i] + 1);
+    }
+}
+
 void op_a_store(int N)
 {
+    log(LOG_PLANT, "%04X A store to %s\n", next_instruction_address, mutl_var[N].name);
     plant_order_extended_operand(cr(), F_STORE, N);
-    //printf("A store to %s\n", mutl_var[N].name);
 }
 
 void op_a_load(int N)
 {
+    log(LOG_PLANT, "%04X A load 0x%X\n", next_instruction_address, N);
     if (BT_SIZE(amode) <= 4)
     {
         plant_order_extended_operand(cr(), F_LOAD_32, N);
@@ -404,69 +510,86 @@ void op_a_load(int N)
     {
         plant_order_extended_operand(cr(), F_LOAD_64, N); /* can generate a 64-bit signed load on MU5 which is not valid */
     }
-    //printf("A load 0x%X\n", N);
+}
+
+void op_a_load_neg(int N)
+{
+    log(LOG_PLANT, "%04X A load negative 0x%X\n", next_instruction_address, N);
+    op_a_load(N);
+    plant_order(cr(), F_RSUB_A, K_IR, 34); /* 34 is the Z internal register */
 }
 
 void op_a_xor(int N)
 {
+    log(LOG_PLANT, "%04X A XOR 0x%X\n", next_instruction_address, N);
     plant_order_extended_operand(cr(), F_XOR_A, N);
 }
 
 void op_a_and(int N)
 {
+    log(LOG_PLANT, "%04X A AND 0x%X\n", next_instruction_address, N);
     plant_order_extended_operand(cr(), F_AND_A, N);
 }
 
 void op_a_or(int N)
 {
+    log(LOG_PLANT, "%04X A OR 0x%X\n", next_instruction_address, N);
     plant_order_extended_operand(cr(), F_OR_A, N);
 }
 
 void op_a_left_shift(int N)
 {
+    log(LOG_PLANT, "%04X A LSH 0x%X\n", next_instruction_address, N);
     plant_order_extended_operand(cr(), F_SHIFT_L_A, N);
 }
 
 void op_a_add(int N)
 {
+    log(LOG_PLANT, "%04X A ADD 0x%X\n", next_instruction_address, N);
     plant_order_extended_operand(cr(), F_ADD_A, N);
 }
 
 void op_a_sub(int N)
 {
+    log(LOG_PLANT, "%04X A SUB 0x%X\n", next_instruction_address, N);
     plant_order_extended_operand(cr(), F_SUB_A, N);
 }
 
 void op_a_mul(int N)
 {
+    log(LOG_PLANT, "%04X A MUL 0x%X\n", next_instruction_address, N);
     plant_order_extended_operand(cr(), F_MUL_A, N);
 }
 
 void op_a_div(int N)
 {
+    log(LOG_PLANT, "%04X A DIV 0x%X\n", next_instruction_address, N);
     plant_order_extended_operand(cr(), F_DIV_A, N);
 }
 
 void op_a_compare(int N)
 {
+    log(LOG_PLANT, "%04X A COMP 0x%X\n", next_instruction_address, N);
     plant_order_extended_operand(cr(), F_COMP_A, N);
 }
 
 void op_a_add_store(int N)
 {
+    log(LOG_PLANT, "%04X A ADD STORE 0x%X\n", next_instruction_address, N);
     op_a_add(N);
     op_a_store(N);
 }
 
 void op_a_sub_store(int N)
 {
+    log(LOG_PLANT, "%04X A SUB STORE 0x%X\n", next_instruction_address, N);
     op_a_sub(N);
     op_a_store(N);
 }
 
 void op_org_aconv(int N)
 {
-    printf("Aconv "); print_basic_type(N); printf("\n");
+    printf("Aconv %s\n", format_basic_type(N));
 }
 
 void op_org_set_amode(int N)
@@ -475,10 +598,60 @@ void op_org_set_amode(int N)
     //printf("Amode set to "); print_basic_type(N); printf("\n");
 }
 
+void op_org_jump_not_equal(int N)
+{
+    if (mutl_var[N].data.label.address_defined)
+    {
+        int16 relative = next_instruction_address - mutl_var[N].data.label.address;
+        log(LOG_PLANT, "%04X ORG JUMP NE %s relative %d\n", next_instruction_address, mutl_var[N].name, relative);
+        if (relative >= -32 && relative < 32)
+        {
+            plant_org_order(F_BRANCH_NE, K_LITERAL, relative & 0x3F);
+        }
+        else
+        {
+            plant_org_order_extended(F_BRANCH_NE, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+            write_16_bit_word(relative);
+        }
+    }
+    else
+    {
+        log(LOG_PLANT, "%04X ORG JUMP NE to %s forward ref\n", next_instruction_address, mutl_var[N].name);
+        plant_org_order_extended(F_BRANCH_NE, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+        register_forward_label_ref(N);
+        write_16_bit_word(0); /* place holder */
+    }
+}
+
+void op_org_jump_seg(int N)
+{
+    if (mutl_var[N].data.label.address_defined)
+    {
+        int16 relative = next_instruction_address - mutl_var[N].data.label.address;
+        log(LOG_PLANT, "%04X ORG JUMP SEG to %s relative %d\n", next_instruction_address, mutl_var[N].name, relative);
+        if (relative >= -32 && relative < 32)
+        {
+            plant_org_order(F_RELJUMP, K_LITERAL, relative & 0x3F);
+        }
+        else
+        {
+            plant_org_order_extended(F_RELJUMP, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+            write_16_bit_word(relative);
+        }
+    }
+    else
+    {
+        log(LOG_PLANT, "%04X ORG JUMP SEG to %s forward ref\n", next_instruction_address, mutl_var[N].name);
+        plant_org_order_extended(F_RELJUMP, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+        register_forward_label_ref(N);
+        write_16_bit_word(0); /* place holder */
+    }
+}
+
 static MUTLOP mutl_ops[32][4] =
 {
     { NULL, op_a_store, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
+    { NULL, op_a_load_neg, NULL, NULL },
     { NULL, op_a_load, NULL, NULL },
     { NULL, op_a_xor, NULL, NULL },
     { NULL, op_a_and, NULL, NULL },
@@ -487,12 +660,12 @@ static MUTLOP mutl_ops[32][4] =
     { NULL, NULL, NULL, NULL },
     { NULL, op_a_add, NULL, NULL },
     { NULL, op_a_sub, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
+    { NULL, NULL, op_org_jump_not_equal, NULL },
     { NULL, op_a_mul, NULL, NULL },
     { NULL, op_a_div, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
-    { NULL, op_a_compare, NULL, NULL },
+    { NULL, op_a_compare, op_org_jump_seg, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
@@ -531,30 +704,48 @@ void TLENDMODULE(int ST)
 
 void TLSDECL(char *SN, int T, int D)
 {
-    printf("Declare var %s ", SN); print_basic_type(T); printf(" dim=%d\n", D);
+    log(LOG_SYMBOLS, "Declare var %s %s dim=%d\n", SN, format_basic_type(T), D);
     last_mutl_var++;
+    mutl_var[last_mutl_var].symbol_type = SYM_VARIABLE;
     strncpy(mutl_var[last_mutl_var].name, SN, MAX_NAME_LEN - 1);
-    mutl_var[last_mutl_var].type = T;
-    mutl_var[last_mutl_var].dimension = D;
-    mutl_var[last_mutl_var].offset = ++last_mutl_var_offset;
+    mutl_var[last_mutl_var].data.var.data_type = T;
+    mutl_var[last_mutl_var].data.var.dimension = D;
+    mutl_var[last_mutl_var].data.var.offset = ++last_mutl_var_offset;
 }
 
 void TLPROCSPEC(char *NAM, int NAT)
 {
-    printf("Declare proc %s\n", NAM);
+    log(LOG_SYMBOLS, "Declare proc %s\n", NAM);
     last_mutl_var++;
 }
 
 void TLLABELSPEC(char *N, int U)
 {
+    char temp[80];
+    last_mutl_var++;
+    mutl_var[last_mutl_var].symbol_type = SYM_LABEL;
     if (U > 1)
     {
-        printf("Compiler label spec\n");
+        sprintf(temp, "INTERNAL%04d", last_mutl_var);
+        strncpy(mutl_var[last_mutl_var].name, temp, MAX_NAME_LEN - 1);
+        log(LOG_SYMBOLS, "Declare internal label %s\n", temp);
     }
     else
     {
-        printf("Label spec %s\n", N);
+        strncpy(mutl_var[last_mutl_var].name, N, MAX_NAME_LEN - 1);
+        log(LOG_SYMBOLS, "Declare label %s\n", N);
     }
+
+    mutl_var[last_mutl_var].data.label.address_defined = 0;
+    mutl_var[last_mutl_var].data.label.num_forward_refs = 0;
+}
+
+void TLLABEL(int L)
+{
+    log(LOG_SYMBOLS, "Define label %s at 0x%04X\n", mutl_var[L].name, next_instruction_address);
+    mutl_var[L].data.label.address_defined = 1;
+    mutl_var[L].data.label.address = next_instruction_address;
+    fixup_forward_label_refs(L);
 }
 
 void TLCLITS(int BT, char *VAL)
@@ -563,27 +754,27 @@ void TLCLITS(int BT, char *VAL)
     int i;
     memcpy(current_literal, VAL, len);
     current_literal_basic_type = BT;
-    printf("Current literal is");
+    log(LOG_SYMBOLS, "Current literal is");
     for (i = 0; i < len; i++)
     {
-        printf(" %02X", current_literal[i]);
+        log(LOG_SYMBOLS, " %02X", current_literal[i]);
     }
-    printf("\n");
+    log(LOG_SYMBOLS, "\n");
 }
 
 void TLPL(int F, int N)
 {
-    int type = F >> 5;
+    int data_type = F >> 5;
     int opcode = F & 0x1F;
     void(*op)(int) = NULL;
-    op = mutl_ops[opcode][type].op;
+    op = mutl_ops[opcode][data_type].op;
     if (op != NULL)
     {
         op(N);
     }
     else
     {
-        printf("Plant type=%d op=0x%X n=0x%X\n", type, opcode, N);
+        printf("Plant type=%d op=0x%X n=0x%X\n", data_type, opcode, N);
     }
 }
 

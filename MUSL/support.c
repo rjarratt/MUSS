@@ -107,10 +107,6 @@ void INBACKSPACE(int n)
     fseek(CurrentInputStream, -n, SEEK_CUR);
 }
 
-void TLLINE(int line)
-{
-}
-
 void OUTLINENO(int n)
 {
 }
@@ -124,11 +120,6 @@ char *FINDN(char *name, int kind)
 char *PART(char *vec, int first, int last)
 {
     return &vec[first];
-}
-
-void TLPRINT(int mode)
-{
-//    printf("TLPRINT %d\n", mode);
 }
 
 void CAPTION(char *msg)
