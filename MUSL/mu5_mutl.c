@@ -239,7 +239,7 @@ typedef struct
     } data;
 } MUTLSYMBOL;
 
-static int logging = 3;
+static int logging = 0;
 static FILE *out_file;
 static int amode = 0;
 static MUTLSYMBOL mutl_var[MAX_NAMES + 1];
@@ -292,7 +292,7 @@ static void update_16_bit_word(unsigned int address, unsigned int word)
     byte = word & 0xFF;
     fwrite(&byte, 1, 1, out_file);
     fsetpos(out_file, &cur_pos);
-    printf("Fixing address %08X to contain %04X\n", address, word);
+    //printf("Fixing address %08X to contain %04X\n", address, word);
 }
 
 static uint8 get_operand(uint8 n)
@@ -479,7 +479,7 @@ void register_forward_label_ref(int N)
     else
     {
         label->forward_ref_locations[label->num_forward_refs++] = next_instruction_address;
-        printf("Forward ref for %s at 0x%08X\n", mutl_var[N].name, next_instruction_address);
+        //printf("Forward ref for %s at 0x%08X\n", mutl_var[N].name, next_instruction_address);
     }
 }
 
@@ -598,29 +598,59 @@ void op_org_set_amode(int N)
     //printf("Amode set to "); print_basic_type(N); printf("\n");
 }
 
-void op_org_jump_not_equal(int N)
+void op_org_jump_generic(int N, int F, char *type)
 {
     if (mutl_var[N].data.label.address_defined)
     {
         int16 relative = next_instruction_address - mutl_var[N].data.label.address;
-        log(LOG_PLANT, "%04X ORG JUMP NE %s relative %d\n", next_instruction_address, mutl_var[N].name, relative);
+        log(LOG_PLANT, "%04X ORG JUMP %s %s relative %d\n", next_instruction_address, type, mutl_var[N].name, relative);
         if (relative >= -32 && relative < 32)
         {
-            plant_org_order(F_BRANCH_NE, K_LITERAL, relative & 0x3F);
+            plant_org_order(F, K_LITERAL, relative & 0x3F);
         }
         else
         {
-            plant_org_order_extended(F_BRANCH_NE, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+            plant_org_order_extended(F, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
             write_16_bit_word(relative);
         }
     }
     else
     {
-        log(LOG_PLANT, "%04X ORG JUMP NE to %s forward ref\n", next_instruction_address, mutl_var[N].name);
-        plant_org_order_extended(F_BRANCH_NE, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+        log(LOG_PLANT, "%04X ORG JUMP %s to %s forward ref\n", next_instruction_address, type, mutl_var[N].name);
+        plant_org_order_extended(F, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
         register_forward_label_ref(N);
         write_16_bit_word(0); /* place holder */
     }
+}
+
+void op_org_jump_equal(int N)
+{
+    op_org_jump_generic(N, F_BRANCH_EQ, "EQ");
+}
+
+void op_org_jump_not_equal(int N)
+{
+    op_org_jump_generic(N, F_BRANCH_NE, "NE");
+}
+
+void op_org_jump_greater_than_or_equal(int N)
+{
+    op_org_jump_generic(N, F_BRANCH_GE, "GE");
+}
+
+void op_org_jump_less_than(int N)
+{
+    op_org_jump_generic(N, F_BRANCH_LT, "LT");
+}
+
+void op_org_jump_less_than_or_equal(int N)
+{
+    op_org_jump_generic(N, F_BRANCH_LE, "LE");
+}
+
+void op_org_jump_greater_than(int N)
+{
+    op_org_jump_generic(N, F_BRANCH_GT, "GT");
 }
 
 void op_org_jump_seg(int N)
@@ -659,12 +689,12 @@ static MUTLOP mutl_ops[32][4] =
     { NULL, op_a_left_shift, op_org_set_amode, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, op_a_add, NULL, NULL },
-    { NULL, op_a_sub, NULL, NULL },
+    { NULL, op_a_sub, op_org_jump_equal, NULL },
     { NULL, NULL, op_org_jump_not_equal, NULL },
-    { NULL, op_a_mul, NULL, NULL },
-    { NULL, op_a_div, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
+    { NULL, op_a_mul, op_org_jump_greater_than_or_equal, NULL },
+    { NULL, op_a_div, op_org_jump_less_than, NULL },
+    { NULL, NULL, op_org_jump_less_than_or_equal, NULL },
+    { NULL, NULL, op_org_jump_greater_than, NULL },
     { NULL, op_a_compare, op_org_jump_seg, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
