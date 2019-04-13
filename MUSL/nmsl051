@@ -1203,6 +1203,8 @@ END
 return result;
 }
 @BOX10.1
+0 => ADD.LSPEC;
+@BOX10.2
 result = 0;
 @END
 @TITLE MSL05.4(1,6)
@@ -1826,7 +1828,7 @@ for (I = 0; I < (TLIST[PTR] & 0xFF); I++)
   DECLAREN(TLIST[PTR],KFIELD,TLIST[PTR-1]);
 @BOX 8.1
 TL.SELECT.FIELD(CONN,ALT,I);
-@BOX 8.1
+@BOX 8.2
 TLSELECTFIELD(CONN,ALT,I);
 @BOX 9.1
 @BOX 9.2
@@ -2022,7 +2024,7 @@ MN = DECLAREN(ID,KLIT,LITT);
 #MSL05.10.1
 @BOX 7.1
 $IF LBUFF[1+>IPTR] = COMMA
-@BOX 7.1
+@BOX 7.2
 if (memcmp(&LBUFF[++IPTR], &COMMA, sizeof(ITYPE)) == 0)
 @BOX 8.1
 1 -> IPTR;
@@ -2058,7 +2060,7 @@ ITEMISE(1);
 ITEMISE(1);
 @BOX 15.1
 $IF LBUFF[IPTR] = EOL $TH 1+>IPTR $FI
-@BOX 15.1
+@BOX 15.2
 if (memcmp(&LBUFF[IPTR], &EOL, sizeof(ITYPE)) == 0)
 {
   IPTR++;
@@ -3455,7 +3457,7 @@ EVAL.CONST()=>CONST;
 CONST = (void *)EVALCONST();
 @BOX 5.1
 $IF LBUFF[1+>IPTR]/=RSB
-@BOX 5.1
+@BOX 5.2
 if (memcmp(&LBUFF[++IPTR], &RSB, sizeof(ITYPE)) != 0)
 @BOX 6.1
 CONST => COMP.DIM;

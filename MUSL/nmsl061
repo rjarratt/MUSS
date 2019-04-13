@@ -825,7 +825,7 @@ while (memcmp(&LBUFF[IPTR+1], &EOS, sizeof(ITYPE)) != 0)
 $EX;
 $EN
 @BOX 14.2
-exit(0);
+return; /**/ //exit(0);
 }
 @BOX 15.1
 IPTR - 3 => IPTR => END.PTR
@@ -1032,11 +1032,11 @@ TL.CYCLE(EVAL.LIMIT(TINT));
 TLCYCLE(EVALLIMIT(TINT));
 @BOX 9.1
 8 => CON.STK[1 +> CON.PTR];
-@BOX 9.1
+@BOX 9.2
 CONSTK[++CONPTR] = 8;
 @BOX12.1
 IF LBUFF[1 +> IPTR] /= DDO
-@BOX12.1
+@BOX12.2
 if (memcmp(&LBUFF[IPTR+2], &DDO, sizeof(ITYPE)) != 0)
 @BOX13.1
 END
@@ -1104,7 +1104,7 @@ TRANSCOMP(0);
 TLPL(0x45,T);
 @BOX 8.1
 %3000 => EVAL.LIMIT;
-@BOX 8.1
+@BOX 8.2
 result = 0x3000;
 @BOX 9.1
 END
@@ -1290,7 +1290,7 @@ $IF LBUFF[1+>IPTR] /= BSLASH
 if (memcmp(&LBUFF[++IPTR], &BSLASH, sizeof(ITYPE)) != 0)
 @BOX 7.1
 $IF TAG $OF LBUFF[1+>IPTR] /= 1
-@BOX 7.1
+@BOX 7.2
 if (LBUFF[++IPTR].TAG != 1)
 @BOX 8.1
 IND $OF LBUFF[IPTR] => ID;
@@ -1317,7 +1317,7 @@ $IF LBUFF[IPTR+1] = EOS
 if (memcmp(&LBUFF[IPTR+1], &EOS, sizeof(ITYPE)) == 0)
 @BOX 11.1
 $IF LBUFF[1+>IPTR] = COMMA
-@BOX 11.1
+@BOX 11.2
 if (memcmp(&LBUFF[++IPTR], &COMMA, sizeof(ITYPE)) == 0)
 @BOX 14.1
 MONITOR(128);
@@ -1331,7 +1331,7 @@ TLASSEND();
 $EX;
 $EN
 @BOX 19.2
-exit(0);
+return; /**/ //exit(0);
 }
 @END
 @TITLE MSL06.7(1,7)
@@ -1610,7 +1610,7 @@ TL.LABEL(CON.STK[CON.PTR-1]);
 TLLABEL(CONSTK[CONPTR-1]);
 @BOX 7.1
 3 -> CON.PTR;
-@BOX 7.1
+@BOX 7.2
 CONPTR -= 3;
 @BOX 9.1
 $EN
