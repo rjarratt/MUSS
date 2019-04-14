@@ -5,6 +5,7 @@
 
 #define LOG_PLANT 0x1
 #define LOG_SYMBOLS 0x2
+#define LOG_STRUCTURE 0x4
 
 #define FIRST_NAME 2
 #define MAX_NAMES 4031
@@ -211,7 +212,7 @@
 
 typedef struct { void(*op)(int); } MUTLOP;
 
-typedef enum { SYM_VARIABLE, SYM_LABEL } SYMBOLTYPE;
+typedef enum { SYM_VARIABLE, SYM_LABEL, SYM_PROC } SYMBOLTYPE;
 
 typedef struct
 {
@@ -220,13 +221,22 @@ typedef struct
     int offset;
 } VARSYMBOL;
 
-typedef struct
+typedef struct /* some fields in common with PROC so must remain in synch */
 {
     int address_defined;
     uint32 address;
     int num_forward_refs;
     uint32 forward_ref_locations[MAX_FORWARD_LOCATIONS];
 } LABELSYMBOL;
+
+typedef struct /* some fields in common with LABEL so must remain in synch */
+{
+    int address_defined;
+    uint32 address;
+    int num_forward_refs;
+    uint32 forward_ref_locations[MAX_FORWARD_LOCATIONS];
+    int param_count;
+} PROCSYMBOL;
 
 typedef struct
 {
@@ -236,10 +246,11 @@ typedef struct
     {
         VARSYMBOL var;
         LABELSYMBOL label;
+        PROCSYMBOL proc;
     } data;
 } MUTLSYMBOL;
 
-static int logging = 0;
+static int logging = LOG_PLANT | LOG_SYMBOLS | LOG_STRUCTURE;
 static FILE *out_file;
 static int amode = 0;
 static MUTLSYMBOL mutl_var[MAX_NAMES + 1];
@@ -248,6 +259,7 @@ static int last_mutl_var_offset = -1;
 static uint8 current_literal[MAX_LITERAL_LEN];
 static int current_literal_basic_type; /* gives length */
 static int next_instruction_address = 0;
+static PROCSYMBOL *current_proc;
 
 void log(int source, char *format, ...)
 {
@@ -587,17 +599,6 @@ void op_a_sub_store(int N)
     op_a_store(N);
 }
 
-void op_org_aconv(int N)
-{
-    printf("Aconv %s\n", format_basic_type(N));
-}
-
-void op_org_set_amode(int N)
-{
-    amode = N;
-    //printf("Amode set to "); print_basic_type(N); printf("\n");
-}
-
 void op_org_jump_generic(int N, int F, char *type)
 {
     if (mutl_var[N].data.label.address_defined)
@@ -621,6 +622,49 @@ void op_org_jump_generic(int N, int F, char *type)
         register_forward_label_ref(N);
         write_16_bit_word(0); /* place holder */
     }
+}
+
+void op_org_stack_link(int N)
+{
+    int offset = mutl_var[N].data.proc.param_count * 4;
+    log(LOG_PLANT, "%04X ORG STACK LINK to %s, offset=%d\n", next_instruction_address, mutl_var[N].name, offset);
+    plant_org_order(F_STACKLINK, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
+    write_16_bit_word(offset); // all stacked operands are 64-bit
+}
+
+void op_org_stack_parameter(int N)
+{
+    if (N != 0x3000)
+    {
+        printf("Can't stack parameter 0x%04x\n", N);
+        exit(0);
+    }
+
+    log(LOG_PLANT, "%04X STACK register\n", next_instruction_address);
+    plant_order_extended(cr(), F_STACK, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
+    write_16_bit_word(0); /* dummy, not sure how to stack the register without reloading it.*/
+}
+
+void op_org_enter(int N)
+{
+    if (N != 0)
+    {
+        printf("Can't enter 0x%04x\n", N);
+        exit(0);
+    }
+
+    op_org_jump_generic(N, F_RELJUMP, "REL JUMP"); // TODO: should make this absolute, needs generic function to support it.
+}
+
+void op_org_aconv(int N)
+{
+    printf("Aconv %s\n", format_basic_type(N));
+}
+
+void op_org_set_amode(int N)
+{
+    amode = N;
+    //printf("Amode set to "); print_basic_type(N); printf("\n");
 }
 
 void op_org_jump_equal(int N)
@@ -680,9 +724,9 @@ void op_org_jump_seg(int N)
 
 static MUTLOP mutl_ops[32][4] =
 {
-    { NULL, op_a_store, NULL, NULL },
-    { NULL, op_a_load_neg, NULL, NULL },
-    { NULL, op_a_load, NULL, NULL },
+    { NULL, op_a_store, op_org_stack_link, NULL },
+    { NULL, op_a_load_neg, op_org_stack_parameter, NULL },
+    { NULL, op_a_load, op_org_enter, NULL },
     { NULL, op_a_xor, NULL, NULL },
     { NULL, op_a_and, NULL, NULL },
     { NULL, op_a_or, op_org_aconv, NULL },
@@ -734,10 +778,20 @@ void TLENDMODULE(int ST)
 
 void TLSDECL(char *SN, int T, int D)
 {
-    log(LOG_SYMBOLS, "Declare var %s %s dim=%d\n", SN, format_basic_type(T), D);
+    char *name;
+    if (SN != NULL)
+    {
+        name = SN;
+    }
+    else
+    {
+        name = "(internal)";
+    }
+
+    log(LOG_SYMBOLS, "Declare var %s %s dim=%d\n", name, format_basic_type(T), D);
     last_mutl_var++;
     mutl_var[last_mutl_var].symbol_type = SYM_VARIABLE;
-    strncpy(mutl_var[last_mutl_var].name, SN, MAX_NAME_LEN - 1);
+    strncpy(mutl_var[last_mutl_var].name, name, MAX_NAME_LEN - 1);
     mutl_var[last_mutl_var].data.var.data_type = T;
     mutl_var[last_mutl_var].data.var.dimension = D;
     mutl_var[last_mutl_var].data.var.offset = ++last_mutl_var_offset;
@@ -745,10 +799,56 @@ void TLSDECL(char *SN, int T, int D)
 
 void TLPROCSPEC(char *NAM, int NAT)
 {
-    log(LOG_SYMBOLS, "Declare proc %s\n", NAM);
+    log(LOG_SYMBOLS, "Declare proc %s, nature=0x%04X\n", NAM, NAT);
     last_mutl_var++;
+    current_proc = &mutl_var[last_mutl_var].data.proc;
+    mutl_var[last_mutl_var].symbol_type = SYM_PROC;
+    strncpy(mutl_var[last_mutl_var].name, NAM, MAX_NAME_LEN - 1);
 }
 
+void TLPROCPARAM(int T, int D)
+{
+    log(LOG_SYMBOLS, "Declare proc param %s, dim=%d\n", format_basic_type(T), D);
+    current_proc->param_count++;
+}
+
+void TLPROCRESULT(int R, int D)
+{
+    log(LOG_SYMBOLS, "Declare proc result %s, dim=%d\n", format_basic_type(R), D);
+}
+
+void TLPROC(int P)
+{
+    log(LOG_STRUCTURE, "Define proc %s at 0x%04X\n", mutl_var[P].name, next_instruction_address);
+    mutl_var[P].data.proc.address_defined = 1;
+    mutl_var[P].data.proc.address = next_instruction_address;
+    fixup_forward_label_refs(P);
+}
+
+void TLPROCKIND(int K)
+{
+    log(LOG_STRUCTURE, "Define proc kind 0x%04X\n", K);
+    MUBLCODE(0x29); OUTBINB(K); ;
+}
+
+void TLENDPROC(void)
+{
+    log(LOG_STRUCTURE, "End proc\n");
+}
+
+void TLBLOCK(void)
+{
+    log(LOG_STRUCTURE, "Start block\n");
+}
+
+void TLENDBLOCK(void)
+{
+    log(LOG_STRUCTURE, "End block\n");
+}
+void TLENTRY(int N)
+{
+    log(LOG_STRUCTURE, "Enter proc %s\n", mutl_var[N].name);
+}
 void TLLABELSPEC(char *N, int U)
 {
     char temp[80];

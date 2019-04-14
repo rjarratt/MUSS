@@ -893,44 +893,44 @@ END;
 //   MUBLCODE(0x11); MUBLS(NAM); MUBLUV(NAT); ;
 //}
 
-void TLPROCPARAM(int T, int D)
-{
-   MUBLCODE(0x12); MUBLU16(T); MUBLIV(D) ;
-}
-
-void TLPROCRESULT(int R, int D)
-{
-   MUBLCODE(0x27); MUBLUV(R);
-}
-
-void TLPROC(int P)
-{
-   MUBLCODE(0x13); MUBLUV(P); ;
-}
-
-void TLPROCKIND(int K)
-{
-   MUBLCODE(0x29); OUTBINB(K); ;
-}
-
-void TLENDPROC(void)
-{
-   MUBLCODE(0x14); ;
-}
-
-void TLBLOCK(void)
-{
-   MUBLCODE(0x19); ;
-}
-
-void TLENDBLOCK(void)
-{
-   MUBLCODE(0x1A); ;
-}
-void TLENTRY(int N)
-{
-      MUBLCODE(0x31);MUBLU16(N);;
-}
+//void TLPROCPARAM(int T, int D)
+//{
+//   MUBLCODE(0x12); MUBLU16(T); MUBLIV(D) ;
+//}
+//
+//void TLPROCRESULT(int R, int D)
+//{
+//   MUBLCODE(0x27); MUBLUV(R);
+//}
+//
+//void TLPROC(int P)
+//{
+//   MUBLCODE(0x13); MUBLUV(P); ;
+//}
+//
+//void TLPROCKIND(int K)
+//{
+//   MUBLCODE(0x29); OUTBINB(K); ;
+//}
+//
+//void TLENDPROC(void)
+//{
+//   MUBLCODE(0x14); ;
+//}
+//
+//void TLBLOCK(void)
+//{
+//   MUBLCODE(0x19); ;
+//}
+//
+//void TLENDBLOCK(void)
+//{
+//   MUBLCODE(0x1A); ;
+//}
+//void TLENTRY(int N)
+//{
+//      MUBLCODE(0x31);MUBLU16(N);;
+//}
 @END
 @TITLE MSL10.3.6(1,6)
 @COL 1S
