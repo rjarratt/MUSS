@@ -983,7 +983,7 @@ if (memcmp(&LBUFF[++IPTR], &LB, sizeof(ITYPE)) != 0)
 @BOX 6.1
 $IF LBUFF[1+IPTR]=RB
 @BOX 6.2
-if (memcmp(&LBUFF[++IPTR], &RB, sizeof(ITYPE)) == 0)
+if (memcmp(&LBUFF[1+IPTR], &RB, sizeof(ITYPE)) == 0)
 @BOX 7.1
 IF COMP.TYPE()=>PARAMS[1+>LASTP] => TEMP & %8000 /=0 $TH
 TADPROC => TEMP FI
