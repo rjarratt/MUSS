@@ -6,12 +6,14 @@
 #define LOG_PLANT 0x1
 #define LOG_SYMBOLS 0x2
 #define LOG_STRUCTURE 0x4
+#define LOG_LITERALS 0x8
 
 #define FIRST_NAME 2
 #define MAX_NAMES 4031
 #define MAX_NAME_LEN 32
 #define MAX_LITERAL_LEN 256
 #define MAX_FORWARD_LOCATIONS 64
+#define MAX_BLOCK_DEPTH 16
 
 #define CR_ORG 0
 #define CR_B 1
@@ -250,7 +252,12 @@ typedef struct
     } data;
 } MUTLSYMBOL;
 
-static int logging = LOG_PLANT | LOG_SYMBOLS | LOG_STRUCTURE;
+typedef struct
+{
+    int last_mutl_var; /* the last_mutl_var value for the previous block in the hierarchy */
+} BLOCK;
+
+static int logging = /*LOG_PLANT |*/ LOG_SYMBOLS | LOG_STRUCTURE;
 static FILE *out_file;
 static int amode = 0;
 static MUTLSYMBOL mutl_var[MAX_NAMES + 1];
@@ -262,6 +269,8 @@ static int next_instruction_address = 0;
 static PROCSYMBOL *current_proc_spec;
 static int current_proc_call_n;
 static int current_proc_call_stack_link_offset_address;
+static BLOCK block_stack[MAX_BLOCK_DEPTH];
+static int block_level = 0;
 
 void log(int source, char *format, ...)
 {
@@ -481,6 +490,32 @@ uint8 cr(void)
         }
     }
     return result;
+}
+
+void start_block_level(void)
+{
+    if (block_level < (MAX_BLOCK_DEPTH - 1))
+    {
+        block_stack[block_level++].last_mutl_var = last_mutl_var;
+    }
+    else
+    {
+        printf("Max block nesting level exceeded\n");
+        exit(0);
+    }
+}
+
+void end_block_level(void)
+{
+    if (block_level > 0)
+    {
+        last_mutl_var = block_stack[--block_level].last_mutl_var;
+    }
+    else
+    {
+        printf("Too many block ends, stack underflow\n");
+        exit(0);
+    }
 }
 
 int param_stack_size(int N)
@@ -813,8 +848,8 @@ void TLSDECL(char *SN, int T, int D)
         name = "(internal)";
     }
 
-    log(LOG_SYMBOLS, "Declare var %s %s dim=%d\n", name, format_basic_type(T), D);
     last_mutl_var++;
+    log(LOG_SYMBOLS, "Declare var %s %s dim=%d in slot %d\n", name, format_basic_type(T), D, last_mutl_var);
     mutl_var[last_mutl_var].symbol_type = SYM_VARIABLE;
     strncpy(mutl_var[last_mutl_var].name, name, MAX_NAME_LEN - 1);
     mutl_var[last_mutl_var].data.var.data_type = T;
@@ -854,6 +889,7 @@ void TLPROC(int P)
     /* don't make the jump variable length because then we can't calculate the offset to pass to STACKLINK without more complication */
     plant_org_order_extended(F_NB_LOAD_SF_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
     write_16_bit_word(offset);
+    start_block_level();
 }
 
 void TLPROCKIND(int K)
@@ -865,6 +901,7 @@ void TLPROCKIND(int K)
 void TLENDPROC(void)
 {
     log(LOG_STRUCTURE, "End proc\n");
+    end_block_level();
 }
 
 void TLBLOCK(void)
@@ -915,12 +952,12 @@ void TLCLITS(int BT, char *VAL)
     int i;
     memcpy(current_literal, VAL, len);
     current_literal_basic_type = BT;
-    log(LOG_SYMBOLS, "Current literal is");
+    log(LOG_LITERALS, "Current literal is");
     for (i = 0; i < len; i++)
     {
-        log(LOG_SYMBOLS, " %02X", current_literal[i]);
+        log(LOG_LITERALS, " %02X", current_literal[i]);
     }
-    log(LOG_SYMBOLS, "\n");
+    log(LOG_LITERALS, "\n");
 }
 
 void TLPL(int F, int N)
