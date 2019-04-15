@@ -259,8 +259,9 @@ static int last_mutl_var_offset = -1;
 static uint8 current_literal[MAX_LITERAL_LEN];
 static int current_literal_basic_type; /* gives length */
 static int next_instruction_address = 0;
-static PROCSYMBOL *current_proc;
-static int current_proc_n;
+static PROCSYMBOL *current_proc_spec;
+static int current_proc_call_n;
+static int current_proc_call_stack_link_offset_address;
 
 void log(int source, char *format, ...)
 {
@@ -482,7 +483,14 @@ uint8 cr(void)
     return result;
 }
 
-int param_area_size(int N)
+int param_stack_size(int N)
+{
+    int result;
+    result = mutl_var[N].data.proc.param_count * 2;
+    return result;
+}
+
+int param_instruction_size(int N)
 {
     int result;
     result = mutl_var[N].data.proc.param_count * 2;
@@ -635,12 +643,11 @@ void op_org_jump_generic(int N, int F, char *type)
 
 void op_org_stack_link(int N)
 {
-    int offset;
-    current_proc_n = N;
-    offset = param_area_size(N);
-    log(LOG_PLANT, "%04X ORG STACK LINK to %s, offset=%d\n", next_instruction_address, mutl_var[N].name, offset);
+    current_proc_call_n = N;
+    log(LOG_PLANT, "%04X ORG STACK LINK to %s\n", next_instruction_address, mutl_var[N].name);
     plant_org_order_extended(F_STACKLINK, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
-    write_16_bit_word(offset); // all stacked operands are 64-bit
+    current_proc_call_stack_link_offset_address = next_instruction_address;
+    write_16_bit_word(0); /* placeholder fixed up when we plant the ENTER */
 }
 
 void op_org_stack_parameter(int N)
@@ -663,13 +670,15 @@ void op_org_enter(int N)
         exit(0);
     }
 
-    op_org_jump_generic(current_proc_n, F_RELJUMP, "REL JUMP"); // TODO: should make this absolute, needs generic function to support it.
+    op_org_jump_generic(current_proc_call_n, F_RELJUMP, "REL JUMP"); // TODO: should make this absolute, needs generic function to support it.
+    /* update the offset for the STACKLINK */
+    update_16_bit_word(current_proc_call_stack_link_offset_address, next_instruction_address - current_proc_call_stack_link_offset_address + 1);
 }
 
 void op_org_return(int N)
 {
     printf("RETURN operand 0x%04X\n", N);
-    plant_order_extended(CR_ORG, F_RETURN, K_V32, NP_STACK);
+    plant_org_order_extended(F_RETURN, K_V32, NP_STACK);
 }
 
 void op_org_aconv(int N)
@@ -743,7 +752,7 @@ static MUTLOP mutl_ops[32][4] =
     { NULL, op_a_store, op_org_stack_link, NULL },
     { NULL, op_a_load_neg, op_org_stack_parameter, NULL },
     { NULL, op_a_load, op_org_enter, NULL },
-    { NULL, op_a_xor, NULL, NULL },
+    { NULL, op_a_xor, op_org_return, NULL },
     { NULL, op_a_and, NULL, NULL },
     { NULL, op_a_or, op_org_aconv, NULL },
     { NULL, op_a_left_shift, op_org_set_amode, NULL },
@@ -817,7 +826,7 @@ void TLPROCSPEC(char *NAM, int NAT)
 {
     log(LOG_SYMBOLS, "Declare proc %s, nature=0x%04X\n", NAM, NAT);
     last_mutl_var++;
-    current_proc = &mutl_var[last_mutl_var].data.proc;
+    current_proc_spec = &mutl_var[last_mutl_var].data.proc;
     mutl_var[last_mutl_var].symbol_type = SYM_PROC;
     strncpy(mutl_var[last_mutl_var].name, NAM, MAX_NAME_LEN - 1);
 }
@@ -825,7 +834,7 @@ void TLPROCSPEC(char *NAM, int NAT)
 void TLPROCPARAM(int T, int D)
 {
     log(LOG_SYMBOLS, "Declare proc param %s, dim=%d\n", format_basic_type(T), D);
-    current_proc->param_count++;
+    current_proc_spec->param_count++;
 }
 
 void TLPROCRESULT(int R, int D)
@@ -841,17 +850,10 @@ void TLPROC(int P)
     mutl_var[P].data.proc.address = next_instruction_address;
 
     fixup_forward_label_refs(P);
-    offset = -param_area_size(P);
-    // TODO: make this literal thing generic
-    if (offset > -32)
-    {
-        plant_order(CR_ORG, F_NB_LOAD_SF_PLUS, KP_LITERAL, offset);
-    }
-    else
-    {
-        plant_order_extended(CR_ORG, F_NB_LOAD_SF_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
-        write_16_bit_word(offset);
-    }
+    offset = -param_stack_size(P);
+    /* don't make the jump variable length because then we can't calculate the offset to pass to STACKLINK without more complication */
+    plant_org_order_extended(F_NB_LOAD_SF_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+    write_16_bit_word(offset);
 }
 
 void TLPROCKIND(int K)
