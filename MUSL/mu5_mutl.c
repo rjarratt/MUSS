@@ -260,6 +260,7 @@ static uint8 current_literal[MAX_LITERAL_LEN];
 static int current_literal_basic_type; /* gives length */
 static int next_instruction_address = 0;
 static PROCSYMBOL *current_proc;
+static int current_proc_n;
 
 void log(int source, char *format, ...)
 {
@@ -304,7 +305,7 @@ static void update_16_bit_word(unsigned int address, unsigned int word)
     byte = word & 0xFF;
     fwrite(&byte, 1, 1, out_file);
     fsetpos(out_file, &cur_pos);
-    //printf("Fixing address %08X to contain %04X\n", address, word);
+    log(LOG_PLANT, "Fixing address %08X to contain %04X\n", address, word);
 }
 
 static uint8 get_operand(uint8 n)
@@ -626,9 +627,11 @@ void op_org_jump_generic(int N, int F, char *type)
 
 void op_org_stack_link(int N)
 {
-    int offset = mutl_var[N].data.proc.param_count * 4;
+    int offset;
+    current_proc_n = N;
+    offset = mutl_var[N].data.proc.param_count * 4;
     log(LOG_PLANT, "%04X ORG STACK LINK to %s, offset=%d\n", next_instruction_address, mutl_var[N].name, offset);
-    plant_org_order(F_STACKLINK, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
+    plant_org_order_extended(F_STACKLINK, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
     write_16_bit_word(offset); // all stacked operands are 64-bit
 }
 
@@ -641,8 +644,7 @@ void op_org_stack_parameter(int N)
     }
 
     log(LOG_PLANT, "%04X STACK register\n", next_instruction_address);
-    plant_order_extended(cr(), F_STACK, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
-    write_16_bit_word(0); /* dummy, not sure how to stack the register without reloading it.*/
+    plant_order(CR_STS1, F_STACK, K_IR, 48);
 }
 
 void op_org_enter(int N)
@@ -653,7 +655,7 @@ void op_org_enter(int N)
         exit(0);
     }
 
-    op_org_jump_generic(N, F_RELJUMP, "REL JUMP"); // TODO: should make this absolute, needs generic function to support it.
+    op_org_jump_generic(current_proc_n, F_RELJUMP, "REL JUMP"); // TODO: should make this absolute, needs generic function to support it.
 }
 
 void op_org_aconv(int N)
