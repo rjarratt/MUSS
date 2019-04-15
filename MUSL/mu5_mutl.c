@@ -457,6 +457,7 @@ static void plant_org_order(uint8 f, uint8 k, uint8 n)
     order |= n & 0x3F;
     write_16_bit_word(order);
 }
+
 uint8 cr(void)
 {
     uint8 result = 0;
@@ -478,6 +479,13 @@ uint8 cr(void)
             exit(1);
         }
     }
+    return result;
+}
+
+int param_area_size(int N)
+{
+    int result;
+    result = mutl_var[N].data.proc.param_count * 2;
     return result;
 }
 
@@ -629,7 +637,7 @@ void op_org_stack_link(int N)
 {
     int offset;
     current_proc_n = N;
-    offset = mutl_var[N].data.proc.param_count * 4;
+    offset = param_area_size(N);
     log(LOG_PLANT, "%04X ORG STACK LINK to %s, offset=%d\n", next_instruction_address, mutl_var[N].name, offset);
     plant_org_order_extended(F_STACKLINK, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
     write_16_bit_word(offset); // all stacked operands are 64-bit
@@ -656,6 +664,12 @@ void op_org_enter(int N)
     }
 
     op_org_jump_generic(current_proc_n, F_RELJUMP, "REL JUMP"); // TODO: should make this absolute, needs generic function to support it.
+}
+
+void op_org_return(int N)
+{
+    printf("RETURN operand 0x%04X\n", N);
+    plant_order_extended(CR_ORG, F_RETURN, K_V32, NP_STACK);
 }
 
 void op_org_aconv(int N)
@@ -821,10 +835,23 @@ void TLPROCRESULT(int R, int D)
 
 void TLPROC(int P)
 {
+    int offset;
     log(LOG_STRUCTURE, "Define proc %s at 0x%04X\n", mutl_var[P].name, next_instruction_address);
     mutl_var[P].data.proc.address_defined = 1;
     mutl_var[P].data.proc.address = next_instruction_address;
+
     fixup_forward_label_refs(P);
+    offset = -param_area_size(P);
+    // TODO: make this literal thing generic
+    if (offset > -32)
+    {
+        plant_order(CR_ORG, F_NB_LOAD_SF_PLUS, KP_LITERAL, offset);
+    }
+    else
+    {
+        plant_order_extended(CR_ORG, F_NB_LOAD_SF_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+        write_16_bit_word(offset);
+    }
 }
 
 void TLPROCKIND(int K)
