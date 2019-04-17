@@ -14,6 +14,7 @@
 #define MAX_LITERAL_LEN 256
 #define MAX_FORWARD_LOCATIONS 64
 #define MAX_BLOCK_DEPTH 16
+#define MAX_PROC_PARAMS 16
 
 #define CR_ORG 0
 #define CR_B 1
@@ -237,6 +238,7 @@ typedef struct /* some fields in common with LABEL so must remain in synch */
     uint32 address;
     int num_forward_refs;
     uint32 forward_ref_locations[MAX_FORWARD_LOCATIONS];
+    VARSYMBOL parameters[MAX_PROC_PARAMS];
     int param_count;
 } PROCSYMBOL;
 
@@ -244,6 +246,7 @@ typedef struct
 {
     SYMBOLTYPE symbol_type;
     char name[MAX_NAME_LEN];
+    int block_level;
     union
     {
         VARSYMBOL var;
@@ -255,9 +258,10 @@ typedef struct
 typedef struct
 {
     int last_mutl_var; /* the last_mutl_var value for the previous block in the hierarchy */
+    int last_mutl_var_offset; /* the last_mutl_var value for the previous block in the hierarchy */
 } BLOCK;
 
-static int logging = /*LOG_PLANT |*/ LOG_SYMBOLS | LOG_STRUCTURE;
+static int logging = LOG_PLANT | LOG_SYMBOLS | LOG_STRUCTURE;
 static FILE *out_file;
 static int amode = 0;
 static MUTLSYMBOL mutl_var[MAX_NAMES + 1];
@@ -356,7 +360,14 @@ static uint8 get_operand(uint8 n)
     else
     {
         kp = K_V32;
-        np = NP_XNB;
+        if (mutl_var[n].block_level <= 0)
+        {
+            np = NP_XNB;
+        }
+        else
+        {
+            np = NP_NB;
+        }
     }
 
     return kp << 3 | np;
@@ -496,26 +507,33 @@ void start_block_level(void)
 {
     if (block_level < (MAX_BLOCK_DEPTH - 1))
     {
-        block_stack[block_level++].last_mutl_var = last_mutl_var;
+        block_level++;
+        block_stack[block_level].last_mutl_var = last_mutl_var;
+        block_stack[block_level].last_mutl_var_offset = 0;
     }
     else
     {
         printf("Max block nesting level exceeded\n");
         exit(0);
     }
+    log(LOG_STRUCTURE, "Start block, level=%d, last mutl name=%d\n", block_level, last_mutl_var);
 }
 
 void end_block_level(void)
 {
     if (block_level > 0)
     {
-        last_mutl_var = block_stack[--block_level].last_mutl_var;
+        last_mutl_var = block_stack[block_level].last_mutl_var;
+        last_mutl_var_offset = block_stack[block_level].last_mutl_var_offset;
     }
     else
     {
         printf("Too many block ends, stack underflow\n");
         exit(0);
     }
+
+    log(LOG_STRUCTURE, "End block, level=%d\n", block_level);
+    block_level--;
 }
 
 int param_stack_size(int N)
@@ -849,12 +867,14 @@ void TLSDECL(char *SN, int T, int D)
     }
 
     last_mutl_var++;
-    log(LOG_SYMBOLS, "Declare var %s %s dim=%d in slot %d\n", name, format_basic_type(T), D, last_mutl_var);
     mutl_var[last_mutl_var].symbol_type = SYM_VARIABLE;
     strncpy(mutl_var[last_mutl_var].name, name, MAX_NAME_LEN - 1);
+    mutl_var[last_mutl_var].symbol_type = SYM_VARIABLE;
+    mutl_var[last_mutl_var].block_level = block_level;
     mutl_var[last_mutl_var].data.var.data_type = T;
     mutl_var[last_mutl_var].data.var.dimension = D;
     mutl_var[last_mutl_var].data.var.offset = ++last_mutl_var_offset;
+    log(LOG_SYMBOLS, "Declare var %s %s level=%d, dim=%d, offset=%d in slot %d\n", name, format_basic_type(T), block_level, D, last_mutl_var_offset, last_mutl_var);
 }
 
 void TLPROCSPEC(char *NAM, int NAT)
@@ -869,7 +889,17 @@ void TLPROCSPEC(char *NAM, int NAT)
 void TLPROCPARAM(int T, int D)
 {
     log(LOG_SYMBOLS, "Declare proc param %s, dim=%d\n", format_basic_type(T), D);
-    current_proc_spec->param_count++;
+    if (current_proc_spec->param_count < MAX_PROC_PARAMS)
+    {
+        current_proc_spec->parameters[current_proc_spec->param_count].data_type = T;
+        current_proc_spec->parameters[current_proc_spec->param_count].dimension = D;
+        current_proc_spec->param_count++;
+    }
+    else
+    {
+        printf("Too many parameters for procedure\n");
+        exit(0);
+    }
 }
 
 void TLPROCRESULT(int R, int D)
@@ -880,6 +910,7 @@ void TLPROCRESULT(int R, int D)
 void TLPROC(int P)
 {
     int offset;
+    int i;
     log(LOG_STRUCTURE, "Define proc %s at 0x%04X\n", mutl_var[P].name, next_instruction_address);
     mutl_var[P].data.proc.address_defined = 1;
     mutl_var[P].data.proc.address = next_instruction_address;
@@ -890,6 +921,10 @@ void TLPROC(int P)
     plant_org_order_extended(F_NB_LOAD_SF_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
     write_16_bit_word(offset);
     start_block_level();
+    for (i = 0; i < mutl_var[P].data.proc.param_count; i++)
+    {
+        TLSDECL("(param)", mutl_var[P].data.proc.parameters[i].data_type, mutl_var[P].data.proc.parameters[i].dimension);
+    }
 }
 
 void TLPROCKIND(int K)
