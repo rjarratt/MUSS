@@ -236,6 +236,7 @@ typedef struct /* some fields in common with LABEL so must remain in synch */
 {
     int address_defined;
     uint32 address;
+    uint32 stack_offset_address;
     int num_forward_refs;
     uint32 forward_ref_locations[MAX_FORWARD_LOCATIONS];
     VARSYMBOL parameters[MAX_PROC_PARAMS];
@@ -259,9 +260,10 @@ typedef struct
 {
     int last_mutl_var; /* the last_mutl_var value for the previous block in the hierarchy */
     int last_mutl_var_offset; /* the last_mutl_var value for the previous block in the hierarchy */
+    MUTLSYMBOL *proc_def_var;
 } BLOCK;
 
-static int logging = LOG_PLANT | LOG_SYMBOLS | LOG_STRUCTURE;
+static int logging = /*LOG_PLANT |*/ LOG_SYMBOLS | LOG_STRUCTURE;
 static FILE *out_file;
 static int amode = 0;
 static MUTLSYMBOL mutl_var[MAX_NAMES + 1];
@@ -271,6 +273,7 @@ static uint8 current_literal[MAX_LITERAL_LEN];
 static int current_literal_basic_type; /* gives length */
 static int next_instruction_address = 0;
 static PROCSYMBOL *current_proc_spec;
+static MUTLSYMBOL *current_proc_def;
 static int current_proc_call_n;
 static int current_proc_call_stack_link_offset_address;
 static BLOCK block_stack[MAX_BLOCK_DEPTH];
@@ -510,6 +513,7 @@ void start_block_level(void)
         block_level++;
         block_stack[block_level].last_mutl_var = last_mutl_var;
         block_stack[block_level].last_mutl_var_offset = 0;
+        block_stack[block_level].proc_def_var = current_proc_def;
     }
     else
     {
@@ -525,6 +529,7 @@ void end_block_level(void)
     {
         last_mutl_var = block_stack[block_level].last_mutl_var;
         last_mutl_var_offset = block_stack[block_level].last_mutl_var_offset;
+        current_proc_def = block_stack[block_level].proc_def_var;
     }
     else
     {
@@ -730,7 +735,7 @@ void op_org_enter(int N)
 
 void op_org_return(int N)
 {
-    printf("RETURN operand 0x%04X\n", N);
+    log(LOG_STRUCTURE, "RETURN operand 0x%04X\n", N);
     plant_org_order_extended(F_RETURN, K_V32, NP_STACK);
 }
 
@@ -909,33 +914,36 @@ void TLPROCRESULT(int R, int D)
 
 void TLPROC(int P)
 {
-    int offset;
     int i;
-    log(LOG_STRUCTURE, "Define proc %s at 0x%04X\n", mutl_var[P].name, next_instruction_address);
-    mutl_var[P].data.proc.address_defined = 1;
-    mutl_var[P].data.proc.address = next_instruction_address;
+    current_proc_def = &mutl_var[P];
+    PROCSYMBOL *proc_def_var = &current_proc_def->data.proc;
+    log(LOG_STRUCTURE, "Define proc %s at 0x%04X\n", current_proc_def->name, next_instruction_address);
+    proc_def_var->address_defined = 1;
+    proc_def_var->address = next_instruction_address;
 
     fixup_forward_label_refs(P);
-    offset = -param_stack_size(P);
     /* don't make the jump variable length because then we can't calculate the offset to pass to STACKLINK without more complication */
     plant_org_order_extended(F_NB_LOAD_SF_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
-    write_16_bit_word(offset);
+    write_16_bit_word(-param_stack_size(P));
+    plant_org_order_extended(F_SF_LOAD_NB_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+    proc_def_var->stack_offset_address = next_instruction_address;
+    write_16_bit_word(0); /* plant a placeholder to be filled with the size of the local variables */
     start_block_level();
-    for (i = 0; i < mutl_var[P].data.proc.param_count; i++)
+    for (i = 0; i < proc_def_var->param_count; i++)
     {
-        TLSDECL("(param)", mutl_var[P].data.proc.parameters[i].data_type, mutl_var[P].data.proc.parameters[i].dimension);
+        TLSDECL("(param)", proc_def_var->parameters[i].data_type, proc_def_var->parameters[i].dimension);
     }
 }
 
 void TLPROCKIND(int K)
 {
     log(LOG_STRUCTURE, "Define proc kind 0x%04X\n", K);
-    MUBLCODE(0x29); OUTBINB(K); ;
 }
 
 void TLENDPROC(void)
 {
     log(LOG_STRUCTURE, "End proc\n");
+    update_16_bit_word(current_proc_def->data.proc.stack_offset_address, (last_mutl_var_offset + 1) * 2);
     end_block_level();
 }
 
