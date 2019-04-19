@@ -722,42 +722,42 @@ PROC TL.LIT (SN, K);
    MUBLCODE(%B); MUBLS(SN); MUBLUV (K) ;
 END;
 @BOX 1.2
-void TLCLIT16(int BT, int16 VAL)
-{
-   MUBLCODE(0x10); OUTBINB(BT); MUBLUV(VAL); ;
-}
-
-void TLCLIT32(int BT,int32 VAL)
-{   
-   MUBLCODE(0x35); OUTBINB(BT); MUBLUV(VAL); ;
-}
-
-void TLCLIT64(int BT, t_uint64 VAL)
-{
-t_uint64 I;
-I = VAL;
-   MUBLCODE(0x36); OUTBINB(BT); MUBLU64(VAL); ;
-}
-
-void TLCNULL(int PT)
-{
-   MUBLCODE(0x39);MUBLU16(PT);;
-}
+//void TLCLIT16(int BT, int16 VAL)
+//{
+//   MUBLCODE(0x10); OUTBINB(BT); MUBLUV(VAL); ;
+//}
+//
+//void TLCLIT32(int BT,int32 VAL)
+//{   
+//   MUBLCODE(0x35); OUTBINB(BT); MUBLUV(VAL); ;
+//}
+//
+//void TLCLIT64(int BT, t_uint64 VAL)
+//{
+//t_uint64 I;
+//I = VAL;
+//   MUBLCODE(0x36); OUTBINB(BT); MUBLU64(VAL); ;
+//}
+//
+//void TLCNULL(int PT)
+//{
+//   MUBLCODE(0x39);MUBLU16(PT);;
+//}
 
 //void TLCLITS(int BT, char *VAL)
 //{
 //   MUBLCODE(0x3C); OUTBINB(BT); MUBLS(VAL); ;
 //}
 
-void TLCLIT128(int BT, double VAL)
-{
-   MUBLCODE(0x37); OUTBINB(BT); MUBLUV(VAL); ;
-}
-
-void TLLIT (char *SN, int K)
-{
-   MUBLCODE(0xB); MUBLS(SN); MUBLUV (K) ;
-}
+//void TLCLIT128(int BT, double VAL)
+//{
+//   MUBLCODE(0x37); OUTBINB(BT); MUBLUV(VAL); ;
+//}
+//
+//void TLLIT (char *SN, int K)
+//{
+//   MUBLCODE(0xB); MUBLS(SN); MUBLUV (K) ;
+//}
 @END
 @TITLE MSL10.3.3(1,6)
 @COL 1S

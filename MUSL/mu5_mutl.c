@@ -293,6 +293,19 @@ void log(int source, char *format, ...)
     va_end(va);
 }
 
+void fatal(char *format, ...)
+{
+    va_list va;
+
+    va_start(va, format);
+
+    vprintf(format, va);
+
+    exit(0);
+
+    va_end(va);
+}
+
 static char *format_basic_type(int bt)
 {
     static char buf[80];
@@ -354,8 +367,7 @@ static uint8 get_operand(uint8 n)
             }
             default:
             {
-                printf("Cannot yet generate literal of %s\n", format_basic_type(current_literal_basic_type));
-                exit(1);
+                fatal("Cannot yet generate literal of %s\n", format_basic_type(current_literal_basic_type));
                 break;
             }
         }
@@ -412,8 +424,7 @@ static void plant_operand(uint8 n)
             }
             default:
             {
-                printf("Cannot yet generate literal of %s\n", format_basic_type(current_literal_basic_type));
-                exit(1);
+                fatal("Cannot yet generate literal of %s\n", format_basic_type(current_literal_basic_type));
                 break;
             }
         }
@@ -499,8 +510,7 @@ uint8 cr(void)
         }
         default:
         {
-            printf("Cannot handle Real and Decimal\n");
-            exit(1);
+            fatal("Cannot handle Real and Decimal\n");
         }
     }
     return result;
@@ -517,8 +527,7 @@ void start_block_level(void)
     }
     else
     {
-        printf("Max block nesting level exceeded\n");
-        exit(0);
+        fatal("Max block nesting level exceeded\n");
     }
     log(LOG_STRUCTURE, "Start block, level=%d, last mutl name=%d\n", block_level, last_mutl_var);
 }
@@ -533,8 +542,7 @@ void end_block_level(void)
     }
     else
     {
-        printf("Too many block ends, stack underflow\n");
-        exit(0);
+        fatal("Too many block ends, stack underflow\n");
     }
 
     log(LOG_STRUCTURE, "End block, level=%d\n", block_level);
@@ -560,8 +568,7 @@ void register_forward_label_ref(int N)
     LABELSYMBOL *label = &mutl_var[N].data.label;
     if (label->num_forward_refs >= MAX_FORWARD_LOCATIONS)
     {
-        printf("Forward ref list for %s is full\n", mutl_var[N].name);
-        exit(1);
+        fatal("Forward ref list for %s is full\n", mutl_var[N].name);
     }
     else
     {
@@ -712,8 +719,7 @@ void op_org_stack_parameter(int N)
 {
     if (N != 0x3000)
     {
-        printf("Can't stack parameter 0x%04x\n", N);
-        exit(0);
+        fatal("Can't stack parameter 0x%04x\n", N);
     }
 
     log(LOG_PLANT, "%04X STACK register\n", next_instruction_address);
@@ -724,8 +730,7 @@ void op_org_enter(int N)
 {
     if (N != 0)
     {
-        printf("Can't enter 0x%04x\n", N);
-        exit(0);
+        fatal("Can't enter 0x%04x\n", N);
     }
 
     op_org_jump_generic(current_proc_call_n, F_RELJUMP, "REL JUMP"); // TODO: should make this absolute, needs generic function to support it.
@@ -841,6 +846,16 @@ static MUTLOP mutl_ops[32][4] =
     { NULL, NULL, NULL, NULL }
 };
 
+void set_literal_value(t_uint64 val, int size)
+{
+    t_uint64 temp = val;
+    int i;
+    for (i = 0; i < size; i++)
+    {
+        current_literal[i] = (val >> (size - i - 1)) & 0xF;
+    }
+}
+
 void TL(int M, char *FN, int DZ)
 {
     out_file = fopen(FN, "wb");
@@ -902,8 +917,7 @@ void TLPROCPARAM(int T, int D)
     }
     else
     {
-        printf("Too many parameters for procedure\n");
-        exit(0);
+        fatal("Too many parameters for procedure\n");
     }
 }
 
@@ -989,6 +1003,29 @@ void TLLABEL(int L)
     fixup_forward_label_refs(L);
 }
 
+void TLCLIT16(int BT, int16 VAL)
+{
+    set_literal_value(VAL, sizeof(int16));
+    current_literal_basic_type = BT;
+}
+
+void TLCLIT32(int BT, int32 VAL)
+{
+    set_literal_value(VAL, sizeof(int32));
+    current_literal_basic_type = BT;
+}
+
+void TLCLIT64(int BT, t_uint64 VAL)
+{
+    set_literal_value(VAL, sizeof(t_uint64));
+    current_literal_basic_type = BT;
+}
+
+void TLCNULL(int PT)
+{
+    fatal("TL.C.NULL not supported\n");
+}
+
 void TLCLITS(int BT, char *VAL)
 {
     int len = BT_SIZE(BT);
@@ -1001,6 +1038,16 @@ void TLCLITS(int BT, char *VAL)
         log(LOG_LITERALS, " %02X", current_literal[i]);
     }
     log(LOG_LITERALS, "\n");
+}
+
+void TLCLIT128(int BT, double VAL)
+{
+    fatal("TL.C.LIT128 not supported\n");
+}
+
+void TLLIT(char *SN, int K)
+{
+    fatal("TL.LIT not supported\n");
 }
 
 void TLPL(int F, int N)
