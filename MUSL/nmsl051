@@ -321,6 +321,7 @@ LASTMN,CURLEV,CURRES,CURPROC,CURBLK,GLEV,EVAL.CONST,END.CHECKS,PROCLEV,EVAL.LIT)
 @BOX 1.2
 #include <stdio.h>
 #include <memory.h>
+#include "..\..\MUSS\musl\support.h"
 
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 typedef unsigned char      uint8;
