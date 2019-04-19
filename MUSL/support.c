@@ -132,26 +132,6 @@ int FINDP(char *name, int first, int last)
     return 0;
 }
 
-void TLCYCLE(int limit)
-{
-
-}
-
-void TLCVCYCLE(int cv, int init, int mode)
-{
-
-}
-
-void TLCVLIMIT(int limit, int test)
-{
-
-}
-
-void TLREPEAT(void)
-{
-
-}
-
 int BOPD;
 int AOPD;
 

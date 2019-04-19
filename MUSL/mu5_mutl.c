@@ -365,6 +365,23 @@ static uint8 get_operand(uint8 n)
                 }
                 break;
             }
+            case BT_MODE_SIGNED_INTEGER:
+            {
+                int len = BT_SIZE(current_literal_basic_type);
+                if (len <= 2)
+                {
+                    np = NP_16_BIT_SIGNED_LITERAL;
+                }
+                else if (len <= 4)
+                {
+                    np = NP_32_BIT_SIGNED_LITERAL;
+                }
+                else
+                {
+                    np = NP_64_BIT_LITERAL;
+                }
+                break;
+            }
             default:
             {
                 fatal("Cannot yet generate literal of %s\n", format_basic_type(current_literal_basic_type));
@@ -395,6 +412,7 @@ static void plant_operand(uint8 n)
         switch (BT_MODE(current_literal_basic_type))
         {
             case BT_MODE_UNSIGNED_INTEGER:
+            case BT_MODE_SIGNED_INTEGER:
             {
                 int len = BT_SIZE(current_literal_basic_type);
                 t_uint64 literal = 0;
@@ -1065,4 +1083,30 @@ void TLPL(int F, int N)
         printf("Plant type=%d op=0x%X n=0x%X\n", data_type, opcode, N);
     }
 }
+
+void TLCYCLE(int limit)
+{
+    log(LOG_PLANT, "TL.CYCLE\n");
+    //fatal("TL.CYCLE not supported\n");
+}
+
+void TLCVCYCLE(int cv, int init, int mode)
+{
+    log(LOG_PLANT, "TL.CV.CYCLE\n");
+    op_a_load(init);
+    op_a_store(cv);
+}
+
+void TLCVLIMIT(int limit, int test)
+{
+    log(LOG_PLANT, "TL.CV.LIMIT\n");
+
+}
+
+void TLREPEAT(void)
+{
+    log(LOG_PLANT, "TL.CV.REPEAT\n");
+
+}
+
 
