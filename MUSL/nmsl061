@@ -1037,7 +1037,7 @@ CONSTK[++CONPTR] = 8;
 @BOX12.1
 IF LBUFF[1 +> IPTR] /= DDO
 @BOX12.2
-if (memcmp(&LBUFF[IPTR+2], &DDO, sizeof(ITYPE)) != 0)
+if (memcmp(&LBUFF[++IPTR], &DDO, sizeof(ITYPE)) != 0)
 @BOX13.1
 END
 @BOX13.2
