@@ -263,7 +263,7 @@ typedef struct
     MUTLSYMBOL *proc_def_var;
 } BLOCK;
 
-static int logging = /*LOG_PLANT |*/ LOG_SYMBOLS | LOG_STRUCTURE;
+static int logging = LOG_PLANT | LOG_SYMBOLS | LOG_STRUCTURE;
 static FILE *out_file;
 static int amode = 0;
 static MUTLSYMBOL mutl_var[MAX_NAMES + 1];
@@ -784,7 +784,7 @@ void op_org_jump_seg(int N)
 {
     if (mutl_var[N].data.label.address_defined)
     {
-        int16 relative = next_instruction_address - mutl_var[N].data.label.address;
+        int16 relative = mutl_var[N].data.label.address - next_instruction_address;
         log(LOG_PLANT, "%04X ORG JUMP SEG to %s relative %d\n", next_instruction_address, mutl_var[N].name, relative);
         if (relative >= -32 && relative < 32)
         {
