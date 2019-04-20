@@ -1154,10 +1154,16 @@ void start_loop(int mode, int control_variable)
     loop_stack[loop_level].control_variable = control_variable;
 
 }
+
+void end_loop(void)
+{
+    loop_level--;
+}
+
 void TLCYCLE(int limit)
 {
     log(LOG_PLANT, "TL.CYCLE\n");
-    //fatal("TL.CYCLE not supported\n");
+    fatal("TL.CYCLE not supported\n");
 }
 
 void TLCVCYCLE(int cv, int init, int mode)
@@ -1214,6 +1220,7 @@ void TLREPEAT(void)
 
     relative = next_instruction_address - loop->address_of_end_of_loop_jump + 1;
     update_16_bit_word(loop->address_of_end_of_loop_jump, relative);
+    end_loop();
 }
 
 
