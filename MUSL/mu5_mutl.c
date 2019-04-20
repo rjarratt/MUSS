@@ -15,6 +15,7 @@
 #define MAX_FORWARD_LOCATIONS 64
 #define MAX_BLOCK_DEPTH 16
 #define MAX_PROC_PARAMS 16
+#define MAX_LOOP_DEPTH 16
 
 #define CR_ORG 0
 #define CR_B 1
@@ -213,6 +214,8 @@
 #define BT_MODE_UNSIGNED_INTEGER 2
 #define BT_MODE_DECIMAL 3
 
+#define OPERAND_REG_A 0x3000
+
 typedef struct { void(*op)(int); } MUTLOP;
 
 typedef enum { SYM_VARIABLE, SYM_LABEL, SYM_PROC } SYMBOLTYPE;
@@ -263,6 +266,14 @@ typedef struct
     MUTLSYMBOL *proc_def_var;
 } BLOCK;
 
+typedef struct
+{
+    uint32 address_of_condition;
+    uint32 address_of_end_of_loop_jump;
+    int mode;
+    int control_variable;
+} LOOP;
+
 static int logging = LOG_PLANT | LOG_SYMBOLS | LOG_STRUCTURE;
 static FILE *out_file;
 static int amode = 0;
@@ -278,6 +289,8 @@ static int current_proc_call_n;
 static int current_proc_call_stack_link_offset_address;
 static BLOCK block_stack[MAX_BLOCK_DEPTH];
 static int block_level = 0;
+static LOOP loop_stack[MAX_LOOP_DEPTH];
+static int loop_level = -1;
 
 void log(int source, char *format, ...)
 {
@@ -314,6 +327,37 @@ static char *format_basic_type(int bt)
     return buf;
 }
 
+static char *format_operand(uint16 n)
+{
+    static char buf[80];
+    int pos;
+    int len;
+    int i;
+    if (n == 0)
+    {
+        pos = sprintf(buf, "const 0x");
+        len = BT_SIZE(current_literal_basic_type);
+        for (i = 0; i < len; i++)
+        {
+            sprintf(&buf[pos + 2*i], "%02X", current_literal[i]);
+        }
+    }
+    else if (n == OPERAND_REG_A)
+    {
+        strcpy(buf, "reg A");
+    }
+    else if (n < 0x1000)
+    {
+        sprintf(buf, "var %d", n);
+    }
+    else
+    {
+        fatal("Unsupported operand type 0x%X\n", n);
+    }
+
+    return buf;
+}
+
 static void write_16_bit_word(unsigned int word)
 {
     unsigned char byte;
@@ -338,7 +382,7 @@ static void update_16_bit_word(unsigned int address, unsigned int word)
     log(LOG_PLANT, "Fixing address %08X to contain %04X\n", address, word);
 }
 
-static uint8 get_operand(uint8 n)
+static uint8 get_operand(uint16 n)
 {
     uint8 kp = 0;
     uint8 np = 0;
@@ -389,7 +433,7 @@ static uint8 get_operand(uint8 n)
             }
         }
     }
-    else
+    else if (n < 0x1000)
     {
         kp = K_V32;
         if (mutl_var[n].block_level <= 0)
@@ -401,11 +445,15 @@ static uint8 get_operand(uint8 n)
             np = NP_NB;
         }
     }
+    else
+    {
+        fatal("Unsupported operand type 0x%X\n", n);
+    }
 
     return kp << 3 | np;
 }
 
-static void plant_operand(uint8 n)
+static void plant_operand(uint16 n)
 {
     if (n == 0)
     {
@@ -447,10 +495,14 @@ static void plant_operand(uint8 n)
             }
         }
     }
-    else
+    else if (n < 0x1000)
     {
         MUTLSYMBOL var = mutl_var[n];
         write_16_bit_word(var.data.var.offset);
+    }
+    else
+    {
+        fatal("Unsupported operand type 0x%X\n", n);
     }
 }
 
@@ -466,7 +518,7 @@ static void plant_order_extended(uint8 cr, uint8 f, uint8 kp, uint8 np)
     write_16_bit_word(plant_order);
 }
 
-static void plant_order_extended_operand(uint8 cr, uint8 f, uint8 n)
+static void plant_order_extended_operand(uint8 cr, uint8 f, uint16 n)
 {
     uint16 order;
     uint8 operand = get_operand(n);
@@ -613,7 +665,7 @@ void op_a_store(int N)
 
 void op_a_load(int N)
 {
-    log(LOG_PLANT, "%04X A load 0x%X\n", next_instruction_address, N);
+    log(LOG_PLANT, "%04X A load %s\n", next_instruction_address, format_operand(N));
     if (BT_SIZE(amode) <= 4)
     {
         plant_order_extended_operand(cr(), F_LOAD_32, N);
@@ -626,7 +678,7 @@ void op_a_load(int N)
 
 void op_a_load_neg(int N)
 {
-    log(LOG_PLANT, "%04X A load negative 0x%X\n", next_instruction_address, N);
+    log(LOG_PLANT, "%04X A load negative %s\n", next_instruction_address, format_operand(N));
     op_a_load(N);
     plant_order(cr(), F_RSUB_A, K_IR, 34); /* 34 is the Z internal register */
 }
@@ -639,64 +691,77 @@ void op_a_xor(int N)
 
 void op_a_and(int N)
 {
-    log(LOG_PLANT, "%04X A AND 0x%X\n", next_instruction_address, N);
+    log(LOG_PLANT, "%04X A AND %s\n", next_instruction_address, format_operand(N));
     plant_order_extended_operand(cr(), F_AND_A, N);
 }
 
 void op_a_or(int N)
 {
-    log(LOG_PLANT, "%04X A OR 0x%X\n", next_instruction_address, N);
+    log(LOG_PLANT, "%04X A OR %s\n", next_instruction_address, format_operand(N));
     plant_order_extended_operand(cr(), F_OR_A, N);
 }
 
 void op_a_left_shift(int N)
 {
-    log(LOG_PLANT, "%04X A LSH 0x%X\n", next_instruction_address, N);
+    log(LOG_PLANT, "%04X A LSH %s\n", next_instruction_address, format_operand(N));
     plant_order_extended_operand(cr(), F_SHIFT_L_A, N);
 }
 
 void op_a_add(int N)
 {
-    log(LOG_PLANT, "%04X A ADD 0x%X\n", next_instruction_address, N);
+    log(LOG_PLANT, "%04X A ADD %s\n", next_instruction_address, format_operand(N));
     plant_order_extended_operand(cr(), F_ADD_A, N);
 }
 
 void op_a_sub(int N)
 {
-    log(LOG_PLANT, "%04X A SUB 0x%X\n", next_instruction_address, N);
+    log(LOG_PLANT, "%04X A SUB %s\n", next_instruction_address, format_operand(N));
     plant_order_extended_operand(cr(), F_SUB_A, N);
 }
 
 void op_a_mul(int N)
 {
-    log(LOG_PLANT, "%04X A MUL 0x%X\n", next_instruction_address, N);
+    log(LOG_PLANT, "%04X A MUL %s\n", next_instruction_address, format_operand(N));
     plant_order_extended_operand(cr(), F_MUL_A, N);
 }
 
 void op_a_div(int N)
 {
-    log(LOG_PLANT, "%04X A DIV 0x%X\n", next_instruction_address, N);
+    log(LOG_PLANT, "%04X A DIV %s\n", next_instruction_address, format_operand(N));
     plant_order_extended_operand(cr(), F_DIV_A, N);
 }
 
 void op_a_compare(int N)
 {
-    log(LOG_PLANT, "%04X A COMP 0x%X\n", next_instruction_address, N);
+    log(LOG_PLANT, "%04X A COMP %s\n", next_instruction_address, format_operand(N));
     plant_order_extended_operand(cr(), F_COMP_A, N);
 }
 
 void op_a_add_store(int N)
 {
-    log(LOG_PLANT, "%04X A ADD STORE 0x%X\n", next_instruction_address, N);
+    log(LOG_PLANT, "%04X A ADD STORE %s\n", next_instruction_address, format_operand(N));
     op_a_add(N);
     op_a_store(N);
 }
 
 void op_a_sub_store(int N)
 {
-    log(LOG_PLANT, "%04X A SUB STORE 0x%X\n", next_instruction_address, N);
+    log(LOG_PLANT, "%04X A SUB STORE %s\n", next_instruction_address, format_operand(N));
     op_a_sub(N);
     op_a_store(N);
+}
+
+void op_org_jump_generic_address(int F, int16 relative)
+{
+    if (relative >= -32 && relative < 32)
+    {
+        plant_org_order(F, K_LITERAL, relative & 0x3F);
+    }
+    else
+    {
+        plant_org_order_extended(F, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+        write_16_bit_word(relative);
+    }
 }
 
 void op_org_jump_generic(int N, int F, char *type)
@@ -705,15 +770,7 @@ void op_org_jump_generic(int N, int F, char *type)
     {
         int16 relative = next_instruction_address - mutl_var[N].data.label.address;
         log(LOG_PLANT, "%04X ORG JUMP %s %s relative %d\n", next_instruction_address, type, mutl_var[N].name, relative);
-        if (relative >= -32 && relative < 32)
-        {
-            plant_org_order(F, K_LITERAL, relative & 0x3F);
-        }
-        else
-        {
-            plant_org_order_extended(F, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
-            write_16_bit_word(relative);
-        }
+        op_org_jump_generic_address(F, relative);
     }
     else
     {
@@ -735,7 +792,7 @@ void op_org_stack_link(int N)
 
 void op_org_stack_parameter(int N)
 {
-    if (N != 0x3000)
+    if (N != OPERAND_REG_A)
     {
         fatal("Can't stack parameter 0x%04x\n", N);
     }
@@ -758,7 +815,7 @@ void op_org_enter(int N)
 
 void op_org_return(int N)
 {
-    log(LOG_STRUCTURE, "RETURN operand 0x%04X\n", N);
+    log(LOG_STRUCTURE, "RETURN operand %s\n", format_operand(N));
     plant_org_order_extended(F_RETURN, K_V32, NP_STACK);
 }
 
@@ -1084,6 +1141,19 @@ void TLPL(int F, int N)
     }
 }
 
+void start_loop(int mode, int control_variable)
+{
+    loop_level++;
+    if (loop_level >= MAX_LOOP_DEPTH)
+    {
+        fatal("Exceed loop nesting depth\n");
+    }
+
+    loop_stack[loop_level].address_of_condition = next_instruction_address;
+    loop_stack[loop_level].mode = mode;
+    loop_stack[loop_level].control_variable = control_variable;
+
+}
 void TLCYCLE(int limit)
 {
     log(LOG_PLANT, "TL.CYCLE\n");
@@ -1092,21 +1162,58 @@ void TLCYCLE(int limit)
 
 void TLCVCYCLE(int cv, int init, int mode)
 {
-    log(LOG_PLANT, "TL.CV.CYCLE\n");
+    log(LOG_PLANT, "TL.CV.CYCLE, mode=%d\n", mode);
     op_a_load(init);
     op_a_store(cv);
+    start_loop(mode, cv);
 }
 
-void TLCVLIMIT(int limit, int test)
+void TLCVLIMIT(int limit)
 {
-    log(LOG_PLANT, "TL.CV.LIMIT\n");
+    /* This code assumes the FOR loop is always of the form "FOR N < 10". In other words the operator is always LESS THAN only.
+       The compiler does not seem to tell MUTL if the operator is any different. */
+    LOOP *loop = &loop_stack[loop_level];
+    log(LOG_PLANT, "TL.CV.LIMIT %s\n", format_operand(limit));
 
+    if (limit != OPERAND_REG_A)
+    {
+        op_a_load(limit);
+    }
+
+    op_a_compare(loop->control_variable);
+    if ((loop->mode & 1) == 0)
+    {
+        plant_org_order_extended(F_BRANCH_LE, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+    }
+    else
+    {
+        plant_org_order_extended(F_BRANCH_LE, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+    }
+
+    loop->address_of_end_of_loop_jump = next_instruction_address;
+    write_16_bit_word(0); /* place holder for end of loop address */
 }
 
 void TLREPEAT(void)
 {
+    int relative;
+    LOOP *loop = &loop_stack[loop_level];
     log(LOG_PLANT, "TL.CV.REPEAT\n");
+    op_a_load(loop->control_variable);
+    if ((loop->mode & 1) == 0)
+    {
+        plant_order(cr(), F_ADD_A, K_LITERAL, 1);
+    }
+    else
+    {
+        plant_order(cr(), F_SUB_A, K_LITERAL, 1);
+    }
+    op_a_store(loop->control_variable);
+    relative = loop->address_of_condition - next_instruction_address;
+    op_org_jump_generic_address(F_RELJUMP, relative);
 
+    relative = next_instruction_address - loop->address_of_end_of_loop_jump + 1;
+    update_16_bit_word(loop->address_of_end_of_loop_jump, relative);
 }
 
 

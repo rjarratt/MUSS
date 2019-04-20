@@ -38,7 +38,7 @@ void CAPTION(char *);
 int FINDP(char *, int, int);
 void TLCYCLE(int);
 void TLCVCYCLE(int, int, int);
-void TLCVLIMIT(int, int);
+void TLCVLIMIT(int);
 void TLREPEAT(void);
 
 extern int BOPD;
