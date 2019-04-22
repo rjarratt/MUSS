@@ -214,7 +214,15 @@
 #define BT_MODE_UNSIGNED_INTEGER 2
 #define BT_MODE_DECIMAL 3
 
+#define TINT32 0x4C
+
+#define OPERAND_LITERAL 0
 #define OPERAND_REG_A 0x3000
+#define OPERAND_POP 0x1003
+#define NO_OPERAND_FOLLOWS_FLAG 0x80
+#define OPERAND_FOLLOWS(kn) ((kn & NO_OPERAND_FOLLOWS_FLAG) == 0)
+
+#define UNKNOWN_ADDRESS 0x7FFF
 
 typedef struct { void(*op)(int); } MUTLOP;
 
@@ -224,7 +232,7 @@ typedef struct
 {
     int data_type;
     int dimension;
-    int offset;
+    int name_base_offset; /* offset in 32-bit words from NB, including LINK if appropriate */
 } VARSYMBOL;
 
 typedef struct /* some fields in common with PROC so must remain in synch */
@@ -239,7 +247,6 @@ typedef struct /* some fields in common with LABEL so must remain in synch */
 {
     int address_defined;
     uint32 address;
-    uint32 stack_offset_address;
     int num_forward_refs;
     uint32 forward_ref_locations[MAX_FORWARD_LOCATIONS];
     VARSYMBOL parameters[MAX_PROC_PARAMS];
@@ -261,8 +268,9 @@ typedef struct
 
 typedef struct
 {
-    int last_mutl_var; /* the last_mutl_var value for the previous block in the hierarchy */
-    int last_mutl_var_offset; /* the last_mutl_var value for the previous block in the hierarchy */
+    int last_mutl_var; /* The number of the last MUTL variable for the previous block in the hierarchy */
+    int local_names_space; /* The number of 32-bit words required for local names in the current block, including LINK (if any) and parameters */
+    uint32 stack_offset_address; /* the location to update the SF offset when the size of the block's variables is known */
     MUTLSYMBOL *proc_def_var;
 } BLOCK;
 
@@ -278,8 +286,6 @@ static int logging = LOG_PLANT | LOG_SYMBOLS | LOG_STRUCTURE;
 static FILE *out_file;
 static int amode = 0;
 static MUTLSYMBOL mutl_var[MAX_NAMES + 1];
-static int last_mutl_var = FIRST_NAME - 1;
-static int last_mutl_var_offset = -1;
 static uint8 current_literal[MAX_LITERAL_LEN];
 static int current_literal_basic_type; /* gives length */
 static int next_instruction_address = 0;
@@ -288,9 +294,11 @@ static MUTLSYMBOL *current_proc_def;
 static int current_proc_call_n;
 static int current_proc_call_stack_link_offset_address;
 static BLOCK block_stack[MAX_BLOCK_DEPTH];
-static int block_level = 0;
+static int block_level = -1;
 static LOOP loop_stack[MAX_LOOP_DEPTH];
 static int loop_level = -1;
+
+uint8 k_v(void);
 
 void log(int source, char *format, ...)
 {
@@ -333,7 +341,7 @@ static char *format_operand(uint16 n)
     int pos;
     int len;
     int i;
-    if (n == 0)
+    if (n == OPERAND_LITERAL)
     {
         pos = sprintf(buf, "const 0x");
         len = BT_SIZE(current_literal_basic_type);
@@ -345,6 +353,10 @@ static char *format_operand(uint16 n)
     else if (n == OPERAND_REG_A)
     {
         strcpy(buf, "reg A");
+    }
+    else if (n == OPERAND_POP)
+    {
+        strcpy(buf, "pop stack");
     }
     else if (n < 0x1000)
     {
@@ -368,7 +380,7 @@ static void write_16_bit_word(unsigned int word)
     next_instruction_address++;
 }
 
-static void update_16_bit_word(unsigned int address, unsigned int word)
+static void update_16_bit_word(unsigned int address, unsigned int word, char *reason)
 {
     unsigned char byte;
     fpos_t cur_pos;
@@ -379,15 +391,16 @@ static void update_16_bit_word(unsigned int address, unsigned int word)
     byte = word & 0xFF;
     fwrite(&byte, 1, 1, out_file);
     fsetpos(out_file, &cur_pos);
-    log(LOG_PLANT, "Fixing address %08X to contain %04X\n", address, word);
+    log(LOG_PLANT, "Fixing address %08X to contain %04X for %s\n", address, word, reason);
 }
 
 static uint8 get_operand(uint16 n)
 {
     uint8 kp = 0;
     uint8 np = 0;
+    uint8 modifier = 0;
 
-    if (n == 0)
+    if (n == OPERAND_LITERAL)
     {
         kp = KP_LITERAL;
         switch (BT_MODE(current_literal_basic_type))
@@ -433,9 +446,15 @@ static uint8 get_operand(uint16 n)
             }
         }
     }
+    else if (n == OPERAND_POP)
+    {
+        kp = k_v();
+        np = NP_STACK;
+        modifier = NO_OPERAND_FOLLOWS_FLAG;
+    }
     else if (n < 0x1000)
     {
-        kp = K_V32;
+        kp = k_v();
         if (mutl_var[n].block_level <= 0)
         {
             np = NP_XNB;
@@ -450,12 +469,12 @@ static uint8 get_operand(uint16 n)
         fatal("Unsupported operand type 0x%X\n", n);
     }
 
-    return kp << 3 | np;
+    return modifier | kp << 3 | (np & 0x7);
 }
 
 static void plant_operand(uint16 n)
 {
-    if (n == 0)
+    if (n == OPERAND_LITERAL)
     {
         switch (BT_MODE(current_literal_basic_type))
         {
@@ -497,8 +516,15 @@ static void plant_operand(uint16 n)
     }
     else if (n < 0x1000)
     {
-        MUTLSYMBOL var = mutl_var[n];
-        write_16_bit_word(var.data.var.offset);
+        MUTLSYMBOL *var = &mutl_var[n];
+        if (BT_SIZE(var->data.var.data_type) <= 4)
+        {
+            write_16_bit_word(var->data.var.name_base_offset);
+        }
+        else
+        {
+            write_16_bit_word(var->data.var.name_base_offset / 2);
+        }
     }
     else
     {
@@ -528,7 +554,10 @@ static void plant_order_extended_operand(uint8 cr, uint8 f, uint16 n)
     order |= 0x7 << 6;
     order |= operand & 0x3F;
     write_16_bit_word(order);
-    plant_operand(n);
+    if (OPERAND_FOLLOWS(operand))
+    {
+        plant_operand(n);
+    }
 }
 
 static void plant_order(uint8 cr, uint8 f, uint8 k, uint8 n)
@@ -586,29 +615,129 @@ uint8 cr(void)
     return result;
 }
 
-void start_block_level(void)
+uint8 k_v()
 {
-    if (block_level < (MAX_BLOCK_DEPTH - 1))
+    uint8 result = 0;
+    uint8 size = BT_SIZE(amode);
+    if (size <= 4)
     {
-        block_level++;
-        block_stack[block_level].last_mutl_var = last_mutl_var;
-        block_stack[block_level].last_mutl_var_offset = 0;
-        block_stack[block_level].proc_def_var = current_proc_def;
+        result = K_V32;
     }
     else
     {
+        result = K_V64;
+    }
+    return result;
+}
+
+void start_block_level(int param_stack_size)
+{
+    BLOCK *block;
+    int nb_adjust;
+
+    block_level++;
+    if (block_level >= MAX_BLOCK_DEPTH)
+    {
         fatal("Max block nesting level exceeded\n");
     }
-    log(LOG_STRUCTURE, "Start block, level=%d, last mutl name=%d\n", block_level, last_mutl_var);
+
+    block = &block_stack[block_level];
+    if (block_level <= 0)
+    {
+        block->last_mutl_var = FIRST_NAME - 1;
+        block->local_names_space = 0;
+        nb_adjust = 0;
+    }
+    else
+    {
+        BLOCK *prev_block = &block_stack[block_level - 1];
+
+        block->last_mutl_var = prev_block->last_mutl_var;
+        block->local_names_space = 2; /* for the LINK */
+        block->proc_def_var = current_proc_def;
+        nb_adjust = -param_stack_size; /* NB must be positioned at the LINK */
+    }
+
+    /* don't make the jump variable length because then we can't calculate the offset to pass to STACKLINK without more complication */
+    plant_org_order_extended(F_NB_LOAD_SF_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+    write_16_bit_word(nb_adjust);
+    log(LOG_PLANT, "Plant NB=SF%d\n", nb_adjust);
+    plant_org_order_extended(F_SF_LOAD_NB_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+    block->stack_offset_address = next_instruction_address;
+    write_16_bit_word(0); /* plant a placeholder to be filled with the size of the local variables */
+
+    log(LOG_STRUCTURE, "Start block, level=%d, last mutl name=%d\n", block_level, block->last_mutl_var);
+}
+
+int block_var_is_not_aligned(T)
+{
+    BLOCK *block = &block_stack[block_level];
+    int result = 0;
+    if (BT_SIZE(T) > 4 && (block->local_names_space % 2 != 0))
+    { 
+        result = 1;
+    }
+
+    return result;
+}
+
+int add_block_var(uint8 T, int is_parameter)
+{
+    BLOCK *block = &block_stack[block_level];
+    if (is_parameter || BT_SIZE(T) > 4)
+    {
+        if (block_var_is_not_aligned(T))
+        {
+            block->local_names_space++;
+        }
+        block->local_names_space += 2;
+    }
+    else
+    {
+        block->local_names_space++;
+    }
+
+    block->last_mutl_var++;
+    return block->last_mutl_var;
+}
+
+int add_other_block_item(void)
+{
+    BLOCK *block = &block_stack[block_level];
+    block->last_mutl_var++;
+    return block->last_mutl_var;
+}
+
+uint16 get_block_name_offset_for_last_var(uint8 T, int is_parameter)
+{
+    BLOCK *block = &block_stack[block_level];
+    uint16 result;
+
+    if (BT_SIZE(T) > 4)
+    {
+        result = block->local_names_space / 2;
+    }
+    else if (is_parameter)
+    {
+        result = block->local_names_space - 1;
+    }
+    else
+    {
+        result = block->local_names_space - 1;
+    }
+
+    return result;
 }
 
 void end_block_level(void)
 {
-    if (block_level > 0)
+    if (block_level >= 0)
     {
-        last_mutl_var = block_stack[block_level].last_mutl_var;
-        last_mutl_var_offset = block_stack[block_level].last_mutl_var_offset;
-        current_proc_def = block_stack[block_level].proc_def_var;
+        BLOCK *block = &block_stack[block_level];
+
+        update_16_bit_word(block->stack_offset_address, block->local_names_space, "SF adjustment to make room for local variables");
+
+        current_proc_def = block->proc_def_var;
     }
     else
     {
@@ -653,7 +782,7 @@ void fixup_forward_label_refs(int N)
     int i;
     for (i = 0; i < label->num_forward_refs; i++)
     {
-        update_16_bit_word(label->forward_ref_locations[i], label->address - label->forward_ref_locations[i] + 1);
+        update_16_bit_word(label->forward_ref_locations[i], label->address - label->forward_ref_locations[i] + 1, "forward label reference");
     }
 }
 
@@ -751,17 +880,22 @@ void op_a_sub_store(int N)
     op_a_store(N);
 }
 
-void op_org_jump_generic_address(int F, int16 relative)
+uint32 op_org_jump_generic_address(int F, int16 relative)
 {
+    uint32 address_location;
     if (relative >= -32 && relative < 32)
     {
         plant_org_order(F, K_LITERAL, relative & 0x3F);
+        address_location = UNKNOWN_ADDRESS;
     }
     else
     {
         plant_org_order_extended(F, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+        address_location = next_instruction_address;
         write_16_bit_word(relative);
     }
+
+    return address_location;
 }
 
 void op_org_jump_generic(int N, int F, char *type)
@@ -797,8 +931,11 @@ void op_org_stack_parameter(int N)
         fatal("Can't stack parameter 0x%04x\n", N);
     }
 
-    log(LOG_PLANT, "%04X STACK register\n", next_instruction_address);
-    plant_order(CR_STS1, F_STACK, K_IR, 48);
+    log(LOG_PLANT, "%04X STACK parameter\n", next_instruction_address);
+    //plant_order(CR_STS1, F_STACK, K_IR, 48);
+    plant_org_order(F_SF_PLUS, K_LITERAL, 2);
+    plant_order_extended(cr(), F_STORE, K_V64, NP_SF);
+    write_16_bit_word(0);
 }
 
 void op_org_enter(int N)
@@ -810,13 +947,13 @@ void op_org_enter(int N)
 
     op_org_jump_generic(current_proc_call_n, F_RELJUMP, "REL JUMP"); // TODO: should make this absolute, needs generic function to support it.
     /* update the offset for the STACKLINK */
-    update_16_bit_word(current_proc_call_stack_link_offset_address, next_instruction_address - current_proc_call_stack_link_offset_address + 1);
+    update_16_bit_word(current_proc_call_stack_link_offset_address, next_instruction_address - current_proc_call_stack_link_offset_address + 1, "return address");
 }
 
 void op_org_return(int N)
 {
     log(LOG_STRUCTURE, "RETURN operand %s\n", format_operand(N));
-    plant_org_order_extended(F_RETURN, K_V32, NP_STACK);
+    plant_org_order_extended(F_RETURN, k_v(), NP_STACK);
 }
 
 void op_org_aconv(int N)
@@ -827,7 +964,20 @@ void op_org_aconv(int N)
 void op_org_set_amode(int N)
 {
     amode = N;
-    //printf("Amode set to "); print_basic_type(N); printf("\n");
+    log(LOG_PLANT, "Amode set to %s\n", format_basic_type(N));
+}
+
+void op_org_stack(int N)
+{
+    if (N != OPERAND_REG_A)
+    {
+        fatal("Can't stack register 0x%04x\n", N);
+    }
+
+    log(LOG_PLANT, "%04X STACK register\n", next_instruction_address);
+    plant_org_order(F_SF_PLUS, K_LITERAL, 2);
+    plant_order_extended(cr(), F_STORE, K_V64, NP_SF);
+    write_16_bit_word(0);
 }
 
 void op_org_jump_equal(int N)
@@ -894,7 +1044,7 @@ static MUTLOP mutl_ops[32][4] =
     { NULL, op_a_and, NULL, NULL },
     { NULL, op_a_or, op_org_aconv, NULL },
     { NULL, op_a_left_shift, op_org_set_amode, NULL },
-    { NULL, NULL, NULL, NULL },
+    { NULL, NULL, op_org_stack, NULL },
     { NULL, op_a_add, NULL, NULL },
     { NULL, op_a_sub, op_org_jump_equal, NULL },
     { NULL, NULL, op_org_jump_not_equal, NULL },
@@ -943,10 +1093,31 @@ void TLEND(void)
 
 void TLMODULE(void)
 {
+    start_block_level(0);
 }
 
 void TLENDMODULE(int ST)
 {
+    end_block_level();
+}
+
+void declare_variable(char *name, uint8 T, uint8 D, int is_parameter)
+{
+    MUTLSYMBOL *var;
+    int nb_offset;
+    int var_n;
+
+    var_n = add_block_var(T, is_parameter);
+    var = &mutl_var[var_n];
+
+    var->symbol_type = SYM_VARIABLE;
+    strncpy(var->name, name, MAX_NAME_LEN - 1);
+    var->symbol_type = SYM_VARIABLE;
+    var->block_level = block_level;
+    var->data.var.data_type = T;
+    var->data.var.dimension = D;
+    var->data.var.name_base_offset = get_block_name_offset_for_last_var(T, is_parameter);
+    log(LOG_SYMBOLS, "Declare var %s %s level=%d, dim=%d, offset=%d in slot %d\n", name, format_basic_type(T), block_level, D, var->data.var.name_base_offset, var_n);
 }
 
 void TLSDECL(char *SN, int T, int D)
@@ -961,24 +1132,16 @@ void TLSDECL(char *SN, int T, int D)
         name = "(internal)";
     }
 
-    last_mutl_var++;
-    mutl_var[last_mutl_var].symbol_type = SYM_VARIABLE;
-    strncpy(mutl_var[last_mutl_var].name, name, MAX_NAME_LEN - 1);
-    mutl_var[last_mutl_var].symbol_type = SYM_VARIABLE;
-    mutl_var[last_mutl_var].block_level = block_level;
-    mutl_var[last_mutl_var].data.var.data_type = T;
-    mutl_var[last_mutl_var].data.var.dimension = D;
-    mutl_var[last_mutl_var].data.var.offset = ++last_mutl_var_offset;
-    log(LOG_SYMBOLS, "Declare var %s %s level=%d, dim=%d, offset=%d in slot %d\n", name, format_basic_type(T), block_level, D, last_mutl_var_offset, last_mutl_var);
+    declare_variable(name, T, D, 0);
 }
 
 void TLPROCSPEC(char *NAM, int NAT)
 {
     log(LOG_SYMBOLS, "Declare proc %s, nature=0x%04X\n", NAM, NAT);
-    last_mutl_var++;
-    current_proc_spec = &mutl_var[last_mutl_var].data.proc;
-    mutl_var[last_mutl_var].symbol_type = SYM_PROC;
-    strncpy(mutl_var[last_mutl_var].name, NAM, MAX_NAME_LEN - 1);
+    MUTLSYMBOL *sym = &mutl_var[add_other_block_item()];
+    current_proc_spec = &sym->data.proc;
+    sym->symbol_type = SYM_PROC;
+    strncpy(sym->name, NAM, MAX_NAME_LEN - 1);
 }
 
 void TLPROCPARAM(int T, int D)
@@ -998,7 +1161,11 @@ void TLPROCPARAM(int T, int D)
 
 void TLPROCRESULT(int R, int D)
 {
-    log(LOG_SYMBOLS, "Declare proc result %s, dim=%d\n", format_basic_type(R), D);
+    if (R != 0)
+    {
+        log(LOG_SYMBOLS, "Declare proc result %s, dim=%d\n", format_basic_type(R), D);
+    }
+    /* TODO. Process this. */
 }
 
 void TLPROC(int P)
@@ -1011,16 +1178,10 @@ void TLPROC(int P)
     proc_def_var->address = next_instruction_address;
 
     fixup_forward_label_refs(P);
-    /* don't make the jump variable length because then we can't calculate the offset to pass to STACKLINK without more complication */
-    plant_org_order_extended(F_NB_LOAD_SF_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
-    write_16_bit_word(-param_stack_size(P));
-    plant_org_order_extended(F_SF_LOAD_NB_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
-    proc_def_var->stack_offset_address = next_instruction_address;
-    write_16_bit_word(0); /* plant a placeholder to be filled with the size of the local variables */
-    start_block_level();
+    start_block_level(param_stack_size(P));
     for (i = 0; i < proc_def_var->param_count; i++)
     {
-        TLSDECL("(param)", proc_def_var->parameters[i].data_type, proc_def_var->parameters[i].dimension);
+        declare_variable("(param)", proc_def_var->parameters[i].data_type, proc_def_var->parameters[i].dimension, 1);
     }
 }
 
@@ -1032,7 +1193,6 @@ void TLPROCKIND(int K)
 void TLENDPROC(void)
 {
     log(LOG_STRUCTURE, "End proc\n");
-    update_16_bit_word(current_proc_def->data.proc.stack_offset_address, (last_mutl_var_offset + 1) * 2);
     end_block_level();
 }
 
@@ -1052,22 +1212,25 @@ void TLENTRY(int N)
 void TLLABELSPEC(char *N, int U)
 {
     char temp[80];
-    last_mutl_var++;
-    mutl_var[last_mutl_var].symbol_type = SYM_LABEL;
+    int sym_n;
+
+    sym_n = add_other_block_item();
+    MUTLSYMBOL *sym = &mutl_var[sym_n];
+    sym->symbol_type = SYM_LABEL;
     if (U > 1)
     {
-        sprintf(temp, "INTERNAL%04d", last_mutl_var);
-        strncpy(mutl_var[last_mutl_var].name, temp, MAX_NAME_LEN - 1);
+        sprintf(temp, "INTERNAL%04d", sym_n);
+        strncpy(sym->name, temp, MAX_NAME_LEN - 1);
         log(LOG_SYMBOLS, "Declare internal label %s\n", temp);
     }
     else
     {
-        strncpy(mutl_var[last_mutl_var].name, N, MAX_NAME_LEN - 1);
+        strncpy(sym->name, N, MAX_NAME_LEN - 1);
         log(LOG_SYMBOLS, "Declare label %s\n", N);
     }
 
-    mutl_var[last_mutl_var].data.label.address_defined = 0;
-    mutl_var[last_mutl_var].data.label.num_forward_refs = 0;
+    sym->data.label.address_defined = 0;
+    sym->data.label.num_forward_refs = 0;
 }
 
 void TLLABEL(int L)
@@ -1141,18 +1304,21 @@ void TLPL(int F, int N)
     }
 }
 
-void start_loop(int mode, int control_variable)
+LOOP *start_loop(int mode, int control_variable)
 {
+    LOOP *loop;
     loop_level++;
     if (loop_level >= MAX_LOOP_DEPTH)
     {
         fatal("Exceed loop nesting depth\n");
     }
 
-    loop_stack[loop_level].address_of_condition = next_instruction_address;
-    loop_stack[loop_level].mode = mode;
-    loop_stack[loop_level].control_variable = control_variable;
+    loop = &loop_stack[loop_level];
+    loop->address_of_condition = next_instruction_address;
+    loop->mode = mode;
+    loop->control_variable = control_variable;
 
+    return loop;
 }
 
 void end_loop(void)
@@ -1162,8 +1328,15 @@ void end_loop(void)
 
 void TLCYCLE(int limit)
 {
+    LOOP *loop;
     log(LOG_PLANT, "TL.CYCLE\n");
-    fatal("TL.CYCLE not supported\n");
+    op_org_set_amode(TINT32);
+    op_a_load(limit);
+    op_org_stack(OPERAND_REG_A);
+    loop = start_loop(1, OPERAND_POP);
+    TLCLIT32(TINT32, 0);
+    op_a_compare(OPERAND_LITERAL);
+    loop->address_of_end_of_loop_jump = op_org_jump_generic_address(F_BRANCH_LE, UNKNOWN_ADDRESS);
 }
 
 void TLCVCYCLE(int cv, int init, int mode)
@@ -1189,15 +1362,12 @@ void TLCVLIMIT(int limit)
     op_a_compare(loop->control_variable);
     if ((loop->mode & 1) == 0)
     {
-        plant_org_order_extended(F_BRANCH_LE, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+        loop->address_of_end_of_loop_jump = op_org_jump_generic_address(F_BRANCH_LE, UNKNOWN_ADDRESS);
     }
     else
     {
-        plant_org_order_extended(F_BRANCH_LE, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+        loop->address_of_end_of_loop_jump = op_org_jump_generic_address(F_BRANCH_GT, UNKNOWN_ADDRESS);
     }
-
-    loop->address_of_end_of_loop_jump = next_instruction_address;
-    write_16_bit_word(0); /* place holder for end of loop address */
 }
 
 void TLREPEAT(void)
@@ -1214,13 +1384,25 @@ void TLREPEAT(void)
     {
         plant_order(cr(), F_SUB_A, K_LITERAL, 1);
     }
-    op_a_store(loop->control_variable);
+
+    if (loop->control_variable == OPERAND_POP)
+    {
+        op_org_stack(OPERAND_REG_A);
+    }
+    else
+    {
+        op_a_store(loop->control_variable);
+    }
     relative = loop->address_of_condition - next_instruction_address;
     op_org_jump_generic_address(F_RELJUMP, relative);
 
     relative = next_instruction_address - loop->address_of_end_of_loop_jump + 1;
-    update_16_bit_word(loop->address_of_end_of_loop_jump, relative);
+    update_16_bit_word(loop->address_of_end_of_loop_jump, relative, "end of loop address");
     end_loop();
+    if (loop->control_variable == OPERAND_POP)
+    {
+        op_a_load(OPERAND_POP); /* remove control variable from the stack */
+    }
 }
 
 
