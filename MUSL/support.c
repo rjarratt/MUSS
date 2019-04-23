@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <memory.h>
 #include "support.h"
 static FILE *CurrentInputStream = NULL;
 static FILE *CurrentOutputStream = NULL;
@@ -119,7 +120,10 @@ char *FINDN(char *name, int kind)
 
 char *PART(char *vec, int first, int last)
 {
-    return &vec[first];
+    static char result[80];
+    memcpy(result, &vec[first], last - first + 1);
+    result[last - first + 1] = '\0';
+    return result;
 }
 
 void CAPTION(char *msg)

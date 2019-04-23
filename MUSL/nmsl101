@@ -672,20 +672,20 @@ MUBLCODE(0x15);OUTBINB(N);MUBLUV(S);MUBLIV(I);
 MUBLUV(NL);MUBLS("A");;
 }
 
-void TLLOAD(int SN, int AN)
-{
-   MUBLCODE(0x2C); OUTBINB(SN); OUTBINB(AN); ;
-}
-
-void TLCODEAREA(int AN)
-{
-   MUBLCODE(3); OUTBINB(AN); ;
-}
-
-void TLDATAAREA(int AN)
-{
-   MUBLCODE(4); OUTBINB(AN); ;
-}
+//void TLLOAD(int SN, int AN)
+//{
+//   MUBLCODE(0x2C); OUTBINB(SN); OUTBINB(AN); ;
+//}
+//
+//void TLCODEAREA(int AN)
+//{
+//   MUBLCODE(3); OUTBINB(AN); ;
+//}
+//
+//void TLDATAAREA(int AN)
+//{
+//   MUBLCODE(4); OUTBINB(AN); ;
+//}
 @END
 @TITLE MSL10.3.4(1,6)
 @COL 1S
