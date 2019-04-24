@@ -234,7 +234,8 @@ typedef struct
 {
     int data_type;
     int dimension;
-    int name_base_offset; /* offset in 32-bit words from NB, including LINK if appropriate */
+    int position; /* for regular variables this is offset in 32-bit words from NB, including LINK if appropriate, vstore it is the v-line number */
+    int is_vstore;
 } VARSYMBOL;
 
 typedef struct /* some fields in common with PROC so must remain in synch */
@@ -434,6 +435,19 @@ static void update_16_bit_header_word(unsigned int address, unsigned int word, c
     log(LOG_PLANT, "Fixing header address %08X to contain %04X for %s\n", address, word, reason);
 }
 
+static t_uint64 get_current_literal()
+{
+    int len = BT_SIZE(current_literal_basic_type);
+    t_uint64 literal = 0;
+    int i;
+    for (i = 0; i < len; i++)
+    {
+        literal = literal << 8 | current_literal[i];
+    }
+
+    return literal;
+}
+
 static uint8 get_operand(uint16 n)
 {
     uint8 kp = 0;
@@ -494,14 +508,22 @@ static uint8 get_operand(uint16 n)
     }
     else if (n < 0x1000)
     {
-        kp = k_v();
-        if (mutl_var[n].block_level <= 0)
+        if (!mutl_var[n].data.var.is_vstore)
         {
-            np = NP_XNB;
+            kp = k_v();
+            if (mutl_var[n].block_level <= 0)
+            {
+                np = NP_XNB;
+            }
+            else
+            {
+                np = NP_NB;
+            }
         }
         else
         {
-            np = NP_NB;
+            kp = K_PRIVILEGED;
+            np = NP_0;
         }
     }
     else
@@ -522,12 +544,7 @@ static void plant_operand(uint16 n)
             case BT_MODE_SIGNED_INTEGER:
             {
                 int len = BT_SIZE(current_literal_basic_type);
-                t_uint64 literal = 0;
-                int i;
-                for (i = 0; i < len; i++)
-                {
-                    literal = literal << 8 | current_literal[i];
-                }
+                t_uint64 literal = get_current_literal();
 
                 if (len <= 2)
                 {
@@ -557,13 +574,13 @@ static void plant_operand(uint16 n)
     else if (n < 0x1000)
     {
         MUTLSYMBOL *var = &mutl_var[n];
-        if (BT_SIZE(var->data.var.data_type) <= 4)
+        if (BT_SIZE(var->data.var.data_type) <= 4 || var->data.var.is_vstore)
         {
-            write_16_bit_code_word(var->data.var.name_base_offset);
+            write_16_bit_code_word(var->data.var.position);
         }
         else
         {
-            write_16_bit_code_word(var->data.var.name_base_offset / 2);
+            write_16_bit_code_word(var->data.var.position / 2);
         }
     }
     else
@@ -1170,13 +1187,20 @@ void TLENDMODULE(int ST)
     update_16_bit_header_word(1, areas[current_code_area].size, "module length");
 }
 
-void declare_variable(char *name, uint8 T, uint8 D, int is_parameter)
+void declare_variable(char *name, uint8 T, uint8 D, int is_parameter, int is_vstore)
 {
     MUTLSYMBOL *var;
     int nb_offset;
     int var_n;
 
-    var_n = add_block_var(T, is_parameter);
+    if (!is_vstore)
+    {
+        var_n = add_block_var(T, is_parameter);
+    }
+    else
+    {
+        var_n = add_other_block_item();
+    }
     var = &mutl_var[var_n];
 
     var->symbol_type = SYM_VARIABLE;
@@ -1185,8 +1209,18 @@ void declare_variable(char *name, uint8 T, uint8 D, int is_parameter)
     var->block_level = block_level;
     var->data.var.data_type = T;
     var->data.var.dimension = D;
-    var->data.var.name_base_offset = get_block_name_offset_for_last_var(T, is_parameter);
-    log(LOG_SYMBOLS, "Declare var %s %s level=%d, dim=%d, offset=%d in slot %d\n", name, format_basic_type(T), block_level, D, var->data.var.name_base_offset, var_n);
+    var->data.var.is_vstore = is_vstore;
+
+    if (!is_vstore)
+    {
+        var->data.var.position = get_block_name_offset_for_last_var(T, is_parameter);
+        log(LOG_SYMBOLS, "Declare var %s %s level=%d, dim=%d, offset=%d in slot %d\n", name, format_basic_type(T), block_level, D, var->data.var.position, var_n);
+    }
+    else
+    {
+        var->data.var.position = get_current_literal();
+        log(LOG_SYMBOLS, "Declare vstore %s %s level=%d, dim=%d, position=0x%X in slot %d\n", name, format_basic_type(T), block_level, D, var->data.var.position, var_n);
+    }
 }
 
 void TLSDECL(char *SN, int T, int D)
@@ -1201,7 +1235,17 @@ void TLSDECL(char *SN, int T, int D)
         name = "(internal)";
     }
 
-    declare_variable(name, T, D, 0);
+    declare_variable(name, T, D, 0, 0);
+}
+
+void TLVDECL(char *SN, uint32 SA, int RS, int WS, int T, int D)
+{
+    if (SA != 0)
+    {
+        fatal("Expected TL.V.DECL to be called with a literal for the position\n");
+    }
+
+    declare_variable(SN, T, D, 0, 1);
 }
 
 void TLPROCSPEC(char *NAM, int NAT)
@@ -1250,7 +1294,7 @@ void TLPROC(int P)
     start_block_level(param_stack_size(P));
     for (i = 0; i < proc_def_var->param_count; i++)
     {
-        declare_variable("(param)", proc_def_var->parameters[i].data_type, proc_def_var->parameters[i].dimension, 1);
+        declare_variable("(param)", proc_def_var->parameters[i].data_type, proc_def_var->parameters[i].dimension, 1, 0);
     }
 }
 

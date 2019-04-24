@@ -812,11 +812,11 @@ void TLSPACE(int SI)
 //   MUBLCODE(0x08); MUBLS(SN); MUBLIV(T); MUBLUV(D); ;
 //}
 
-void TLVDECL(char *SN, uint32 SA, int RS, int WS, int T, int D)
-{
-   MUBLCODE(0x09);MUBLS(SN); MUBLUV(SA); MUBLU16(RS);
-MUBLU16(WS); MUBLUV(T); MUBLIV(D); ;
-}
+//void TLVDECL(char *SN, uint32 SA, int RS, int WS, int T, int D)
+//{
+//   MUBLCODE(0x09);MUBLS(SN); MUBLUV(SA); MUBLU16(RS);
+//MUBLU16(WS); MUBLUV(T); MUBLIV(D); ;
+//}
 
 void TLSELECTVAR(void)
 {
