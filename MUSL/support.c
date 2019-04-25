@@ -114,6 +114,8 @@ void OUTLINENO(int n)
 
 char *FINDN(VECTOR *name, int kind)
 {
+    printf("FINDN not implemented\n");
+    exit(0);
     // see lib022
     return NULL;
 }
