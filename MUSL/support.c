@@ -112,18 +112,18 @@ void OUTLINENO(int n)
 {
 }
 
-char *FINDN(char *name, int kind)
+char *FINDN(VECTOR *name, int kind)
 {
     // see lib022
     return NULL;
 }
 
-char *PART(char *vec, int first, int last)
+VECTOR *PART(char *vec, int first, int last)
 {
-    static char result[80];
-    memcpy(result, &vec[first], last - first + 1);
-    result[last - first + 1] = '\0';
-    return result;
+    static VECTOR result;
+    result.first = &vec[first];
+    result.length = last - first + 1;
+    return &result;
 }
 
 void CAPTION(char *msg)

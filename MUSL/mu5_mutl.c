@@ -340,6 +340,18 @@ void fatal(char *format, ...)
     va_end(va);
 }
 
+static void vecstrcpy(char *dst, VECTOR *src, int dst_size)
+{
+    int len = src->length;
+    if (len > dst_size - 1)
+    {
+        len = dst_size - 1;
+    }
+
+    strncpy(dst, src->first, len);
+    dst[len] = '\0';
+}
+
 static char *format_basic_type(int bt)
 {
     static char buf[80];
@@ -1187,7 +1199,7 @@ void TLENDMODULE(int ST)
     update_16_bit_header_word(1, areas[current_code_area].size, "module length");
 }
 
-void declare_variable(char *name, uint8 T, int D, int is_parameter, int is_vstore)
+void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vstore)
 {
     MUTLSYMBOL *var;
     int nb_offset;
@@ -1204,7 +1216,7 @@ void declare_variable(char *name, uint8 T, int D, int is_parameter, int is_vstor
     var = &mutl_var[var_n];
 
     var->symbol_type = SYM_VARIABLE;
-    strncpy(var->name, name, MAX_NAME_LEN - 1);
+    vecstrcpy(var->name, name, sizeof(var->name));
     var->symbol_type = SYM_VARIABLE;
     var->block_level = block_level;
     var->data.var.data_type = T;
@@ -1214,7 +1226,7 @@ void declare_variable(char *name, uint8 T, int D, int is_parameter, int is_vstor
     if (!is_vstore)
     {
         var->data.var.position = get_block_name_offset_for_last_var(T, is_parameter);
-        log(LOG_SYMBOLS, "Declare var %s %s level=%d, dim=%d, offset=%d in slot %d\n", name, format_basic_type(T), block_level, D, var->data.var.position, var_n);
+        log(LOG_SYMBOLS, "Declare var %s %s level=%d, dim=%d, offset=%d in slot %d\n", var->name, format_basic_type(T), block_level, D, var->data.var.position, var_n);
     }
     else
     {
@@ -1223,22 +1235,23 @@ void declare_variable(char *name, uint8 T, int D, int is_parameter, int is_vstor
     }
 }
 
-void TLSDECL(char *SN, int T, int D)
+void TLSDECL(VECTOR *SN, int T, int D)
 {
-    char *name;
+    VECTOR name;
     if (SN != NULL)
     {
-        name = SN;
+        memcpy(&name, SN, sizeof(VECTOR));
     }
     else
     {
-        name = "(internal)";
+        name.first = "(internal)";
+        name.length = strlen(name.first);
     }
 
-    declare_variable(name, T, D, 0, 0);
+    declare_variable(&name, T, D, 0, 0);
 }
 
-void TLVDECL(char *SN, uint32 SA, int RS, int WS, int T, int D)
+void TLVDECL(VECTOR *SN, uint32 SA, int RS, int WS, int T, int D)
 {
     if (SA != 0)
     {
@@ -1248,13 +1261,13 @@ void TLVDECL(char *SN, uint32 SA, int RS, int WS, int T, int D)
     declare_variable(SN, T, D, 0, 1);
 }
 
-void TLPROCSPEC(char *NAM, int NAT)
+void TLPROCSPEC(VECTOR *NAM, int NAT)
 {
-    log(LOG_SYMBOLS, "Declare proc %s, nature=0x%04X\n", NAM, NAT);
     MUTLSYMBOL *sym = &mutl_var[add_other_block_item()];
     current_proc_spec = &sym->data.proc;
     sym->symbol_type = SYM_PROC;
-    strncpy(sym->name, NAM, MAX_NAME_LEN - 1);
+    vecstrcpy(sym->name, NAM, sizeof(sym->name));
+    log(LOG_SYMBOLS, "Declare proc %s, nature=0x%04X\n", sym->name, NAT);
 }
 
 void TLPROCPARAM(int T, int D)
@@ -1322,7 +1335,7 @@ void TLENTRY(int N)
 {
     log(LOG_STRUCTURE, "Enter proc %s\n", mutl_var[N].name);
 }
-void TLLABELSPEC(char *N, int U)
+void TLLABELSPEC(VECTOR *N, int U)
 {
     char temp[80];
     int sym_n;
@@ -1338,8 +1351,8 @@ void TLLABELSPEC(char *N, int U)
     }
     else
     {
-        strncpy(sym->name, N, MAX_NAME_LEN - 1);
-        log(LOG_SYMBOLS, "Declare label %s\n", N);
+        vecstrcpy(sym->name, N, sizeof(sym->name));
+        log(LOG_SYMBOLS, "Declare label %s\n", sym->name);
     }
 
     sym->data.label.address_defined = 0;
@@ -1377,24 +1390,16 @@ void TLCNULL(int PT)
     fatal("TL.C.NULL not supported\n");
 }
 
-void TLCLITS(int BT, char *VAL)
+void TLCLITS(int BT, VECTOR *VAL)
 {
     int len = BT_SIZE(BT);
     int i;
 
-    if (len == 1)
-    {
-        strcpy(current_literal, VAL);
-        len = strlen(current_literal);
-    }
-    else
-    {
-        memcpy(current_literal, VAL, len);
-    }
+    memcpy(current_literal, VAL->first, VAL->length);
 
     current_literal_basic_type = BT;
     log(LOG_LITERALS, "Current literal is");
-    for (i = 0; i < len; i++)
+    for (i = 0; i < VAL->length; i++)
     {
         log(LOG_LITERALS, " %02X", current_literal[i]);
     }
@@ -1406,7 +1411,7 @@ void TLCLIT128(int BT, double VAL)
     fatal("TL.C.LIT128 not supported\n");
 }
 
-void TLLIT(char *SN, int K)
+void TLLIT(VECTOR *SN, int K)
 {
     fatal("TL.LIT not supported\n");
 }

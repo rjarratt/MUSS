@@ -84,6 +84,8 @@ PLIST.ENT[PLISTZ] PLIST;
 $LO8[CHLISTZ] CHLIST;
 $LO8[64] XNAME;
 @BOX 1.2
+#include "..\..\MUSS\musl\support.h"
+
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 typedef unsigned char      uint8;
 typedef short              int16;
@@ -217,7 +219,7 @@ extern int NEXTCH(void);
 extern void NEWLINES(int);
 extern void OUTLINENO(int);
 extern void PPCCMD(void);
-extern uint32 FINDN(char *,int);
+extern char *FINDN(VECTOR *,int);
 extern int FINDP(char *,int,int);
 extern void SELECTOUTPUT(int);
 extern void SPACES(int);
@@ -228,7 +230,7 @@ extern void TLASSVALUE(int,int);
 extern void TLBLOCK();
 extern void TLCLIT32(int,int32);
 extern void TLCLIT16(int,int16);
-extern void TLCLITS(int,void *);
+extern void TLCLITS(int,VECTOR *);
 extern void TLCNULL(int);
 extern void TLDATAAREA(int);
 extern void TLENDBLOCK();
@@ -236,7 +238,7 @@ extern void TLENDPROC();
 extern void TLENDTYPE(int);
 extern void TLLABEL(int);
 extern void TLLABELSPEC(char *,int);
-extern int TLLINE(int);
+extern void TLLINE(int);
 extern void TLLIT(char *,int);
 extern void TLPL(int,int);
 extern void TLPROC(int);
@@ -255,7 +257,7 @@ extern void TLVDECL(char *,uint32,int,int,int,int);
 
 // COMMON PSPECS FROM OTHER MODULES
 unsigned short ADDN();
-extern char *GENN(unsigned short);
+extern VECTOR *GENN(unsigned short);
 extern void MONITOR(int);
 void ITEMISE(int);
 int TRANSCOMP(int);

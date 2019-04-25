@@ -736,7 +736,7 @@ int TVST,TBYADDR;
 uint16 DLIST[SDLIST];
 int MAXMUTLN,MAXN,MAXCH;
 //$IM $LI TLO0;
-extern char *GENN(uint16);
+extern VECTOR *GENN(uint16);
 
 #define AOPD 0x3000;
 @END
@@ -1140,7 +1140,7 @@ uint16 ADDLSPEC(uint16 LIBN)
 {
 uint16 result = 0;
 int J,K,M,N;
-uint32 F;
+char *F;
 char *LNAME;
 @BOX3.1
 GENN(LIBN) => LNAME;

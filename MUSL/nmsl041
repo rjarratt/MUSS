@@ -225,6 +225,7 @@ $LI/ADDR[$LO8] NIL=;
 @BOX 1.2
 #include <stdio.h>
 #include <string.h>
+#include "..\..\MUSS\musl\support.h"
 
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 typedef unsigned char      uint8;
@@ -360,7 +361,7 @@ void TLEND(void);
 void TLINSERT(int);
 int COMPTYPE(void);
 uint16 ADDN();
-extern char *GENN(uint16);
+extern VECTOR *GENN(uint16);
 void PRINTSTATS(void);
 int CONPTR;
 extern int IPTR;

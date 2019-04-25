@@ -315,7 +315,7 @@ $PS EXPN($LO16);
 #MSL08.6
 @BOX 4.2
 uint16 ADDN(void);
-char *GENN(uint16);
+VECTOR *GENN(uint16);
 uint16 DECLAREN(uint16, int, int);
 uint16 DUMMY(void);
 uint16 MUTLN(uint16);
@@ -568,9 +568,9 @@ RETURN AS RESULT
 @BOX 1.1
 $PR GENN(INTID);
 @BOX 1.2
-char *GENN(uint16 INTID)
+VECTOR *GENN(uint16 INTID)
 {
-char *result = NULL;
+VECTOR *result = NULL;
 @BOX 2.1
 $IN FSTCH,LSTCH,I,N;
 @BOX 2.2

@@ -66,6 +66,7 @@ TL.MODULE,TL.END.MODULE,TL.MODE);
 #include <stdio.h>
 #include <memory.h>
 #include <string.h>
+#include "..\..\MUSS\musl\support.h"
 
 typedef unsigned char      uint8;
 typedef short              int16;
@@ -171,7 +172,7 @@ void TLCLIT16(int,int16);
 void TLCLIT32 (int,int32);
 void TLCLIT64(int,t_uint64);
 void TLCNULL(int);
-void TLCLITS(int,char *);
+void TLCLITS(int,VECTOR *);
 void TLCLIT128(int,double);
 void TLLIT(char *,int);
 @BOX 6.1

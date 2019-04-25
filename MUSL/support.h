@@ -9,6 +9,12 @@ typedef long long          t_int64;
 typedef unsigned int       uint32;
 typedef unsigned long long t_uint64;
 
+typedef struct
+{
+    char *first;
+    uint16 length;
+} VECTOR;
+
 void SELECTINPUT(FILE *f);
 void SELECTOUTPUT(FILE *f);
 FILE *DEFINEINPUT(int StreamNumber, char *FileName, int Mode); /* CH3UM */
@@ -31,8 +37,8 @@ void INBACKSPACE(int);
 void TLLINE(int);
 void OUTLINENO(int);
 
-char *FINDN(char *, int);
-char *PART(char *, int, int);
+char *FINDN(VECTOR *, int);
+VECTOR *PART(char *, int, int);
 void TLPRINT(int);
 void CAPTION(char *);
 int FINDP(char *, int, int);
