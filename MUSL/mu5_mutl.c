@@ -291,7 +291,7 @@ typedef struct
     uint16 size;
 } AREA;
 
-static int logging = LOG_PLANT | LOG_SYMBOLS | LOG_STRUCTURE | LOG_MEMORY;
+static int logging = LOG_PLANT | LOG_SYMBOLS | LOG_STRUCTURE | LOG_MEMORY | LOG_LITERALS;
 static FILE *out_file;
 static int amode = 0;
 static MUTLSYMBOL mutl_var[MAX_NAMES + 1];
@@ -1187,7 +1187,7 @@ void TLENDMODULE(int ST)
     update_16_bit_header_word(1, areas[current_code_area].size, "module length");
 }
 
-void declare_variable(char *name, uint8 T, uint8 D, int is_parameter, int is_vstore)
+void declare_variable(char *name, uint8 T, int D, int is_parameter, int is_vstore)
 {
     MUTLSYMBOL *var;
     int nb_offset;
@@ -1381,7 +1381,17 @@ void TLCLITS(int BT, char *VAL)
 {
     int len = BT_SIZE(BT);
     int i;
-    memcpy(current_literal, VAL, len);
+
+    if (len == 1)
+    {
+        strcpy(current_literal, VAL);
+        len = strlen(current_literal);
+    }
+    else
+    {
+        memcpy(current_literal, VAL, len);
+    }
+
     current_literal_basic_type = BT;
     log(LOG_LITERALS, "Current literal is");
     for (i = 0; i < len; i++)
