@@ -874,11 +874,19 @@ void op_a_load(int N)
     }
 }
 
-void op_a_load_neg(int N)
+void op_a_load_neg_or_ref(int N)
 {
-    log(LOG_PLANT, "%04X A load negative %s\n", next_instruction_address, format_operand(N));
-    op_a_load(N);
-    plant_order(cr(), F_RSUB_A, K_IR, 34); /* 34 is the Z internal register */
+    VARSYMBOL *var = &mutl_var[N];
+    if (var->dimension == 0)
+    {
+        log(LOG_PLANT, "%04X A load negative %s\n", next_instruction_address, format_operand(N));
+        op_a_load(N);
+        plant_order(cr(), F_RSUB_A, K_IR, 34); /* 34 is the Z internal register */
+    }
+    else
+    {
+        log(LOG_PLANT, "%04X A load REF %s\n", next_instruction_address, format_operand(N));
+    }
 }
 
 void op_a_xor(int N)
@@ -1107,7 +1115,7 @@ void op_org_jump_seg(int N)
 static MUTLOP mutl_ops[32][4] =
 {
     { NULL, op_a_store, op_org_stack_link, NULL },
-    { NULL, op_a_load_neg, op_org_stack_parameter, NULL },
+    { NULL, op_a_load_neg_or_ref, op_org_stack_parameter, NULL },
     { NULL, op_a_load, op_org_enter, NULL },
     { NULL, op_a_xor, op_org_return, NULL },
     { NULL, op_a_and, NULL, NULL },
@@ -1231,7 +1239,7 @@ void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vst
     else
     {
         var->data.var.position = get_current_literal();
-        log(LOG_SYMBOLS, "Declare vstore %s %s level=%d, dim=%d, position=0x%X in slot %d\n", name, format_basic_type(T), block_level, D, var->data.var.position, var_n);
+        log(LOG_SYMBOLS, "Declare vstore %s %s level=%d, dim=%d, position=0x%X in slot %d\n", var->name, format_basic_type(T), block_level, D, var->data.var.position, var_n);
     }
 }
 
