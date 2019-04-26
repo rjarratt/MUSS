@@ -458,7 +458,7 @@ $AD[$LO8] NAME,LIBN;
 #MSL04.1.1
 @BOX 2.2
 int I,C;
-char *NAME;
+VECTOR *NAME;
 //char **LIBN;
 #MSL04.1.1
 @BOX 3.1
@@ -488,7 +488,7 @@ IX &= 0x8000;
 NAME = GENN(LBUFF[IPTR].IND);
 for (I = 0; I < NODNAMES; I++)
 {
-  if (strcmp(DNAMES[I], NAME) == 0) break;
+  if (strncmp(DNAMES[I], NAME->first, NAME->length) == 0) break;
 }
 if (I == NODNAMES)
 @BOX 6.1
