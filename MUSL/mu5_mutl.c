@@ -1286,9 +1286,10 @@ void TLDATAAREA(int AN)
 {
     log(LOG_MEMORY, "TL.DATA.AREA area %d\n", AN);
     current_data_area = AN;
+    SEGMENT *segment = get_segment(current_data_area);
+    log(LOG_PLANT, "%04X Load SN=0x%04x\n", next_instruction_address(), segment->segment_number);
     plant_org_order_extended(F_SN_LOAD, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
-    plant_16_bit_code_word(segments[areas[AN].segment_index].segment_number);
-    log(LOG_PLANT, "%04X Load SN=0x%04x\n", next_instruction_address(), areas[current_data_area].segment_index);
+    plant_16_bit_code_word(segment->segment_number);
 }
 
 void TL(int M, char *FN, int DZ)
@@ -1326,6 +1327,7 @@ void TLMODULE(void)
     TLLOAD(0, 1);
     TLCODEAREA(1);
     TLDATAAREA(0);
+
     start_block_level(0);
 }
 
