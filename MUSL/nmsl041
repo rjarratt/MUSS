@@ -488,7 +488,7 @@ IX &= 0x8000;
 NAME = GENN(LBUFF[IPTR].IND);
 for (I = 0; I < NODNAMES; I++)
 {
-  if (strncmp(DNAMES[I], NAME->first, NAME->length) == 0) break;
+  if (strncmp(DNAMES[I], NAME->buffer, NAME->length) == 0) break;
 }
 if (I == NODNAMES)
 @BOX 6.1
