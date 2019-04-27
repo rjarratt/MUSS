@@ -413,11 +413,23 @@ static void write_16_bit_word(uint16 word)
     fwrite(&byte, 1, 1, out_file);
 }
 
+SEGMENT *get_segment(uint16 area_number)
+{
+    AREA *area;
+    SEGMENT *segment;
+    area = &areas[area_number];
+    if (area->segment_index >= MAX_SEGMENTS)
+    {
+        fatal("Invalid segment index %d for area %d\n", area->segment_index, area_number);
+    }
+
+    segment = &segments[area->segment_index];
+    return segment;
+}
+
 static void plant_16_bit_word(uint16 area_number, uint16 word)
 {
-    AREA *area = &areas[area_number];
-    SEGMENT *segment = &segments[area->segment_index];
-    printf("area %d, seg %d\n", area_number, segment->segment_number);
+    SEGMENT *segment = get_segment(area_number);
     if (segment->next_word > segment->size)
     {
         fatal("Segment %d is full\n", segment->segment_number);
@@ -427,8 +439,7 @@ static void plant_16_bit_word(uint16 area_number, uint16 word)
 
 static void plant_16_bit_word_update(uint16 area_number, uint16 address, uint16 word)
 {
-    AREA *area = &areas[area_number];
-    SEGMENT *segment = &segments[area->segment_index];
+    SEGMENT *segment = get_segment(area_number);
     segment->words[address] = word;
 }
 
@@ -443,10 +454,14 @@ static void plant_16_bit_code_word_update(unsigned int address, unsigned int wor
     log(LOG_PLANT, "Fixing code address %08X to contain %04X for %s\n", address, word, reason);
 }
 
+static void plant_16_bit_data_word(uint16 word)
+{
+    plant_16_bit_word(current_data_area, word);
+}
+
 static int next_instruction_address(void)
 {
-    AREA *area = &areas[current_code_area];
-    SEGMENT *segment = &segments[area->segment_index];
+    SEGMENT *segment = get_segment(current_code_area);
     return segment->next_word;
 }
 
@@ -1426,7 +1441,7 @@ void TLCNULL(int PT)
 
 void TLCLITS(int BT, VECTOR *VAL)
 {
-    int len = BT_SIZE(BT);
+    int size = BT_SIZE(BT);
     int i;
 
     memcpy(current_literal, VAL->first, VAL->length);
@@ -1438,6 +1453,16 @@ void TLCLITS(int BT, VECTOR *VAL)
         log(LOG_LITERALS, " %02X", current_literal[i]);
     }
     log(LOG_LITERALS, "\n");
+
+    if (size == 1)
+    {
+        int words = (VAL->length + 1) / 2;
+        for (i = 0; i < words; i++)
+        {
+            uint16 word = (current_literal[i * 2] << 8) | current_literal[i * 2 + 1];
+            plant_16_bit_data_word(word);
+        }
+    }
 }
 
 void TLCLIT128(int BT, double VAL)
