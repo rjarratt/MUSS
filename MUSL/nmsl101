@@ -833,20 +833,20 @@ void TLMAKE(int S, int T, int D)
 {
    MUBLCODE(0x0A); MUBLU16(S); MUBLU16(T); MUBLIV(D);
 }
-void TLASS(int VL, int AN)
-{
-     MUBLCODE(0x26);MUBLUV(VL); MUBLIV(AN);;
-}
-
-void TLASSVALUE(int N, int R)
-{
-    MUBLCODE(0xF);MUBLUV(N);MUBLUV(R);;
-}
-
-void TLASSEND(void)
-{
-    MUBLCODE(0xD);;
-}
+//void TLASS(int VL, int AN)
+//{
+//     MUBLCODE(0x26);MUBLUV(VL); MUBLIV(AN);;
+//}
+//
+//void TLASSVALUE(int N, int R)
+//{
+//    MUBLCODE(0xF);MUBLUV(N);MUBLUV(R);;
+//}
+//
+//void TLASSEND(void)
+//{
+//    MUBLCODE(0xD);;
+//}
 @END
 @TITLE MSL10.3.5(1,6)
 @COL 1S

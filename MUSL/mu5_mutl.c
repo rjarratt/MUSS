@@ -230,7 +230,7 @@
 
 typedef struct { void(*op)(int); } MUTLOP;
 
-typedef enum { SYM_VARIABLE, SYM_LABEL, SYM_PROC } SYMBOLTYPE;
+typedef enum { SYM_VARIABLE, SYM_LITERAL, SYM_LABEL, SYM_PROC } SYMBOLTYPE;
 
 typedef struct
 {
@@ -238,7 +238,16 @@ typedef struct
     int dimension;
     int position; /* for regular variables this is offset in 32-bit words from NB, including LINK if appropriate, vstore it is the v-line number */
     int is_vstore;
+    uint16 initialiser_address;
 } VARSYMBOL;
+
+typedef struct
+{
+    int data_type;
+    int dimension;
+    int length;
+    uint32 address;
+} LITSYMBOL;
 
 typedef struct /* some fields in common with PROC so must remain in synch */
 {
@@ -266,6 +275,7 @@ typedef struct
     union
     {
         VARSYMBOL var;
+        LITSYMBOL lit;
         LABELSYMBOL label;
         PROCSYMBOL proc;
     } data;
@@ -310,6 +320,8 @@ static VECTOR current_literal;
 static int current_literal_basic_type; /* gives length */
 static PROCSYMBOL *current_proc_spec;
 static MUTLSYMBOL *current_proc_def;
+static int current_assign_variable;
+static int current_assign_variable_area;
 static int current_proc_call_n;
 static int current_proc_call_stack_link_offset_address;
 static BLOCK block_stack[MAX_BLOCK_DEPTH];
@@ -495,6 +507,14 @@ static int next_data_address(void)
     return segment->next_word;
 }
 
+static uint32 compute_descriptor_origin(uint16 data_area_word_address)
+{
+    uint32 result;
+    SEGMENT *segment = get_segment(current_data_area);
+    result = segment->segment_number << 16 | ((data_area_word_address << 1) & 0xFFFF);
+    return result;
+}
+
 static t_uint64 get_current_literal(void)
 {
     int len;
@@ -569,22 +589,34 @@ static uint8 get_operand(uint16 n)
     }
     else if (n < 0x1000)
     {
-        if (!mutl_var[n].data.var.is_vstore)
+        if (mutl_var[n].symbol_type == SYM_VARIABLE)
         {
-            kp = k_v();
-            if (mutl_var[n].block_level <= 0)
+            if (!mutl_var[n].data.var.is_vstore)
             {
-                np = NP_XNB;
+                kp = k_v();
+                if (mutl_var[n].block_level <= 0)
+                {
+                    np = NP_XNB;
+                }
+                else
+                {
+                    np = NP_NB;
+                }
             }
             else
             {
-                np = NP_NB;
+                kp = K_PRIVILEGED;
+                np = NP_0;
             }
+        }
+        else if (mutl_var[n].symbol_type == SYM_LITERAL)
+        {
+            kp = KP_LITERAL;
+            np = NP_64_BIT_LITERAL; /* will plant descriptor in the literal */
         }
         else
         {
-            kp = K_PRIVILEGED;
-            np = NP_0;
+            fatal("Can't get operand for this symbol type\n");
         }
     }
     else
@@ -634,14 +666,34 @@ static void plant_operand(uint16 n)
     }
     else if (n < 0x1000)
     {
-        MUTLSYMBOL *var = &mutl_var[n];
-        if (BT_SIZE(var->data.var.data_type) <= 4 || var->data.var.is_vstore)
+        if (mutl_var[n].symbol_type == SYM_VARIABLE)
         {
-            plant_16_bit_code_word(var->data.var.position);
+            MUTLSYMBOL *var = &mutl_var[n];
+            if (BT_SIZE(var->data.var.data_type) <= 4 || var->data.var.is_vstore)
+            {
+                plant_16_bit_code_word(var->data.var.position);
+            }
+            else
+            {
+                plant_16_bit_code_word(var->data.var.position / 2);
+            }
+        }
+        else if (mutl_var[n].symbol_type == SYM_LITERAL)
+        {
+            LITSYMBOL *lit = &mutl_var[n].data.lit;
+            t_uint64 descriptor;
+            descriptor = (t_uint64)0x1 << 62;
+            descriptor |= (t_uint64)0x3 << 59;
+            descriptor |= (t_uint64)(lit->length & 0xFFFFFF) << 32;
+            descriptor |= lit->address;
+            plant_16_bit_code_word((descriptor >> 48) & 0xFFFF);
+            plant_16_bit_code_word((descriptor >> 32) & 0xFFFF);
+            plant_16_bit_code_word((descriptor >> 16) & 0xFFFF);
+            plant_16_bit_code_word(descriptor & 0xFFFF);
         }
         else
         {
-            plant_16_bit_code_word(var->data.var.position / 2);
+            fatal("Can't plant operand for this symbol type\n");
         }
     }
     else
@@ -935,6 +987,7 @@ void op_a_load_neg_or_ref(int N)
     else
     {
         log(LOG_PLANT, "%04X A load REF %s\n", next_instruction_address(), format_operand(N));
+        plant_order_extended_operand(cr(), F_LOAD_64, N);
     }
 }
 
@@ -1299,7 +1352,6 @@ void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vst
 
     var->symbol_type = SYM_VARIABLE;
     vecstrcpy(var->name, name, sizeof(var->name));
-    var->symbol_type = SYM_VARIABLE;
     var->block_level = block_level;
     var->data.var.data_type = T;
     var->data.var.dimension = D;
@@ -1317,6 +1369,24 @@ void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vst
     }
 }
 
+void declare_literal(VECTOR *literal, uint8 T, int D)
+{
+    MUTLSYMBOL *var;
+    int nb_offset;
+    int var_n;
+
+    var_n = add_other_block_item();
+    var = &mutl_var[var_n];
+
+    strcpy(var->name, "(literal)");
+    var->symbol_type = SYM_LITERAL;
+    var->block_level = block_level;
+    var->data.lit.data_type = T;
+    var->data.lit.dimension = D;
+    var->data.lit.address = compute_descriptor_origin(next_data_address());
+    log(LOG_SYMBOLS, "Declare literal %s %s level=%d, dim=%d, address=0x%08X in slot %d\n", var->name, format_basic_type(T), block_level, D, var->data.lit.address, var_n);
+}
+
 void TLSDECL(VECTOR *SN, int T, int D)
 {
     VECTOR name;
@@ -1330,7 +1400,14 @@ void TLSDECL(VECTOR *SN, int T, int D)
         name.length = strlen(name.buffer);
     }
 
-    declare_variable(&name, T, D, 0, 0);
+    if (D == -1)
+    {
+        declare_literal(&current_literal, T, D);
+    }
+    else
+    {
+        declare_variable(&name, T, D, 0, 0);
+    }
 }
 
 void TLVDECL(VECTOR *SN, uint32 SA, int RS, int WS, int T, int D)
@@ -1341,6 +1418,42 @@ void TLVDECL(VECTOR *SN, uint32 SA, int RS, int WS, int T, int D)
     }
 
     declare_variable(SN, T, D, 0, 1);
+}
+
+void TLASS(int VL, int AN)
+{
+    current_assign_variable = VL;
+    if (AN == -1)
+    {
+        current_assign_variable_area = current_data_area; /* should be code area, but don't want this */
+    }
+    else if (AN == -2)
+    {
+        current_assign_variable_area = current_data_area;
+    }
+    else
+    {
+        current_assign_variable_area = AN;
+    }
+    log(LOG_LITERALS, "TL.ASS to variable %d in area %d\n", current_assign_variable, current_assign_variable_area);
+}
+
+void TLASSVALUE(int N, int R)
+{
+    if (N != 0)
+    {
+        fatal("TL.ASS.VALUE for non-zero NAME not supported\n");
+    }
+
+    log(LOG_LITERALS, "TL.ASS.VALUE current literal to variable %d, repeat is %d\n", current_assign_variable, R);
+    mutl_var[current_assign_variable].data.lit.length = current_literal.length;
+    plant_vector(&current_literal);
+}
+
+void TLASSEND(void)
+{
+    log(LOG_LITERALS, "TL.ASS.END\n");
+    current_assign_variable = -1;
 }
 
 void TLPROCSPEC(VECTOR *NAM, int NAT)
