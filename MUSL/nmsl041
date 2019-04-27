@@ -568,12 +568,16 @@ switch (I)
   }
   case 8: 
   {
-    TLLOAD(EVALCONST(),EVALCONST());
+    int32 p1 = EVALCONST();
+    int32 p2 = EVALCONST();
+    TLLOAD(p1, p2);
     break;
   }
   case 9: 
   {
-    TLMODE(EVALCONST(),EVALCONST());
+    int32 p1 = EVALCONST();
+    int32 p2 = EVALCONST();
+    TLMODE(p1, p2);
     break;
   }
   case 10: 
