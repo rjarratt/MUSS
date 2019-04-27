@@ -350,7 +350,7 @@ extern unsigned char XNAME[64];
 void LIB(FILE *,int);
 void TL(int,FILE *,int);
 void TLMODULE();
-void TLSEG(int,int,uint32,void *,int);
+void TLSEG(int32,int32,int32,int32,int32);
 void TLLOAD(int,int);
 void TLMODE(int,int);
 void TLPRINT(int);
@@ -558,7 +558,12 @@ switch (I)
   }
   case 7: 
   {
-    TLSEG(EVALCONST(),(void *)EVALCONST(),EVALCONST(),(void *)EVALCONST(),EVALCONST());
+    int32 p1 = EVALCONST();
+    int32 p2 = EVALCONST();
+    int32 p3 = EVALCONST();
+    int32 p4 = EVALCONST();
+    int32 p5 = EVALCONST();
+    TLSEG(p1, p2, p3, p4, p5);
     break;
   }
   case 8: 

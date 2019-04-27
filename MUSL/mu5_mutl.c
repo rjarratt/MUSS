@@ -18,6 +18,8 @@
 #define MAX_PROC_PARAMS 16
 #define MAX_LOOP_DEPTH 16
 #define MAX_AREAS 256
+#define MAX_SEGMENTS 32
+#define MAX_SEGMENT_SIZE 65535
 
 #define CR_ORG 0
 #define CR_B 1
@@ -287,9 +289,17 @@ typedef struct
 
 typedef struct
 {
-    uint16 segment;
-    uint16 size;
+    uint16 segment_index;
 } AREA;
+
+typedef struct
+{
+    uint16 segment_number;
+    uint16 words[MAX_SEGMENT_SIZE];
+    uint32 next_word;
+    uint32 size;
+    uint32 run_time_address;
+} SEGMENT;
 
 static int logging = LOG_PLANT | LOG_SYMBOLS | LOG_STRUCTURE | LOG_MEMORY | LOG_LITERALS;
 static FILE *out_file;
@@ -297,7 +307,6 @@ static int amode = 0;
 static MUTLSYMBOL mutl_var[MAX_NAMES + 1];
 static uint8 current_literal[MAX_LITERAL_LEN];
 static int current_literal_basic_type; /* gives length */
-static int next_instruction_address = 0;
 static PROCSYMBOL *current_proc_spec;
 static MUTLSYMBOL *current_proc_def;
 static int current_proc_call_n;
@@ -309,7 +318,7 @@ static int loop_level = -1;
 static AREA areas[MAX_AREAS];
 static uint8 current_code_area = 1;
 static uint8 current_data_area = 0;
-static uint16 module_header_word_count = 0;
+static SEGMENT segments[MAX_SEGMENTS];
 
 uint8 k_v(void);
 
@@ -404,50 +413,44 @@ static void write_16_bit_word(uint16 word)
     fwrite(&byte, 1, 1, out_file);
 }
 
-static void write_16_bit_header_word(uint16 word)
+static void plant_16_bit_word(uint16 area_number, uint16 word)
 {
-    write_16_bit_word(word);
-    module_header_word_count++;
-}
-
-static void write_16_bit_code_word(uint16 word)
-{
-    write_16_bit_word(word);
-    next_instruction_address++;
-    if (areas[current_code_area].size >= 65535)
+    AREA *area = &areas[area_number];
+    SEGMENT *segment = &segments[area->segment_index];
+    printf("area %d, seg %d\n", area_number, segment->segment_number);
+    if (segment->next_word > segment->size)
     {
-        fatal("Code segment is full\n");
+        fatal("Segment %d is full\n", segment->segment_number);
     }
-
-    areas[current_code_area].size++;
+    segment->words[segment->next_word++] = word;
 }
 
-static void update_16_bit_word(uint32 address, uint16 word)
+static void plant_16_bit_word_update(uint16 area_number, uint16 address, uint16 word)
 {
-    unsigned char byte;
-    fpos_t cur_pos;
-    fgetpos(out_file, &cur_pos);
-    fseek(out_file, address * 2, SEEK_SET);
-    byte = (word >> 8) & 0xFF;
-    fwrite(&byte, 1, 1, out_file);
-    byte = word & 0xFF;
-    fwrite(&byte, 1, 1, out_file);
-    fsetpos(out_file, &cur_pos);
+    AREA *area = &areas[area_number];
+    SEGMENT *segment = &segments[area->segment_index];
+    segment->words[address] = word;
 }
 
-static void update_16_bit_code_word(unsigned int address, unsigned int word, char *reason)
+static void plant_16_bit_code_word(uint16 word)
 {
-    update_16_bit_word(address + module_header_word_count, word, reason);
+    plant_16_bit_word(current_code_area, word);
+}
+
+static void plant_16_bit_code_word_update(unsigned int address, unsigned int word, char *reason)
+{
+    plant_16_bit_word_update(current_code_area, address, word);
     log(LOG_PLANT, "Fixing code address %08X to contain %04X for %s\n", address, word, reason);
 }
 
-static void update_16_bit_header_word(unsigned int address, unsigned int word, char *reason)
+static int next_instruction_address(void)
 {
-    update_16_bit_word(address, word, reason);
-    log(LOG_PLANT, "Fixing header address %08X to contain %04X for %s\n", address, word, reason);
+    AREA *area = &areas[current_code_area];
+    SEGMENT *segment = &segments[area->segment_index];
+    return segment->next_word;
 }
 
-static t_uint64 get_current_literal()
+static t_uint64 get_current_literal(void)
 {
     int len = BT_SIZE(current_literal_basic_type);
     t_uint64 literal = 0;
@@ -560,19 +563,19 @@ static void plant_operand(uint16 n)
 
                 if (len <= 2)
                 {
-                    write_16_bit_code_word(literal & 0xFFFF);
+                    plant_16_bit_code_word(literal & 0xFFFF);
                 }
                 else if (len <= 4)
                 {
-                    write_16_bit_code_word((literal >> 16) & 0xFFFF);
-                    write_16_bit_code_word(literal & 0xFFFF);
+                    plant_16_bit_code_word((literal >> 16) & 0xFFFF);
+                    plant_16_bit_code_word(literal & 0xFFFF);
                 }
                 else
                 {
-                    write_16_bit_code_word((literal >> 48) & 0xFFFF);
-                    write_16_bit_code_word((literal >> 32) & 0xFFFF);
-                    write_16_bit_code_word((literal >> 16) & 0xFFFF);
-                    write_16_bit_code_word(literal & 0xFFFF);
+                    plant_16_bit_code_word((literal >> 48) & 0xFFFF);
+                    plant_16_bit_code_word((literal >> 32) & 0xFFFF);
+                    plant_16_bit_code_word((literal >> 16) & 0xFFFF);
+                    plant_16_bit_code_word(literal & 0xFFFF);
                 }
                 break;
             }
@@ -588,11 +591,11 @@ static void plant_operand(uint16 n)
         MUTLSYMBOL *var = &mutl_var[n];
         if (BT_SIZE(var->data.var.data_type) <= 4 || var->data.var.is_vstore)
         {
-            write_16_bit_code_word(var->data.var.position);
+            plant_16_bit_code_word(var->data.var.position);
         }
         else
         {
-            write_16_bit_code_word(var->data.var.position / 2);
+            plant_16_bit_code_word(var->data.var.position / 2);
         }
     }
     else
@@ -610,7 +613,7 @@ static void plant_order_extended(uint8 cr, uint8 f, uint8 kp, uint8 np)
     plant_order |= 0x7 << 6;
     plant_order |= (kp & 0x7) << 3;
     plant_order |= np & 0x7;
-    write_16_bit_code_word(plant_order);
+    plant_16_bit_code_word(plant_order);
 }
 
 static void plant_order_extended_operand(uint8 cr, uint8 f, uint16 n)
@@ -622,7 +625,7 @@ static void plant_order_extended_operand(uint8 cr, uint8 f, uint16 n)
     order |= (f & 0xF) << 9;
     order |= 0x7 << 6;
     order |= operand & 0x3F;
-    write_16_bit_code_word(order);
+    plant_16_bit_code_word(order);
     if (OPERAND_FOLLOWS(operand))
     {
         plant_operand(n);
@@ -637,7 +640,7 @@ static void plant_order(uint8 cr, uint8 f, uint8 k, uint8 n)
     order |= (f & 0xF) << 9;
     order |= (k & 0x7) << 6;
     order |= n & 0x3F;
-    write_16_bit_code_word(order);
+    plant_16_bit_code_word(order);
 }
 
 static void plant_org_order_extended(uint8 f, uint8 kp, uint8 np)
@@ -648,7 +651,7 @@ static void plant_org_order_extended(uint8 f, uint8 kp, uint8 np)
     plant_order |= 0x1 << 6;
     plant_order |= (kp & 0x7) << 3;
     plant_order |= np & 0x7;
-    write_16_bit_code_word(plant_order);
+    plant_16_bit_code_word(plant_order);
 }
 
 static void plant_org_order(uint8 f, uint8 k, uint8 n)
@@ -658,7 +661,7 @@ static void plant_org_order(uint8 f, uint8 k, uint8 n)
     order = (f & 0x3F) << 7;
     order |= (k & 0x1) << 6;
     order |= n & 0x3F;
-    write_16_bit_code_word(order);
+    plant_16_bit_code_word(order);
 }
 
 uint8 cr(void)
@@ -729,11 +732,11 @@ void start_block_level(int param_stack_size)
 
     /* don't make the jump variable length because then we can't calculate the offset to pass to STACKLINK without more complication */
     plant_org_order_extended(F_NB_LOAD_SF_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
-    write_16_bit_code_word(nb_adjust);
-    log(LOG_PLANT, "%04X Plant NB=SF+%d\n", next_instruction_address, nb_adjust);
+    plant_16_bit_code_word(nb_adjust);
+    log(LOG_PLANT, "%04X Plant NB=SF+%d\n", next_instruction_address(), nb_adjust);
     plant_org_order_extended(F_SF_LOAD_NB_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
-    block->stack_offset_address = next_instruction_address;
-    write_16_bit_code_word(0); /* plant a placeholder to be filled with the size of the local variables */
+    block->stack_offset_address = next_instruction_address();
+    plant_16_bit_code_word(0); /* plant a placeholder to be filled with the size of the local variables */
 
     log(LOG_STRUCTURE, "Start block, level=%d, last mutl name=%d\n", block_level, block->last_mutl_var);
 }
@@ -804,7 +807,7 @@ void end_block_level(void)
     {
         BLOCK *block = &block_stack[block_level];
 
-        update_16_bit_code_word(block->stack_offset_address, block->local_names_space, "SF adjustment to make room for local variables");
+        plant_16_bit_code_word_update(block->stack_offset_address, block->local_names_space, "SF adjustment to make room for local variables");
 
         current_proc_def = block->proc_def_var;
     }
@@ -840,8 +843,8 @@ void register_forward_label_ref(int N)
     }
     else
     {
-        label->forward_ref_locations[label->num_forward_refs++] = next_instruction_address;
-        //printf("Forward ref for %s at 0x%08X\n", mutl_var[N].name, next_instruction_address);
+        label->forward_ref_locations[label->num_forward_refs++] = next_instruction_address();
+        //printf("Forward ref for %s at 0x%08X\n", mutl_var[N].name, next_instruction_address());
     }
 }
 
@@ -851,19 +854,19 @@ void fixup_forward_label_refs(int N)
     int i;
     for (i = 0; i < label->num_forward_refs; i++)
     {
-        update_16_bit_code_word(label->forward_ref_locations[i], label->address - label->forward_ref_locations[i] + 1, "forward label reference");
+        plant_16_bit_code_word_update(label->forward_ref_locations[i], label->address - label->forward_ref_locations[i] + 1, "forward label reference");
     }
 }
 
 void op_a_store(int N)
 {
-    log(LOG_PLANT, "%04X A store to %s\n", next_instruction_address, mutl_var[N].name);
+    log(LOG_PLANT, "%04X A store to %s\n", next_instruction_address(), mutl_var[N].name);
     plant_order_extended_operand(cr(), F_STORE, N);
 }
 
 void op_a_load(int N)
 {
-    log(LOG_PLANT, "%04X A load %s\n", next_instruction_address, format_operand(N));
+    log(LOG_PLANT, "%04X A load %s\n", next_instruction_address(), format_operand(N));
     if (BT_SIZE(amode) <= 4)
     {
         plant_order_extended_operand(cr(), F_LOAD_32, N);
@@ -879,80 +882,80 @@ void op_a_load_neg_or_ref(int N)
     VARSYMBOL *var = &mutl_var[N];
     if (var->dimension == 0)
     {
-        log(LOG_PLANT, "%04X A load negative %s\n", next_instruction_address, format_operand(N));
+        log(LOG_PLANT, "%04X A load negative %s\n", next_instruction_address(), format_operand(N));
         op_a_load(N);
         plant_order(cr(), F_RSUB_A, K_IR, 34); /* 34 is the Z internal register */
     }
     else
     {
-        log(LOG_PLANT, "%04X A load REF %s\n", next_instruction_address, format_operand(N));
+        log(LOG_PLANT, "%04X A load REF %s\n", next_instruction_address(), format_operand(N));
     }
 }
 
 void op_a_xor(int N)
 {
-    log(LOG_PLANT, "%04X A XOR 0x%X\n", next_instruction_address, N);
+    log(LOG_PLANT, "%04X A XOR 0x%X\n", next_instruction_address(), N);
     plant_order_extended_operand(cr(), F_XOR_A, N);
 }
 
 void op_a_and(int N)
 {
-    log(LOG_PLANT, "%04X A AND %s\n", next_instruction_address, format_operand(N));
+    log(LOG_PLANT, "%04X A AND %s\n", next_instruction_address(), format_operand(N));
     plant_order_extended_operand(cr(), F_AND_A, N);
 }
 
 void op_a_or(int N)
 {
-    log(LOG_PLANT, "%04X A OR %s\n", next_instruction_address, format_operand(N));
+    log(LOG_PLANT, "%04X A OR %s\n", next_instruction_address(), format_operand(N));
     plant_order_extended_operand(cr(), F_OR_A, N);
 }
 
 void op_a_left_shift(int N)
 {
-    log(LOG_PLANT, "%04X A LSH %s\n", next_instruction_address, format_operand(N));
+    log(LOG_PLANT, "%04X A LSH %s\n", next_instruction_address(), format_operand(N));
     plant_order_extended_operand(cr(), F_SHIFT_L_A, N);
 }
 
 void op_a_add(int N)
 {
-    log(LOG_PLANT, "%04X A ADD %s\n", next_instruction_address, format_operand(N));
+    log(LOG_PLANT, "%04X A ADD %s\n", next_instruction_address(), format_operand(N));
     plant_order_extended_operand(cr(), F_ADD_A, N);
 }
 
 void op_a_sub(int N)
 {
-    log(LOG_PLANT, "%04X A SUB %s\n", next_instruction_address, format_operand(N));
+    log(LOG_PLANT, "%04X A SUB %s\n", next_instruction_address(), format_operand(N));
     plant_order_extended_operand(cr(), F_SUB_A, N);
 }
 
 void op_a_mul(int N)
 {
-    log(LOG_PLANT, "%04X A MUL %s\n", next_instruction_address, format_operand(N));
+    log(LOG_PLANT, "%04X A MUL %s\n", next_instruction_address(), format_operand(N));
     plant_order_extended_operand(cr(), F_MUL_A, N);
 }
 
 void op_a_div(int N)
 {
-    log(LOG_PLANT, "%04X A DIV %s\n", next_instruction_address, format_operand(N));
+    log(LOG_PLANT, "%04X A DIV %s\n", next_instruction_address(), format_operand(N));
     plant_order_extended_operand(cr(), F_DIV_A, N);
 }
 
 void op_a_compare(int N)
 {
-    log(LOG_PLANT, "%04X A COMP %s\n", next_instruction_address, format_operand(N));
+    log(LOG_PLANT, "%04X A COMP %s\n", next_instruction_address(), format_operand(N));
     plant_order_extended_operand(cr(), F_COMP_A, N);
 }
 
 void op_a_add_store(int N)
 {
-    log(LOG_PLANT, "%04X A ADD STORE %s\n", next_instruction_address, format_operand(N));
+    log(LOG_PLANT, "%04X A ADD STORE %s\n", next_instruction_address(), format_operand(N));
     op_a_add(N);
     op_a_store(N);
 }
 
 void op_a_sub_store(int N)
 {
-    log(LOG_PLANT, "%04X A SUB STORE %s\n", next_instruction_address, format_operand(N));
+    log(LOG_PLANT, "%04X A SUB STORE %s\n", next_instruction_address(), format_operand(N));
     op_a_sub(N);
     op_a_store(N);
 }
@@ -968,8 +971,8 @@ uint32 op_org_jump_generic_address(int F, int16 relative)
     else
     {
         plant_org_order_extended(F, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
-        address_location = next_instruction_address;
-        write_16_bit_code_word(relative);
+        address_location = next_instruction_address();
+        plant_16_bit_code_word(relative);
     }
 
     return address_location;
@@ -979,26 +982,26 @@ void op_org_jump_generic(int N, int F, char *type)
 {
     if (mutl_var[N].data.label.address_defined)
     {
-        int16 relative = next_instruction_address - mutl_var[N].data.label.address;
-        log(LOG_PLANT, "%04X ORG JUMP %s %s relative %d\n", next_instruction_address, type, mutl_var[N].name, relative);
+        int16 relative = next_instruction_address() - mutl_var[N].data.label.address;
+        log(LOG_PLANT, "%04X ORG JUMP %s %s relative %d\n", next_instruction_address(), type, mutl_var[N].name, relative);
         op_org_jump_generic_address(F, relative);
     }
     else
     {
-        log(LOG_PLANT, "%04X ORG JUMP %s to %s forward ref\n", next_instruction_address, type, mutl_var[N].name);
+        log(LOG_PLANT, "%04X ORG JUMP %s to %s forward ref\n", next_instruction_address(), type, mutl_var[N].name);
         plant_org_order_extended(F, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
         register_forward_label_ref(N);
-        write_16_bit_code_word(0); /* place holder */
+        plant_16_bit_code_word(0); /* place holder */
     }
 }
 
 void op_org_stack_link(int N)
 {
     current_proc_call_n = N;
-    log(LOG_PLANT, "%04X ORG STACK LINK to %s\n", next_instruction_address, mutl_var[N].name);
+    log(LOG_PLANT, "%04X ORG STACK LINK to %s\n", next_instruction_address(), mutl_var[N].name);
     plant_org_order_extended(F_STACKLINK, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
-    current_proc_call_stack_link_offset_address = next_instruction_address;
-    write_16_bit_code_word(0); /* placeholder fixed up when we plant the ENTER */
+    current_proc_call_stack_link_offset_address = next_instruction_address();
+    plant_16_bit_code_word(0); /* placeholder fixed up when we plant the ENTER */
 }
 
 void op_org_stack_parameter(int N)
@@ -1008,11 +1011,11 @@ void op_org_stack_parameter(int N)
         fatal("Can't stack parameter 0x%04x\n", N);
     }
 
-    log(LOG_PLANT, "%04X STACK parameter\n", next_instruction_address);
+    log(LOG_PLANT, "%04X STACK parameter\n", next_instruction_address());
     //plant_order(CR_STS1, F_STACK, K_IR, 48);
     plant_org_order(F_SF_PLUS, K_LITERAL, 2);
     plant_order_extended(cr(), F_STORE, K_V64, NP_SF);
-    write_16_bit_code_word(0);
+    plant_16_bit_code_word(0);
 }
 
 void op_org_enter(int N)
@@ -1024,7 +1027,7 @@ void op_org_enter(int N)
 
     op_org_jump_generic(current_proc_call_n, F_RELJUMP, "REL JUMP"); // TODO: should make this absolute, needs generic function to support it.
     /* update the offset for the STACKLINK */
-    update_16_bit_code_word(current_proc_call_stack_link_offset_address, next_instruction_address - current_proc_call_stack_link_offset_address + 1, "return address");
+    plant_16_bit_code_word_update(current_proc_call_stack_link_offset_address, next_instruction_address() - current_proc_call_stack_link_offset_address + 1, "return address");
 }
 
 void op_org_return(int N)
@@ -1051,10 +1054,10 @@ void op_org_stack(int N)
         fatal("Can't stack register 0x%04x\n", N);
     }
 
-    log(LOG_PLANT, "%04X STACK register\n", next_instruction_address);
+    log(LOG_PLANT, "%04X STACK register\n", next_instruction_address());
     plant_org_order(F_SF_PLUS, K_LITERAL, 2);
     plant_order_extended(cr(), F_STORE, K_V64, NP_SF);
-    write_16_bit_code_word(0);
+    plant_16_bit_code_word(0);
 }
 
 void op_org_jump_equal(int N)
@@ -1091,8 +1094,8 @@ void op_org_jump_seg(int N)
 {
     if (mutl_var[N].data.label.address_defined)
     {
-        int16 relative = mutl_var[N].data.label.address - next_instruction_address;
-        log(LOG_PLANT, "%04X ORG JUMP SEG to %s relative %d\n", next_instruction_address, mutl_var[N].name, relative);
+        int16 relative = mutl_var[N].data.label.address - next_instruction_address();
+        log(LOG_PLANT, "%04X ORG JUMP SEG to %s relative %d\n", next_instruction_address(), mutl_var[N].name, relative);
         if (relative >= -32 && relative < 32)
         {
             plant_org_order(F_RELJUMP, K_LITERAL, relative & 0x3F);
@@ -1100,15 +1103,15 @@ void op_org_jump_seg(int N)
         else
         {
             plant_org_order_extended(F_RELJUMP, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
-            write_16_bit_code_word(relative);
+            plant_16_bit_code_word(relative);
         }
     }
     else
     {
-        log(LOG_PLANT, "%04X ORG JUMP SEG to %s forward ref\n", next_instruction_address, mutl_var[N].name);
+        log(LOG_PLANT, "%04X ORG JUMP SEG to %s forward ref\n", next_instruction_address(), mutl_var[N].name);
         plant_org_order_extended(F_RELJUMP, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
         register_forward_label_ref(N);
-        write_16_bit_code_word(0); /* place holder */
+        plant_16_bit_code_word(0); /* place holder */
     }
 }
 
@@ -1158,19 +1161,25 @@ void set_literal_value(t_uint64 val, int size)
     }
 }
 
+void TLSEG(int32 N, int32 S, int32 RTA, int32 CTA, int32 NL)
+{
+    SEGMENT *seg = &segments[N];
+    seg->segment_number = RTA >> 16;
+    seg->size = S;
+    seg->run_time_address = RTA;
+    log(LOG_MEMORY, "TL.SEG MUTL segment %d, segment address %d, size %d run-time address 0x%08X\n", N, seg->segment_number, seg->size, seg->run_time_address);
+}
+
 void TLLOAD(int SN, int AN)
 {
     log(LOG_MEMORY, "TL.LOAD segment %d area %d\n", SN, AN);
-    areas[AN].segment = SN;
+    areas[AN].segment_index = SN;/* TODO: the code here is naive, it should not have a 1:1 mapping from area to segment, we should scan segment table for a free entry */
 }
 
 void TLCODEAREA(int AN)
 {
-    /* TODO: currently assumes the whole compile unit is one module and one segment for the code */
     log(LOG_MEMORY, "TL.CODE.AREA area %d\n", AN);
     current_code_area = AN;
-
-    update_16_bit_header_word(0, areas[AN].segment, "code segment updated");
 }
 
 void TLDATAAREA(int AN)
@@ -1178,33 +1187,50 @@ void TLDATAAREA(int AN)
     log(LOG_MEMORY, "TL.DATA.AREA area %d\n", AN);
     current_data_area = AN;
     plant_org_order_extended(F_SN_LOAD, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
-    write_16_bit_code_word(areas[current_data_area].segment);
-    log(LOG_PLANT, "%04X Load SN=0x%04x\n", next_instruction_address, areas[current_data_area].segment);
+    plant_16_bit_code_word(segments[areas[AN].segment_index].segment_number);
+    log(LOG_PLANT, "%04X Load SN=0x%04x\n", next_instruction_address(), areas[current_data_area].segment_index);
 }
 
 void TL(int M, char *FN, int DZ)
 {
     out_file = fopen(FN, "wb");
+    TLSEG(0, MAX_SEGMENT_SIZE, -1, -1, 6);
 }
 
 void TLEND(void)
 {
+    int i;
+    int s;
+    for (s = 0; s < MAX_SEGMENTS; s++)
+    {
+        SEGMENT *segment = &segments[s];
+        if (segment->next_word > 0)
+        {
+            /* Write module header. This format is specific to the MU5 emulator */
+            write_16_bit_word(segment->segment_number);
+            write_16_bit_word(segment->next_word);
+            for (i = 0; i < segment->next_word; i++)
+            {
+                write_16_bit_word(segment->words[i]);
+            }
+            printf("Segment 0x%d written with %d words\n", segment->segment_number, segment->next_word - 1);
+        }
+    }
+
     fclose(out_file);
 }
 
 void TLMODULE(void)
 {
-    /* Write module header. This format is specific to the MU5 emulator */
-    write_16_bit_header_word(areas[0].segment);
-    write_16_bit_header_word(0); /* place holder for segment length */
-
+    TLLOAD(0, 1);
+    TLCODEAREA(1);
+    TLDATAAREA(0);
     start_block_level(0);
 }
 
 void TLENDMODULE(int ST)
 {
     end_block_level();
-    update_16_bit_header_word(1, areas[current_code_area].size, "module length");
 }
 
 void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vstore)
@@ -1307,9 +1333,9 @@ void TLPROC(int P)
     int i;
     current_proc_def = &mutl_var[P];
     PROCSYMBOL *proc_def_var = &current_proc_def->data.proc;
-    log(LOG_STRUCTURE, "Define proc %s at 0x%04X\n", current_proc_def->name, next_instruction_address);
+    log(LOG_STRUCTURE, "Define proc %s at 0x%04X\n", current_proc_def->name, next_instruction_address());
     proc_def_var->address_defined = 1;
-    proc_def_var->address = next_instruction_address;
+    proc_def_var->address = next_instruction_address();
 
     fixup_forward_label_refs(P);
     start_block_level(param_stack_size(P));
@@ -1369,9 +1395,9 @@ void TLLABELSPEC(VECTOR *N, int U)
 
 void TLLABEL(int L)
 {
-    log(LOG_SYMBOLS, "Define label %s at 0x%04X\n", mutl_var[L].name, next_instruction_address);
+    log(LOG_SYMBOLS, "Define label %s at 0x%04X\n", mutl_var[L].name, next_instruction_address());
     mutl_var[L].data.label.address_defined = 1;
-    mutl_var[L].data.label.address = next_instruction_address;
+    mutl_var[L].data.label.address = next_instruction_address();
     fixup_forward_label_refs(L);
 }
 
@@ -1450,7 +1476,7 @@ LOOP *start_loop(int mode, int control_variable)
     }
 
     loop = &loop_stack[loop_level];
-    loop->address_of_condition = next_instruction_address;
+    loop->address_of_condition = next_instruction_address();
     loop->mode = mode;
     loop->control_variable = control_variable;
 
@@ -1529,11 +1555,11 @@ void TLREPEAT(void)
     {
         op_a_store(loop->control_variable);
     }
-    relative = loop->address_of_condition - next_instruction_address;
+    relative = loop->address_of_condition - next_instruction_address();
     op_org_jump_generic_address(F_RELJUMP, relative);
 
-    relative = next_instruction_address - loop->address_of_end_of_loop_jump + 1;
-    update_16_bit_code_word(loop->address_of_end_of_loop_jump, relative, "end of loop address");
+    relative = next_instruction_address() - loop->address_of_end_of_loop_jump + 1;
+    plant_16_bit_code_word_update(loop->address_of_end_of_loop_jump, relative, "end of loop address");
     end_loop();
     if (loop->control_variable == OPERAND_POP)
     {

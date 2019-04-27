@@ -135,7 +135,7 @@ PSPEC TL.LOAD($IN,$IN);
 PSPEC TL.CODE.AREA($IN);
 PSPEC TL.DATA.AREA($IN);
 @BOX 3.2
-void TLSEG(int,int,uint32,void *,int);
+void TLSEG(int32,int32,int32,int32,int32);
 void TLLOAD(int,int);
 void TLCODEAREA(int);
 void TLDATAAREA(int);
@@ -666,13 +666,13 @@ PROC TL.DATA.AREA(AN);
    MUBLCODE(4); OUT.BIN.B(AN); ;
 END;
 @BOX 1.2
-void TLSEG(int N, int S, uint32 RTA, void *CTA, int NL)
-{
-uint32 I; I = (RTA << 16) | (uint32)CTA;
-MUBLCODE(0x15);OUTBINB(N);MUBLUV(S);MUBLIV(I);
-MUBLUV(NL);MUBLS("A");;
-}
-
+//void TLSEG(int N, int S, uint32 RTA, void *CTA, int NL)
+//{
+//uint32 I; I = (RTA << 16) | (uint32)CTA;
+//MUBLCODE(0x15);OUTBINB(N);MUBLUV(S);MUBLIV(I);
+//MUBLUV(NL);MUBLS("A");;
+//}
+//
 //void TLLOAD(int SN, int AN)
 //{
 //   MUBLCODE(0x2C); OUTBINB(SN); OUTBINB(AN); ;
