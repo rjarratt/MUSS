@@ -11,7 +11,7 @@ typedef unsigned long long t_uint64;
 
 typedef struct
 {
-    char *first;
+    uint8 *buffer;
     uint16 length;
 } VECTOR;
 

@@ -120,11 +120,11 @@ char *FINDN(VECTOR *name, int kind)
     return NULL;
 }
 
-VECTOR *PART(char *vec, int first, int last)
+VECTOR *PART(char *vec, int buffer, int last)
 {
     static VECTOR result;
-    result.first = &vec[first];
-    result.length = last - first + 1;
+    result.buffer = &vec[buffer];
+    result.length = last - buffer + 1;
     return &result;
 }
 
@@ -133,7 +133,7 @@ void CAPTION(char *msg)
     printf("%s\n", msg);
 }
 
-int FINDP(char *name, int first, int last)
+int FINDP(char *name, int buffer, int last)
 {
     return 0;
 }

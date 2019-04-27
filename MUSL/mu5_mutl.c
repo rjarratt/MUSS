@@ -305,7 +305,8 @@ static int logging = LOG_PLANT | LOG_SYMBOLS | LOG_STRUCTURE | LOG_MEMORY | LOG_
 static FILE *out_file;
 static int amode = 0;
 static MUTLSYMBOL mutl_var[MAX_NAMES + 1];
-static uint8 current_literal[MAX_LITERAL_LEN];
+static uint8 current_literal_buf[MAX_LITERAL_LEN];
+static VECTOR current_literal;
 static int current_literal_basic_type; /* gives length */
 static PROCSYMBOL *current_proc_spec;
 static MUTLSYMBOL *current_proc_def;
@@ -357,8 +358,20 @@ static void vecstrcpy(char *dst, VECTOR *src, int dst_size)
         len = dst_size - 1;
     }
 
-    strncpy(dst, src->first, len);
+    strncpy(dst, src->buffer, len);
     dst[len] = '\0';
+}
+
+static void vecmemcpy(VECTOR *dst, VECTOR *src, int dst_size)
+{
+    int len = src->length;
+    if (len > dst_size)
+    {
+        len = dst_size;
+    }
+
+    memcpy(dst->buffer, src->buffer, len);
+    dst->length = len;
 }
 
 static char *format_basic_type(int bt)
@@ -379,9 +392,9 @@ static char *format_operand(uint16 n)
     {
         pos = sprintf(buf, "const 0x");
         len = BT_SIZE(current_literal_basic_type);
-        for (i = 0; i < len; i++)
+        for (i = 0; i < current_literal.length; i++)
         {
-            sprintf(&buf[pos + 2*i], "%02X", current_literal[i]);
+            sprintf(&buf[pos + 2*i], "%02X", current_literal.buffer[i]);
         }
     }
     else if (n == OPERAND_REG_A)
@@ -459,20 +472,38 @@ static void plant_16_bit_data_word(uint16 word)
     plant_16_bit_word(current_data_area, word);
 }
 
+static void plant_vector(VECTOR *v)
+{
+    int i;
+    int words = (v->length + 1) / 2;
+    for (i = 0; i < words; i++)
+    {
+        uint16 word = (v->buffer[i * 2] << 8) | v->buffer[i * 2 + 1];
+        plant_16_bit_data_word(word);
+    }
+}
+
 static int next_instruction_address(void)
 {
     SEGMENT *segment = get_segment(current_code_area);
     return segment->next_word;
 }
 
+static int next_data_address(void)
+{
+    SEGMENT *segment = get_segment(current_data_area);
+    return segment->next_word;
+}
+
 static t_uint64 get_current_literal(void)
 {
-    int len = BT_SIZE(current_literal_basic_type);
+    int len;
+    len = current_literal.length;
     t_uint64 literal = 0;
     int i;
     for (i = 0; i < len; i++)
     {
-        literal = literal << 8 | current_literal[i];
+        literal = literal << 8 | current_literal.buffer[i];
     }
 
     return literal;
@@ -1172,8 +1203,9 @@ void set_literal_value(t_uint64 val, int size)
     int i;
     for (i = 0; i < size; i++)
     {
-        current_literal[i] = (val >> (size - i - 1)) & 0xF;
+        current_literal.buffer[i] = (val >> (size - i - 1)) & 0xF;
     }
+    current_literal.length = size;
 }
 
 void TLSEG(int32 N, int32 S, int32 RTA, int32 CTA, int32 NL)
@@ -1208,6 +1240,7 @@ void TLDATAAREA(int AN)
 
 void TL(int M, char *FN, int DZ)
 {
+    current_literal.buffer = &current_literal_buf;
     out_file = fopen(FN, "wb");
     TLSEG(0, MAX_SEGMENT_SIZE, -1, -1, 6);
 }
@@ -1293,8 +1326,8 @@ void TLSDECL(VECTOR *SN, int T, int D)
     }
     else
     {
-        name.first = "(internal)";
-        name.length = strlen(name.first);
+        name.buffer = "(internal)";
+        name.length = strlen(name.buffer);
     }
 
     declare_variable(&name, T, D, 0, 0);
@@ -1444,25 +1477,15 @@ void TLCLITS(int BT, VECTOR *VAL)
     int size = BT_SIZE(BT);
     int i;
 
-    memcpy(current_literal, VAL->first, VAL->length);
+    vecmemcpy(&current_literal, VAL, MAX_LITERAL_LEN);
 
     current_literal_basic_type = BT;
     log(LOG_LITERALS, "Current literal is");
     for (i = 0; i < VAL->length; i++)
     {
-        log(LOG_LITERALS, " %02X", current_literal[i]);
+        log(LOG_LITERALS, " %02X", current_literal.buffer[i]);
     }
     log(LOG_LITERALS, "\n");
-
-    if (size == 1)
-    {
-        int words = (VAL->length + 1) / 2;
-        for (i = 0; i < words; i++)
-        {
-            uint16 word = (current_literal[i * 2] << 8) | current_literal[i * 2 + 1];
-            plant_16_bit_data_word(word);
-        }
-    }
 }
 
 void TLCLIT128(int BT, double VAL)
