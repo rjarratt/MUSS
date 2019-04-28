@@ -210,9 +210,6 @@
 #define NP_NB_REF 6
 #define NP_XNB_REF 7
 
-#define BT_SIZE(n) (((n >> 2) & 0xF) +1 )
-#define BT_MODE(n) ((n >> 6) & 0x3)
-
 #define BT_MODE_REAL 0
 #define BT_MODE_SIGNED_INTEGER 1
 #define BT_MODE_UNSIGNED_INTEGER 2
@@ -223,6 +220,7 @@
 #define OPERAND_LITERAL 0
 #define OPERAND_REG_A 0x3000
 #define OPERAND_POP 0x1003
+#define OPERAND_D_REF 0x1004
 #define NO_OPERAND_FOLLOWS_FLAG 0x80
 #define OPERAND_FOLLOWS(kn) ((kn & NO_OPERAND_FOLLOWS_FLAG) == 0)
 
@@ -386,14 +384,6 @@ static void vecmemcpy(VECTOR *dst, VECTOR *src, int dst_size)
     dst->length = len;
 }
 
-static char *format_basic_type(int bt)
-{
-    static char buf[80];
-    char *modes[] = { "Real", "Signed Int", "Unsigned Int", "Decimal" };
-    sprintf(buf, "Mode=%s bytes=%d", modes[BT_MODE(bt)], BT_SIZE(bt));
-    return buf;
-}
-
 static char *format_operand(uint16 n)
 {
     static char buf[80];
@@ -416,6 +406,10 @@ static char *format_operand(uint16 n)
     else if (n == OPERAND_POP)
     {
         strcpy(buf, "pop stack");
+    }
+    else if (n == OPERAND_D_REF)
+    {
+        strcpy(buf, "D[]");
     }
     else if (n < 0x1000)
     {
@@ -956,6 +950,12 @@ void fixup_forward_label_refs(int N)
     }
 }
 
+void op_d_load(int N)
+{
+    log(LOG_PLANT, "%04X D load %s\n", next_instruction_address(), format_operand(N));
+    plant_order_extended_operand(CR_STS2, F_LOAD_D, N); /* can generate a 64-bit signed load on MU5 which is not valid */
+}
+
 void op_a_store(int N)
 {
     log(LOG_PLANT, "%04X A store to %s\n", next_instruction_address(), mutl_var[N].name);
@@ -1218,7 +1218,7 @@ static MUTLOP mutl_ops[32][4] =
 {
     { NULL, op_a_store, op_org_stack_link, NULL },
     { NULL, op_a_load_neg_or_ref, op_org_stack_parameter, NULL },
-    { NULL, op_a_load, op_org_enter, NULL },
+    { NULL, op_a_load, op_org_enter, op_d_load },
     { NULL, op_a_xor, op_org_return, NULL },
     { NULL, op_a_and, NULL, NULL },
     { NULL, op_a_or, op_org_aconv, NULL },
@@ -1504,7 +1504,10 @@ void TLPROC(int P)
     start_block_level(param_stack_size(P));
     for (i = 0; i < proc_def_var->param_count; i++)
     {
-        declare_variable("(param)", proc_def_var->parameters[i].data_type, proc_def_var->parameters[i].dimension, 1, 0);
+        VECTOR temp;
+        temp.buffer = "(param)";
+        temp.length = strlen(temp.buffer);
+        declare_variable(&temp, proc_def_var->parameters[i].data_type, proc_def_var->parameters[i].dimension, 1, 0);
     }
 }
 

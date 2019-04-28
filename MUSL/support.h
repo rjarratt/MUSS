@@ -1,5 +1,8 @@
 #include <stdio.h>
 
+#define BT_SIZE(n) (((n >> 2) & 0xF) +1 )
+#define BT_MODE(n) ((n >> 6) & 0x3)
+
 typedef unsigned char      uint8;
 typedef short              int16;
 typedef unsigned short     uint16;
@@ -53,3 +56,5 @@ typedef int                int32;
 
 void OUTI(int32, int);
 void OUTBINB(int);
+char *format_basic_type(uint8 bt);
+int DumpAR(uint16 AR[], int ap, int level);
