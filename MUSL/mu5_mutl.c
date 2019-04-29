@@ -234,6 +234,7 @@ typedef struct
 {
     int data_type;
     int dimension;
+    int word_size;
     int position; /* for regular variables this is offset in 32-bit words from NB, including LINK if appropriate, vstore it is the v-line number */
     int is_vstore;
     uint16 initialiser_address;
@@ -794,6 +795,12 @@ uint8 k_v()
     return result;
 }
 
+BLOCK *get_current_block(void)
+{
+    BLOCK *result = &block_stack[block_level];
+    return result;
+}
+
 void start_block_level(int param_stack_size)
 {
     BLOCK *block;
@@ -805,7 +812,7 @@ void start_block_level(int param_stack_size)
         fatal("Max block nesting level exceeded\n");
     }
 
-    block = &block_stack[block_level];
+    block = get_current_block();
     if (block_level <= 0)
     {
         block->last_mutl_var = FIRST_NAME - 1;
@@ -835,7 +842,7 @@ void start_block_level(int param_stack_size)
 
 int block_var_is_not_aligned(T)
 {
-    BLOCK *block = &block_stack[block_level];
+    BLOCK *block = get_current_block();
     int result = 0;
     if (BT_SIZE(T) > 4 && (block->local_names_space % 2 != 0))
     { 
@@ -847,18 +854,13 @@ int block_var_is_not_aligned(T)
 
 int add_block_var(uint8 T, int is_parameter)
 {
-    BLOCK *block = &block_stack[block_level];
+    BLOCK *block = get_current_block();
     if (is_parameter || BT_SIZE(T) > 4)
     {
         if (block_var_is_not_aligned(T))
         {
             block->local_names_space++;
         }
-        block->local_names_space += 2;
-    }
-    else
-    {
-        block->local_names_space++;
     }
 
     block->last_mutl_var++;
@@ -867,29 +869,27 @@ int add_block_var(uint8 T, int is_parameter)
 
 int add_other_block_item(void)
 {
-    BLOCK *block = &block_stack[block_level];
+    BLOCK *block = get_current_block();
     block->last_mutl_var++;
     return block->last_mutl_var;
 }
 
 uint16 get_block_name_offset_for_last_var(uint8 T, int is_parameter)
 {
-    BLOCK *block = &block_stack[block_level];
+    BLOCK *block = get_current_block();
     uint16 result;
-
     if (BT_SIZE(T) > 4)
     {
         result = block->local_names_space / 2;
     }
     else if (is_parameter)
     {
-        result = block->local_names_space - 1;
+        result = block->local_names_space;
     }
     else
     {
-        result = block->local_names_space - 1;
+        result = block->local_names_space;
     }
-
     return result;
 }
 
@@ -897,7 +897,7 @@ void end_block_level(void)
 {
     if (block_level >= 0)
     {
-        BLOCK *block = &block_stack[block_level];
+        BLOCK *block = get_current_block();
 
         plant_16_bit_code_word_update(block->stack_offset_address, block->local_names_space, "SF adjustment to make room for local variables");
 
@@ -1342,11 +1342,53 @@ void TLENDMODULE(int ST)
     end_block_level();
 }
 
+int compute_variable_size(uint8 T, int D)
+{
+    int result;
+    if (D == 0)
+    {
+        if (BT_SIZE(T) > 4)
+        {
+            result = 2;
+        }
+        else
+        {
+            result = 1;
+        }
+    }
+    else if (D > 0)
+    {
+        result = ((BT_SIZE(T) * D) + 1) / 2;
+    }
+    else
+    {
+        fatal("Don't yet support computing variable size when dimension is negative\n");
+    }
+
+    return result;
+}
+
+int compute_variable_space(int size_words, int is_parameter)
+{
+    int result;
+    if (is_parameter)
+    {
+        result = 2;
+    }
+    else
+    {
+        result = size_words;
+    }
+    return result;
+}
+
 void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vstore)
 {
     MUTLSYMBOL *var;
-    int nb_offset;
     int var_n;
+    int size_words;
+
+    size_words = compute_variable_size(T, D);
 
     if (!is_vstore)
     {
@@ -1363,12 +1405,15 @@ void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vst
     var->block_level = block_level;
     var->data.var.data_type = T;
     var->data.var.dimension = D;
+    var->data.var.word_size = size_words;
     var->data.var.is_vstore = is_vstore;
 
     if (!is_vstore)
     {
+        BLOCK *block = get_current_block();
         var->data.var.position = get_block_name_offset_for_last_var(T, is_parameter);
-        log(LOG_SYMBOLS, "Declare var %s %s level=%d, dim=%d, offset=%d in slot %d\n", var->name, format_basic_type(T), block_level, D, var->data.var.position, var_n);
+        block->local_names_space += compute_variable_space(size_words, is_parameter);
+        log(LOG_SYMBOLS, "Declare var %s %s level=%d, dim=%d, words=%d, offset=%d in slot %d\n", var->name, format_basic_type(T), block_level, D, size_words, var->data.var.position, var_n);
     }
     else
     {
