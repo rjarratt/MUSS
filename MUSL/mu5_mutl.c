@@ -1456,7 +1456,7 @@ int compute_variable_size(uint8 T, int D)
     }
     else if (D > 0)
     {
-        result = ((BT_SIZE(T) * D) + 1) / 2;
+        result = ((BT_SIZE(T) * D) + 1) / 4;
     }
     else
     {
