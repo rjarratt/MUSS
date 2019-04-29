@@ -950,6 +950,12 @@ void fixup_forward_label_refs(int N)
     }
 }
 
+void op_b_load(int N)
+{
+    log(LOG_PLANT, "%04X B load %s\n", next_instruction_address(), format_operand(N));
+    plant_order_extended_operand(CR_B, F_LOAD_B, N);
+}
+
 void op_d_load(int N)
 {
     log(LOG_PLANT, "%04X D load %s\n", next_instruction_address(), format_operand(N));
@@ -1218,7 +1224,7 @@ static MUTLOP mutl_ops[32][4] =
 {
     { NULL, op_a_store, op_org_stack_link, NULL },
     { NULL, op_a_load_neg_or_ref, op_org_stack_parameter, NULL },
-    { NULL, op_a_load, op_org_enter, op_d_load },
+    { op_b_load, op_a_load, op_org_enter, op_d_load },
     { NULL, op_a_xor, op_org_return, NULL },
     { NULL, op_a_and, NULL, NULL },
     { NULL, op_a_or, op_org_aconv, NULL },
