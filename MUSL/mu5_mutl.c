@@ -210,6 +210,11 @@
 #define NP_NB_REF 6
 #define NP_XNB_REF 7
 
+#define DESCRIPTOR_8_BIT 3
+#define DESCRIPTOR_16_BIT 4
+#define DESCRIPTOR_32_BIT 5
+#define DESCRIPTOR_64_BIT 6
+
 #define BT_MODE_REAL 0
 #define BT_MODE_SIGNED_INTEGER 1
 #define BT_MODE_UNSIGNED_INTEGER 2
@@ -468,6 +473,20 @@ static void plant_16_bit_code_word(uint16 word)
     plant_16_bit_word(current_code_area, word);
 }
 
+static void plant_32_bit_code_word(uint32 word)
+{
+    plant_16_bit_code_word((word >> 16) & 0xFFFF);
+    plant_16_bit_code_word(word & 0xFFFF);
+}
+
+static void plant_64_bit_code_word(t_uint64 word)
+{
+    plant_16_bit_code_word((word >> 48) & 0xFFFF);
+    plant_16_bit_code_word((word >> 32) & 0xFFFF);
+    plant_16_bit_code_word((word >> 16) & 0xFFFF);
+    plant_16_bit_code_word(word & 0xFFFF);
+}
+
 static void plant_16_bit_code_word_update(unsigned int address, unsigned int word, char *reason)
 {
     plant_16_bit_word_update(current_code_area, address, word);
@@ -524,6 +543,32 @@ static t_uint64 get_current_literal(void)
     return literal;
 }
 
+static t_uint64 build_type_0_descriptor(uint8 size_bytes, uint16 length, uint32 address)
+{
+    t_uint64 descriptor;
+    t_uint64 type;
+    if (size_bytes == 1)
+    {
+        type = DESCRIPTOR_8_BIT;
+    }
+    else if (size_bytes == 2)
+    {
+        type = DESCRIPTOR_16_BIT;
+    }
+    else if (size_bytes == 4)
+    {
+        type = DESCRIPTOR_32_BIT;
+    }
+    else
+    {
+        type = DESCRIPTOR_64_BIT;
+    }
+
+    descriptor = (type & 0x7) << 59;
+    descriptor |= (t_uint64)(length & 0xFFFFFF) << 32;
+    descriptor |= address;
+    return descriptor;
+}
 static uint8 get_operand(uint16 n)
 {
     uint8 kp = 0;
@@ -580,6 +625,12 @@ static uint8 get_operand(uint16 n)
     {
         kp = k_v();
         np = NP_STACK;
+        modifier = NO_OPERAND_FOLLOWS_FLAG;
+    }
+    else if (n == OPERAND_D_REF)
+    {
+        kp = K_SB;
+        np = NP_DR;
         modifier = NO_OPERAND_FOLLOWS_FLAG;
     }
     else if (n < 0x1000)
@@ -640,15 +691,11 @@ static void plant_operand(uint16 n)
                 }
                 else if (len <= 4)
                 {
-                    plant_16_bit_code_word((literal >> 16) & 0xFFFF);
-                    plant_16_bit_code_word(literal & 0xFFFF);
+                    plant_32_bit_code_word(literal & 0xFFFFFFFF);
                 }
                 else
                 {
-                    plant_16_bit_code_word((literal >> 48) & 0xFFFF);
-                    plant_16_bit_code_word((literal >> 32) & 0xFFFF);
-                    plant_16_bit_code_word((literal >> 16) & 0xFFFF);
-                    plant_16_bit_code_word(literal & 0xFFFF);
+                    plant_64_bit_code_word(literal);
                 }
                 break;
             }
@@ -676,15 +723,8 @@ static void plant_operand(uint16 n)
         else if (mutl_var[n].symbol_type == SYM_LITERAL)
         {
             LITSYMBOL *lit = &mutl_var[n].data.lit;
-            t_uint64 descriptor;
-            descriptor = (t_uint64)0x1 << 62;
-            descriptor |= (t_uint64)0x3 << 59;
-            descriptor |= (t_uint64)(lit->length & 0xFFFFFF) << 32;
-            descriptor |= lit->address;
-            plant_16_bit_code_word((descriptor >> 48) & 0xFFFF);
-            plant_16_bit_code_word((descriptor >> 32) & 0xFFFF);
-            plant_16_bit_code_word((descriptor >> 16) & 0xFFFF);
-            plant_16_bit_code_word(descriptor & 0xFFFF);
+            t_uint64 descriptor = build_type_0_descriptor(1, lit->length, lit->address);
+            plant_64_bit_code_word(descriptor);
         }
         else
         {
@@ -793,6 +833,25 @@ uint8 k_v()
         result = K_V64;
     }
     return result;
+}
+
+static void plant_stack_a(void)
+{
+    plant_org_order(F_SF_PLUS, K_LITERAL, 2);
+    plant_order_extended(cr(), F_STORE, K_V64, NP_SF);
+    plant_16_bit_code_word(0);
+}
+
+static void plant_stack_x(void)
+{
+    plant_org_order(F_SF_PLUS, K_LITERAL, 2);
+    plant_order_extended(CR_XS, F_STORE, K_V64, NP_SF);
+    plant_16_bit_code_word(0);
+}
+
+static void plant_pop_x(void)
+{
+    plant_order_extended(CR_XS, F_LOAD_32, K_V32, NP_STACK);
 }
 
 BLOCK *get_current_block(void)
@@ -962,6 +1021,50 @@ void op_d_load(int N)
     plant_order_extended_operand(CR_STS2, F_LOAD_D, N); /* can generate a 64-bit signed load on MU5 which is not valid */
 }
 
+void op_d_load_ref(int N)
+{
+    log(LOG_PLANT, "%04X D load REF %s\n", next_instruction_address(), format_operand(N));
+    if (N <= 0 || N >= MAX_NAMES)
+    {
+        fatal("Cannot load descriptor ref to operand\n");
+    }
+
+    VARSYMBOL *var = &mutl_var[N].data.var;
+    t_uint64 descriptor = build_type_0_descriptor(BT_SIZE(var->data_type), var->dimension, 0);
+
+    log(LOG_PLANT, "%04X   LOAD D with fixed part %llX\n", next_instruction_address(), descriptor);
+    plant_order_extended(CR_STS2, F_LOAD_D, KP_LITERAL, NP_64_BIT_LITERAL);
+    plant_64_bit_code_word(descriptor);
+
+    plant_stack_x();
+
+    if (block_level == 0)
+    {
+        log(LOG_PLANT, "%04X   A LOAD XNB\n", next_instruction_address());
+        plant_order(CR_XS, F_LOAD_32, K_IR, 1);
+    }
+    else
+    {
+        log(LOG_PLANT, "%04X   A LOAD SN NB\n", next_instruction_address());
+        plant_order(CR_XS, F_LOAD_32, K_IR, 2);
+    }
+    log(LOG_PLANT, "%04X   A Add 0x%04X\n", next_instruction_address(), var->position * 4);
+    plant_order_extended(CR_XS, F_ADD_X, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
+    plant_16_bit_code_word(var->position * 4);
+
+    plant_stack_x();
+
+    log(LOG_PLANT, "%04X   LOAD DO from stack\n", next_instruction_address());
+    plant_order_extended(CR_STS2, F_LOAD_DO, K_V64, NP_STACK);
+
+    plant_pop_x();
+}
+
+void op_d_select_element(int N)
+{
+    log(LOG_PLANT, "%04X D select element (NO-OP) %s\n", next_instruction_address(), format_operand(N));
+}
+
 void op_a_store(int N)
 {
     log(LOG_PLANT, "%04X A store to %s\n", next_instruction_address(), mutl_var[N].name);
@@ -1117,10 +1220,7 @@ void op_org_stack_parameter(int N)
     }
 
     log(LOG_PLANT, "%04X STACK parameter\n", next_instruction_address());
-    //plant_order(CR_STS1, F_STACK, K_IR, 48);
-    plant_org_order(F_SF_PLUS, K_LITERAL, 2);
-    plant_order_extended(cr(), F_STORE, K_V64, NP_SF);
-    plant_16_bit_code_word(0);
+    plant_stack_a();
 }
 
 void op_org_enter(int N)
@@ -1160,9 +1260,7 @@ void op_org_stack(int N)
     }
 
     log(LOG_PLANT, "%04X STACK register\n", next_instruction_address());
-    plant_org_order(F_SF_PLUS, K_LITERAL, 2);
-    plant_order_extended(cr(), F_STORE, K_V64, NP_SF);
-    plant_16_bit_code_word(0);
+    plant_stack_a();
 }
 
 void op_org_jump_equal(int N)
@@ -1223,10 +1321,10 @@ void op_org_jump_seg(int N)
 static MUTLOP mutl_ops[32][4] =
 {
     { NULL, op_a_store, op_org_stack_link, NULL },
-    { NULL, op_a_load_neg_or_ref, op_org_stack_parameter, NULL },
+    { NULL, op_a_load_neg_or_ref, op_org_stack_parameter, op_d_load_ref },
     { op_b_load, op_a_load, op_org_enter, op_d_load },
     { NULL, op_a_xor, op_org_return, NULL },
-    { NULL, op_a_and, NULL, NULL },
+    { NULL, op_a_and, NULL, op_d_select_element },
     { NULL, op_a_or, op_org_aconv, NULL },
     { NULL, op_a_left_shift, op_org_set_amode, NULL },
     { NULL, NULL, op_org_stack, NULL },
@@ -1679,7 +1777,7 @@ void TLPL(int F, int N)
     }
     else
     {
-        printf("Plant type=%d op=0x%X n=0x%X\n", data_type, opcode, N);
+        fatal("Plant type=%d op=0x%X n=0x%X\n", data_type, opcode, N);
     }
 }
 
