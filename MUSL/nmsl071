@@ -5942,7 +5942,7 @@ if (REFR != 0)
 @B11.1
 TL.PL(FN,OPD);
 @B11.2
-DumpAR(AR, 0, 0); /**/
+//DumpAR(AR, 0, 0); /**/
 TLPL(FN,OPD);
 @B12.1
 END::7.3.3
