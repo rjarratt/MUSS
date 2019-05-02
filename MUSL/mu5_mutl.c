@@ -390,6 +390,12 @@ static void vecmemcpy(VECTOR *dst, VECTOR *src, int dst_size)
     dst->length = len;
 }
 
+static int type_is_string(uint8 T)
+{
+    int result = BT_MODE(T) == BT_MODE_UNSIGNED_INTEGER && BT_SIZE(T) == 1;
+    return result;
+}
+
 static char *format_operand(uint16 n)
 {
     static char buf[80];
@@ -507,6 +513,7 @@ static void plant_vector(VECTOR *v)
         uint16 word = (v->buffer[i * 2] << 8) | v->buffer[i * 2 + 1];
         plant_16_bit_data_word(word);
     }
+    block_stack[0].local_names_space += words;
 }
 
 static int next_instruction_address(void)
@@ -635,12 +642,20 @@ static uint8 get_operand(uint16 n)
     }
     else if (n < 0x1000)
     {
-        if (mutl_var[n].symbol_type == SYM_VARIABLE)
+        MUTLSYMBOL *var = &mutl_var[n];
+        if (var->symbol_type == SYM_VARIABLE)
         {
-            if (!mutl_var[n].data.var.is_vstore)
+            if (!var->data.var.is_vstore)
             {
-                kp = k_v();
-                if (mutl_var[n].block_level <= 0)
+                if (var->data.var.dimension > 0)
+                {
+                    kp = K_V64; /* we are loading a descriptor */
+                }
+                else
+                {
+                    kp = k_v();
+                }
+                if (var->block_level <= 0)
                 {
                     np = NP_XNB;
                 }
@@ -655,7 +670,7 @@ static uint8 get_operand(uint16 n)
                 np = NP_0;
             }
         }
-        else if (mutl_var[n].symbol_type == SYM_LITERAL)
+        else if (var->symbol_type == SYM_LITERAL)
         {
             kp = KP_LITERAL;
             np = NP_64_BIT_LITERAL; /* will plant descriptor in the literal */
@@ -800,21 +815,73 @@ static void plant_org_order(uint8 f, uint8 k, uint8 n)
 uint8 cr(void)
 {
     uint8 result = 0;
-    switch (BT_MODE(amode))
+    if (type_is_string(amode))
     {
-        case BT_MODE_SIGNED_INTEGER:
+        result = CR_STS2;
+    }
+    else
+    {
+        switch (BT_MODE(amode))
         {
-            result = CR_XS;
-            break;
+            case BT_MODE_SIGNED_INTEGER:
+            {
+                if (BT_SIZE(amode) <= 4)
+                {
+                    result = CR_XS;
+                }
+                else
+                {
+                    result = CR_AU;
+                }
+
+                break;
+            }
+            case BT_MODE_UNSIGNED_INTEGER:
+            {
+                result = CR_AU;
+                break;
+            }
+            default:
+            {
+                fatal("Cannot handle Real and Decimal\n");
+            }
         }
-        case BT_MODE_UNSIGNED_INTEGER:
+    }
+    return result;
+}
+
+uint8 cr_for_load(void)
+{
+    uint8 result = 0;
+    if (type_is_string(amode))
+    {
+        result = CR_STS2;
+    }
+    else
+    {
+        switch (BT_MODE(amode))
         {
-            result = CR_AU;
-            break;
-        }
-        default:
-        {
-            fatal("Cannot handle Real and Decimal\n");
+            case BT_MODE_SIGNED_INTEGER:
+            {
+                if (BT_SIZE(amode) <= 4)
+                {
+                    result = CR_XS;
+                }
+                else
+                {
+                    result = CR_FLOAT;
+                }
+                break;
+            }
+            case BT_MODE_UNSIGNED_INTEGER:
+            {
+                result = CR_FLOAT;
+                break;
+            }
+            default:
+            {
+                fatal("Cannot handle Real and Decimal\n");
+            }
         }
     }
     return result;
@@ -824,7 +891,11 @@ uint8 k_v()
 {
     uint8 result = 0;
     uint8 size = BT_SIZE(amode);
-    if (size <= 4)
+    if (type_is_string(amode))
+    {
+        result = K_V64;
+    }
+    else if (size <= 4)
     {
         result = K_V32;
     }
@@ -937,7 +1008,7 @@ uint16 get_block_name_offset_for_last_var(uint8 T, int is_parameter)
 {
     BLOCK *block = get_current_block();
     uint16 result;
-    if (BT_SIZE(T) > 4)
+    if (BT_SIZE(T) > 4 || type_is_string(T))
     {
         result = block->local_names_space / 2;
     }
@@ -1068,7 +1139,7 @@ void op_d_select_element(int N)
 void op_a_store(int N)
 {
     log(LOG_PLANT, "%04X A store to %s\n", next_instruction_address(), mutl_var[N].name);
-    plant_order_extended_operand(cr(), F_STORE, N);
+    plant_order_extended_operand(cr_for_load(), F_STORE, N);
 }
 
 void op_a_load(int N)
@@ -1076,18 +1147,18 @@ void op_a_load(int N)
     log(LOG_PLANT, "%04X A load %s\n", next_instruction_address(), format_operand(N));
     if (BT_SIZE(amode) <= 4)
     {
-        plant_order_extended_operand(cr(), F_LOAD_32, N);
+        plant_order_extended_operand(cr_for_load(), F_LOAD_32, N);
     }
     else
     {
-        plant_order_extended_operand(cr(), F_LOAD_64, N); /* can generate a 64-bit signed load on MU5 which is not valid */
+        plant_order_extended_operand(cr_for_load(), F_LOAD_64, N);
     }
 }
 
 void op_a_load_neg_or_ref(int N)
 {
     VARSYMBOL *var = &mutl_var[N];
-    if (var->dimension == 0)
+    if (var->dimension == 0 && N != OPERAND_D_REF)
     {
         log(LOG_PLANT, "%04X A load negative %s\n", next_instruction_address(), format_operand(N));
         op_a_load(N);
@@ -1807,27 +1878,34 @@ void TLCYCLE(int limit)
 {
     LOOP *loop;
     log(LOG_PLANT, "TL.CYCLE\n");
-    op_org_set_amode(TINT32);
+    int saved_amode = amode;
+    amode = TINT32;
     op_a_load(limit);
     op_org_stack(OPERAND_REG_A);
     loop = start_loop(1, OPERAND_POP);
     TLCLIT32(TINT32, 0);
     op_a_compare(OPERAND_LITERAL);
     loop->address_of_end_of_loop_jump = op_org_jump_generic_address(F_BRANCH_LE, UNKNOWN_ADDRESS);
+    amode = saved_amode;
 }
 
 void TLCVCYCLE(int cv, int init, int mode)
 {
+    int saved_amode = amode;
+    amode = mutl_var[cv].data.var.data_type;
     log(LOG_PLANT, "TL.CV.CYCLE, mode=%d\n", mode);
     op_a_load(init);
     op_a_store(cv);
     start_loop(mode, cv);
+    amode = saved_amode;
 }
 
 void TLCVLIMIT(int limit)
 {
     /* This code assumes the FOR loop is always of the form "FOR N < 10". In other words the operator is always LESS THAN only.
        The compiler does not seem to tell MUTL if the operator is any different. */
+    int saved_amode = amode;
+    amode = TINT32;
     LOOP *loop = &loop_stack[loop_level];
     log(LOG_PLANT, "TL.CV.LIMIT %s\n", format_operand(limit));
 
@@ -1845,12 +1923,16 @@ void TLCVLIMIT(int limit)
     {
         loop->address_of_end_of_loop_jump = op_org_jump_generic_address(F_BRANCH_GT, UNKNOWN_ADDRESS);
     }
+
+    amode = saved_amode;
 }
 
 void TLREPEAT(void)
 {
     int relative;
     LOOP *loop = &loop_stack[loop_level];
+    int saved_amode = amode;
+    amode = mutl_var[loop->control_variable].data.var.data_type;
     log(LOG_PLANT, "TL.CV.REPEAT\n");
     op_a_load(loop->control_variable);
     if ((loop->mode & 1) == 0)
@@ -1880,6 +1962,8 @@ void TLREPEAT(void)
     {
         op_a_load(OPERAND_POP); /* remove control variable from the stack */
     }
+
+    amode = saved_amode;
 }
 
 
