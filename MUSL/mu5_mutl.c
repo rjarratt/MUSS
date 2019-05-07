@@ -1833,7 +1833,16 @@ void TLCLIT128(int BT, double VAL)
 
 void TLLIT(VECTOR *SN, int K)
 {
-    fatal("TL.LIT not supported\n");
+    log(LOG_LITERALS, "TL.LIT %0.*s, kind=%X\n", SN->length, SN->buffer, K);
+    int sym_n;
+
+    sym_n = add_other_block_item();
+    MUTLSYMBOL *sym = &mutl_var[sym_n];
+    sym->symbol_type = SYM_LITERAL;
+    vecstrcpy(sym->name, SN, sizeof(sym->name));
+    sym->data.lit.data_type = K;
+
+    log(LOG_SYMBOLS, "Declare literal %s\n", sym->name);
 }
 
 void TLPL(int F, int N)
