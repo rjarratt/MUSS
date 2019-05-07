@@ -1016,7 +1016,7 @@ if (memcmp(&LBUFF[++IPTR], &COMMA, sizeof(ITYPE)) == 0)
 $IF LBUFF[IPTR + 1]/= RB
 @BOX 9.2
 IPTR--;
-if (memcmp(&LBUFF[IPTR + 1], &RB, sizeof(ITYPE)) != 0)
+if (memcmp(&LBUFF[IPTR /* + 1*/], &RB, sizeof(ITYPE)) != 0) /**/ /* possible bug in the original code here, can't parse "$LS CREATE.SEGMENT($IN,ADDR);" otherwise */
 @BOX 10.1
 $IF LBUFF[2+>IPTR]/=SLASH
 @BOX 10.2
@@ -3406,7 +3406,7 @@ if ((VTYPE & 1) != 1)
 VTYPE ->> 1 + 1 -> IPTR;
 TBYADDR => VTYPE;
 @BOX22.2
-IPTR = (VTYPE >> 1) + 1;
+IPTR -= (VTYPE >> 1) + 1;
 VTYPE = TBYADDR;
 @BOX 23.1
 IF LBUFF[IPTR] = DADDR
