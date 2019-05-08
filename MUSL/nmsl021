@@ -251,7 +251,7 @@ extern void TLSELECTVAR();
 extern void TLSELECTFIELD(int,int,int);
 extern void TLSPACE(int);
 extern void TLTYPE(VECTOR *,int);
-extern void TLTYPECOMP(int,int,char *);
+extern void TLTYPECOMP(int,int,VECTOR *);
 extern void TLVDECL(char *,uint32,int,int,int,int);
 // END OF LIBSPECS FROM OTHER MODULES
 

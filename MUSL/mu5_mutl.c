@@ -215,6 +215,9 @@
 #define DESCRIPTOR_32_BIT 5
 #define DESCRIPTOR_64_BIT 6
 
+#define MUTL_NATURE_NAME_ALREADY_DEFINED(N) ((N & 0x2000) == 0x2000)
+#define MUTL_NATURE_NAME(N) (N & 0xFFF)
+
 #define BT_MODE_REAL 0
 #define BT_MODE_SIGNED_INTEGER 1
 #define BT_MODE_UNSIGNED_INTEGER 2
@@ -324,6 +327,7 @@ static VECTOR current_literal;
 static int current_literal_basic_type; /* gives length */
 static PROCSYMBOL *current_proc_spec;
 static MUTLSYMBOL *current_proc_def;
+static MUTLSYMBOL *current_type_def;
 static int current_assign_variable;
 static int current_assign_variable_area;
 static int current_proc_call_n;
@@ -1611,16 +1615,35 @@ void declare_literal(VECTOR *literal, uint8 T, int D)
 
 void TLTYPE(VECTOR *N, int NAT)
 {
-    log(LOG_SYMBOLS, "Declare aggregate type %0.*s nature=%X level=%d\n", N->length, N->buffer, NAT, block_level);
-    exit(0);
+    int sym_n;
+    if (MUTL_NATURE_NAME_ALREADY_DEFINED(NAT))
+    {
+        sym_n = MUTL_NATURE_NAME(NAT);
+    }
+    else
+    {
+        sym_n = add_other_block_item();
+    }
+
+    current_type_def = &mutl_var[sym_n];
+    vecstrcpy(current_type_def->name, N, sizeof(current_type_def->name));
+
+    log(LOG_SYMBOLS, "Start aggregate type %0.*s nature=%X level=%d in slot %d\n", N->length, N->buffer, NAT, block_level, sym_n);
 }
 
-void TLTYPECOMP(int T, int D, char *NM)
+void TLTYPECOMP(int T, int D, VECTOR *NM)
 {
+    log(LOG_SYMBOLS, "Adding %0.*s of type %s and dimension %d to %s\n", NM->length, NM->buffer, format_basic_type(T), D, current_type_def->name);
 }
 
 void TLENDTYPE(int STAT)
 {
+    log(LOG_SYMBOLS, "End of aggregate type definition for %s\n", current_type_def->name);
+    current_type_def = NULL;
+    if (STAT == 1)
+    {
+        fatal("Don't support alternative type specification\n");
+    }
 }
 
 void TLSDECL(VECTOR *SN, int T, int D)
