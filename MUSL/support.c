@@ -155,7 +155,11 @@ char *format_basic_type(uint8 bt)
 {
     static char buf[80];
     char *modes[] = { "Real", "Signed Int", "Unsigned Int", "Decimal" };
-    sprintf(buf, "(%02X) Mode=%s bytes=%d", bt, modes[BT_MODE(bt)], BT_SIZE(bt));
+    sprintf(buf, "(%02X)%s Mode=%s bytes=%d",
+                 bt,
+                 (BT_NOTDEF(bt))? " NotDef": "",
+                 modes[BT_MODE(bt)],
+                 BT_SIZE(bt));
     return buf;
 }
 

@@ -16,6 +16,7 @@
 #define MAX_FORWARD_LOCATIONS 64
 #define MAX_BLOCK_DEPTH 16
 #define MAX_PROC_PARAMS 16
+#define MAX_TYPE_FIELDS 64
 #define MAX_LOOP_DEPTH 16
 #define MAX_AREAS 256
 #define MAX_SEGMENTS 32
@@ -236,7 +237,7 @@
 
 typedef struct { void(*op)(int); } MUTLOP;
 
-typedef enum { SYM_VARIABLE, SYM_LITERAL, SYM_LABEL, SYM_PROC } SYMBOLTYPE;
+typedef enum { SYM_VARIABLE, SYM_LITERAL, SYM_LABEL, SYM_PROC, SYM_TYPE } SYMBOLTYPE;
 
 typedef struct
 {
@@ -276,6 +277,12 @@ typedef struct /* some fields in common with LABEL so must remain in synch */
 
 typedef struct
 {
+    VARSYMBOL fields[MAX_TYPE_FIELDS];
+    int field_count;
+} TYPESYMBOL;
+
+typedef struct
+{
     SYMBOLTYPE symbol_type;
     char name[MAX_NAME_LEN];
     int block_level;
@@ -285,6 +292,7 @@ typedef struct
         LITSYMBOL lit;
         LABELSYMBOL label;
         PROCSYMBOL proc;
+        TYPESYMBOL type;
     } data;
 } MUTLSYMBOL;
 
@@ -1627,6 +1635,8 @@ void TLTYPE(VECTOR *N, int NAT)
 
     current_type_def = &mutl_var[sym_n];
     vecstrcpy(current_type_def->name, N, sizeof(current_type_def->name));
+    current_type_def->symbol_type = SYM_TYPE;
+    current_type_def->block_level = block_level;
 
     log(LOG_SYMBOLS, "Start aggregate type %0.*s nature=%X level=%d in slot %d\n", N->length, N->buffer, NAT, block_level, sym_n);
 }
@@ -1634,6 +1644,15 @@ void TLTYPE(VECTOR *N, int NAT)
 void TLTYPECOMP(int T, int D, VECTOR *NM)
 {
     log(LOG_SYMBOLS, "Adding %0.*s of type %s and dimension %d to %s\n", NM->length, NM->buffer, format_basic_type(T), D, current_type_def->name);
+    if (BT_NOTDEF(T))
+    {
+        fatal("Don't yet support forward def\n"); /* have to add a MUTL name for it */
+    }
+
+    TYPESYMBOL *type = &current_type_def->data.type;
+    VARSYMBOL *field = &type->fields[type->field_count++];
+    field->data_type = T;
+    field->dimension = D;
 }
 
 void TLENDTYPE(int STAT)

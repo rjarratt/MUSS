@@ -2,6 +2,7 @@
 
 #define BT_SIZE(n) (((n >> 2) & 0xF) +1 )
 #define BT_MODE(n) ((n >> 6) & 0x3)
+#define BT_NOTDEF(n) ((n &0x2000) == 0x2000)
 
 typedef unsigned char      uint8;
 typedef short              int16;
