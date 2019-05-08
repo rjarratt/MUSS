@@ -3415,6 +3415,7 @@ if (memcmp(&LBUFF[IPTR], &DADDR, sizeof(ITYPE)) != 0)
 @BOX 24.1
 TBYADDR !> VTYPE;
 @BOX 24.2
+IPTR--; /**/ /* Possible bug in the sources. If the parameter is just "ADDR" with nothing else IPTR is not left on the last part of the parameter */
 VTYPE |= TBYADDR;
 @END
 @TITLE MSL05.18(1,11)
