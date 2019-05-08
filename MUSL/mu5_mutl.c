@@ -1609,6 +1609,20 @@ void declare_literal(VECTOR *literal, uint8 T, int D)
     log(LOG_SYMBOLS, "Declare literal %s %s level=%d, dim=%d, address=0x%08X in slot %d\n", var->name, format_basic_type(T), block_level, D, var->data.lit.address, var_n);
 }
 
+void TLTYPE(VECTOR *N, int NAT)
+{
+    log(LOG_SYMBOLS, "Declare aggregate type %0.*s nature=%X level=%d\n", N->length, N->buffer, NAT, block_level);
+    exit(0);
+}
+
+void TLTYPECOMP(int T, int D, char *NM)
+{
+}
+
+void TLENDTYPE(int STAT)
+{
+}
+
 void TLSDECL(VECTOR *SN, int T, int D)
 {
     VECTOR name;

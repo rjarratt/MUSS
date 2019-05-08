@@ -126,7 +126,7 @@ PSPEC TL.TYPE(ADDR[$LO8],$IN);
 PSPEC TL.TYPE.COMP($IN,ADDR,ADDR[$LO8]);
 PSPEC TL.END.TYPE($IN);
 @BOX 2.2
-void TLTYPE(char *,int);
+void TLTYPE(VECTOR *,int);
 void TLTYPECOMP(int,int,char *);
 void TLENDTYPE(int);
 @BOX 3.1
@@ -629,19 +629,19 @@ PROC TL.END.TYPE(STAT);
    MUBLCODE(2); OUT.BIN.B(STAT); ;
 END;
 @BOX 1.2
-void TLTYPE(char *N, int NAT)
-{
-     MUBLCODE(0); MUBLS(N) ; MUBLUV(NAT);
-}
-void TLTYPECOMP(int T, int D, char *NM)
-{
-   MUBLCODE(1); MUBLUV(T); MUBLIV(D);MUBLS(NM);
-}
-
-void TLENDTYPE(int STAT)
-{
-   MUBLCODE(2); OUTBINB(STAT); ;
-}
+//void TLTYPE(char *N, int NAT)
+//{
+//     MUBLCODE(0); MUBLS(N) ; MUBLUV(NAT);
+//}
+//void TLTYPECOMP(int T, int D, char *NM)
+//{
+//   MUBLCODE(1); MUBLUV(T); MUBLIV(D);MUBLS(NM);
+//}
+//
+//void TLENDTYPE(int STAT)
+//{
+//   MUBLCODE(2); OUTBINB(STAT); ;
+//}
 @END
 @TITLE MSL10.3.2(1,6)
 @COL 1S
