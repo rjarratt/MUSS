@@ -219,6 +219,8 @@
 #define MUTL_NATURE_NAME_ALREADY_DEFINED(N) ((N & 0x2000) == 0x2000)
 #define MUTL_NATURE_NAME(N) (N & 0xFFF)
 
+#define BT_BOUNDED_PTR_TO_VECTOR 3
+
 #define BT_MODE_REAL 0
 #define BT_MODE_SIGNED_INTEGER 1
 #define BT_MODE_UNSIGNED_INTEGER 2
@@ -402,9 +404,9 @@ static void vecmemcpy(VECTOR *dst, VECTOR *src, int dst_size)
     dst->length = len;
 }
 
-static int type_is_string(uint8 T)
+static int type_is_vector(uint8 T)
 {
-    int result = BT_MODE(T) == BT_MODE_UNSIGNED_INTEGER && BT_SIZE(T) == 1;
+    int result = BT_PTR_TO(T) == BT_BOUNDED_PTR_TO_VECTOR;
     return result;
 }
 
@@ -827,7 +829,7 @@ static void plant_org_order(uint8 f, uint8 k, uint8 n)
 uint8 cr(void)
 {
     uint8 result = 0;
-    if (type_is_string(amode))
+    if (type_is_vector(amode))
     {
         result = CR_STS2;
     }
@@ -865,7 +867,7 @@ uint8 cr(void)
 uint8 cr_for_load(void)
 {
     uint8 result = 0;
-    if (type_is_string(amode))
+    if (type_is_vector(amode))
     {
         result = CR_STS2;
     }
@@ -903,7 +905,7 @@ uint8 k_v()
 {
     uint8 result = 0;
     uint8 size = BT_SIZE(amode);
-    if (type_is_string(amode))
+    if (type_is_vector(amode))
     {
         result = K_V64;
     }
@@ -932,9 +934,22 @@ static void plant_stack_x(void)
     plant_16_bit_code_word(0);
 }
 
+static void plant_stack_d(void)
+{
+    log(LOG_PLANT, "%04X Stack D\n", next_instruction_address());
+    plant_org_order(F_SF_PLUS, K_LITERAL, 2);
+    plant_order_extended(CR_STS2, F_STORE, K_V64, NP_SF);
+    plant_16_bit_code_word(0);
+}
+
 static void plant_pop_x(void)
 {
     plant_order_extended(CR_XS, F_LOAD_32, K_V32, NP_STACK);
+}
+
+static void plant_pop(void)
+{
+    plant_org_order(F_SF_PLUS, K_LITERAL, -2);
 }
 
 BLOCK *get_current_block(void)
@@ -1020,7 +1035,7 @@ uint16 get_block_name_offset_for_last_var(uint8 T, int is_parameter)
 {
     BLOCK *block = get_current_block();
     uint16 result;
-    if (BT_SIZE(T) > 4 || type_is_string(T))
+    if (BT_SIZE(T) > 4 || type_is_vector(T))
     {
         result = block->local_names_space / 2;
     }
@@ -1178,8 +1193,15 @@ void op_a_load_neg_or_ref(int N)
     }
     else
     {
-        log(LOG_PLANT, "%04X A load REF %s\n", next_instruction_address(), format_operand(N));
-        plant_order_extended_operand(cr(), F_LOAD_64, N);
+        if (N == OPERAND_D_REF)
+        {
+            log(LOG_PLANT, "%04X A load REF %s (NO-OP)\n", next_instruction_address(), format_operand(N));
+        }
+        else
+        {
+            log(LOG_PLANT, "%04X A load REF %s\n", next_instruction_address(), format_operand(N));
+            plant_order_extended_operand(cr(), F_LOAD_64, N);
+        }
     }
 }
 
@@ -1326,7 +1348,27 @@ void op_org_return(int N)
 
 void op_org_aconv(int N)
 {
-    printf("Aconv %s\n", format_basic_type(N));
+    int kind = (N >> 14) & 1;
+    int from_amode = amode;
+    amode = N;
+    log(LOG_PLANT, "Aconv kind=%d to %s\n", kind, format_basic_type(N));
+    if (type_is_vector(from_amode) && (BT_MODE(N) == BT_MODE_SIGNED_INTEGER || BT_MODE(N) == BT_MODE_UNSIGNED_INTEGER))
+    {
+        log(LOG_PLANT, "Aconv get vector bound\n", kind, format_basic_type(N));
+        log(LOG_PLANT, "  ");
+        plant_stack_d();
+        log(LOG_PLANT, "  %04X Load top 32 bits\n", next_instruction_address());
+        plant_order_extended(cr(), F_LOAD_32, K_V32, NP_SF);
+        plant_16_bit_code_word(0);
+        log(LOG_PLANT, "  %04X Mask the bound\n", next_instruction_address());
+        plant_order_extended(cr(), F_AND, KP_LITERAL, NP_32_BIT_UNSIGNED_LITERAL);
+        plant_32_bit_code_word(0x00FFFFFF);
+        plant_pop();
+    }
+    else
+    {
+        //fatal("Conversion not implemented\n");
+    }
 }
 
 void op_org_set_amode(int N)
