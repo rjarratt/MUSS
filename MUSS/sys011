@@ -1,0 +1,546 @@
+@X @~
+~L3 COUK1247
+80
+~V7 56 2 -5
+~D10
+~H                    MUSS
+~
+~
+~D10
+~H             SYS011
+~D10
+~MMANCHESTER UNIVERSITY  -  CONFIDENTIAL
+~
+~
+                                                             ISSUE 11~
+~V9 -1
+~P
+~V9 1
+~YSYS011
+~M~OSYS IMPLEMENTATION DESCRIPTION
+~
+~M~OSection 1 Version 1
+~S1~OSection 1.1 Co-ordinator
+~S1~O1. General Description
+~BThe co-ordinator is the module responsible for all low-level process
+synchronisation and scheduling within the system. As such, it
+also interfaces directly with the interrupt hardware. Interface
+procedures are provided for halting and freeing activities, and for
+manipulating a single mutual exclusion semaphore, called the checkpoint, for con
+trolling access to the system
+data structures.
+~BThe scheduling at this level is non pre-emptive in that,
+having chosen to enter a particular activity, that
+activity will continue to execute until it halts itself.
+However, once an activity enters user mode (see section 13, Process
+Management), it makes itself eligible for pre-emption.
+~S1~O2. Interfaces
+~
+Other modules used~
+   None~
+Hardware registers used~
+   V.FI~
+   V.HALT.MASK~
+   V.SW.INTS~
+   V.CALL.LINK~
+   V.EXIT.LINK~
+Interrupt level interface procedures~
+   NEXT.ACTIVITY()~
+   HALT (ACTIVITIES, REASON)~
+   FREE (ACTIVITIES, REASON)~
+   SET.INTERRUPT (ACTIVITIES, DUMMY)~
+   CLEAR.INTERRUPT ()~
+   CHECK.IN (DUMMY, DUMMY)~
+   CHECK.OUT (DUMMY, DUMMY)~
+Interrupt level variables~
+   CURRENT.ACTIVITY~
+   CURRENT.ACTIVITY.BIT~
+~S1~O2.1 Hardware Interface
+~BThe co-ordinator needs to interface with the hardware in
+order to schedule kernel activities in response to system interrupt
+requests. System based interrupts generally arise as a result of
+asynchronous events occurring outside the CPU, such as the completion
+of a peripheral transfer or an interrupt from the real time clock.
+Each potential source of interrupts has the ability to set an
+"interrupt request" digit in the CPU. This ultimately results in the
+scheduling of a process to deal with the request, via the set of
+hardware registers illustrated below.~
+~
+~3
+~Q20
+~
+ HARDWARE INTERRUPT                        SOFTWARE INTERRUPT~
+     REQUESTS                                   REQUESTS~
+ |   |   |   |    |                        |   |   |   |    |~
+ ~O|   |   |   |    |~O                        ~O|   |   |   |    |~O~
+ ~O|   V.HW.INTS    |~O                        ~O|   V.SW.INTS    |~O~
+~
+~
+(V.HW.INTS ~WOR V.SW.INTS)                   bits set for all~
+                                           outstanding requests~
+                     ~O                    ~O~
+                     ~O|   V.HALT.MASK    |~O~
+~
+...~WAND ~WNOT V.HALT.MASK~
+~
+ ~O                  ~O~
+ ~O|      V.FI      |~O                        bits set for all~
+                                           unmasked requests~
+~
+~
+~M~OSystem Interrupt Structure~
+~0
+~BV.HW.INTS corresponds to the row of hardware interrupt
+request digits, ordered according to priority with the highest
+priority requests at the most significant end. This register
+may only be read by software, as the individual bits are
+extinguished by writing to the control registers of the interrupting devices.
+~BV.SW.INTS is a read/write register, whose bits correspond
+exactly to those in V.HW.INTS. By writing to this register, the
+software is able to create the effect of a system interrupt.
+~BThe logical 'OR' of these two registers gives all the currently
+outstanding requests for CPU time.
+~BV.HALT.MASK is used to control which of the above requests
+are to be made available for scheduling. A '1' in digit i of
+V.HALT.MASK inhibits the appearance of the corresponding digit
+in the next register, V.FI. This is the basic mechanism whereby
+activities are halted.
+~BV.FI, the Free Indicator, forms the basis of the co-ordinator's
+scheduling decisions. The Free Indicator, as explained above, is
+formed as:~
+~3
+~
+   V.FI = (V.HW.INTS ~OOR~O V.SW.INTS) ~OAND~O ~ONOT~O V.HALT.MASK~
+~0
+~
+Each nonzero digit in V.FI thus represents an outstanding request
+which is free to be scheduled.
+~BThe most significant half of V.FI is reserved for critical kernel
+activities, while the lower digits are assigned
+dynamically to user processes by the Process Manager (section 13).
+If any bits in the most significant half of V.FI are nonzero,
+and the machine is not currently executing in interrupt mode,
+a system based interrupt is forced. This involves a switch into interrupt
+mode and a control transfer to the co-ordinator's main scheduling
+procedure.
+~BFor details of the machine modes, and the exact actions on interrupt
+entry, see the Process Manager (section 13).
+~BThe other hardware registers referenced by this section are
+V.CALL.LINK and V.EXIT.LINK. Their functions are designed to provide
+a clean mechanism for remembering the status of an activity,
+so that it may subsequently be re-entered.
+~BWhen V.CALL.LINK is read, it returns the address at which status information
+was dumped at the time of the last procedure call. This status information
+will usually contain a return address, stack pointers etc. If the address
+of the status information is subsequently written to V.EXIT.LINK, the effect
+is the same as if a normal return from the procedure had been obeyed,
+with the control register and stack pointers reset to the values at that
+address.
+~S1~O2.2 Software Interface
+~BThe co-ordinator module is regarded as being global
+to all other modules, and so its interfaces may be
+used without the normal cross-referencing conventions.
+~S11) NEXT.ACTIVITY ()
+~BThis is the main low-level scheduling procedure. It may be called
+by any activity whenever a rescheduling operation is required, such
+as when an activity has no more interrupts to service, when an activity
+halts (see next procedure), or when a system based interrupt forces
+pre-emption of a user process.
+~S12) HALT (ACTIVITIES, REASON)
+~BThis procedure halts a specified set of activities for
+a particular reason. The activities (specified as the bit pattern
+ACTIVITIES) are made ineligible for scheduling, and are recorded as
+being halted for the specified reason.
+~BThe halt reasons which have currently been allocated are as follows:~
+~
+~T# 5
+~
+0~ICHECKPOINT.HALT - this halt reason records the activities waiting
+to enter the checkpoint semaphore.~
+~
+1~ICORE.HALT - this halt reason record the activities waiting for
+space in core.~
+~
+2~IDTQ.HALT - this halt reason records the activities waiting for a free
+space in the drum transfer queue.~
+~
+3~IPAGING.HALT - this halt reason records the activities waiting for
+the completion of a virtual store (paging) transfer.~
+~
+4~ITASK.HALT - this halt reason records the activities waiting for
+a task to execute. Normally, only Process Zero will halt for this
+reason.~
+~
+~S13) FREE (ACTIVITIES, REASON)
+~BThis procedure frees a set of activities halted for a
+particular reason. The set of activities to be freed (specified as the
+bit pattern ACTIVITIES) are made eligible for scheduling,
+provided they are halted for the specified reason.
+~S14) SET.INTERRUPT (ACTIVITIES, DUMMY)
+~BThis procedure sets a software interrupt request for the specified
+activities.
+~S15) CLEAR.INTERRUPT ()
+~BThis procedure clears a software interrupt request for the
+~Wcurrent activity. If no software interrupt is outstanding,
+it has no effect.
+~S16) CHECK.IN (DUMMY, DUMMY)
+~BThis procedure is used to claim control of the system's data
+structures, by seizing a mutual exclusion semaphore known as the
+~Wcheckpoint. An activity calling CHECK.IN will be halted if any
+other activity currently holds the checkpoint semaphore, but on resuming executi
+on,
+the activity may assume that it now has the required mutual exclusion.
+~BOnce a process holds the checkpoint semaphore, it may make further calls
+to CHECK.IN; each such call must eventually be matched by a subsequent call
+to CHECK.OUT. This enables an activity which holds the checkpoint
+safely to call other procedures which also call CHECK.IN and CHECK.OUT.
+~BCHECK.IN is normally called from a user process, via ENTER.INT.LEVEL
+(see section 13, Process Management) and the parameters, which are
+required by the ENTER.INT.LEVEL mechanism, are dummies and are not actually
+used.
+~S17) CHECK.OUT (DUMMY, DUMMY)
+~BThis procedure relinquishes control of the system's data structures,
+by releasing the checkpoint semaphore. Control
+is not finally relinquished until the number of calls to CHECK.OUT
+equals the number of preceding calls to CHECK.IN (see above). As with
+CHECK.IN, the two parameters are not actually used.
+~S18) CURRENT.ACTIVITY
+~BThis variable records the number of the currently executing
+activity.
+~S19) CURRENT.ACTIVITY.BIT
+~BThis variable records the position in the Free Indicator corresponding
+to the currently executing activity, and is suitable for use as the ACTIVITIES
+parameter to HALT, FREE and SET.INTERRUPT.
+~P
+~S1~O3. Implementation
+~S1~O3.1 Outline of Operation
+~BThe co-ordinator selects an activity to enter, by inspecting the
+Free Indicator register and choosing the most significant '1'.
+Thus, selection is generally according to priority. The only occasion
+when this does not apply is when a user process holds the checkpoint,
+when this process is given preference over the other user processes.
+This is designed to minimise the time during which the system database
+is locked out and in an inconsistent state.
+~BInterrupt activities can be triggered in two ways: by hardware, via the
+hardware interrupt register, or by software via the software interrupt
+register (by calling SET.INTERRUPT). User processes, which occupy the
+least significant half of the Free Indicator, are scheduled
+via the software interrupt register only. Activities awaiting
+activation by either of these methods should be halted for reason
+zero.
+~BAll halting and freeing of activities is achieved by appropriate
+manipulation of the Halt Mask register.
+~S1~O3.2 Data Structures
+~T# 20
+~
+ACTIVITY.LINK~Ia vector holding the restart links for all activities
+considered by the co-ordinator.~
+HALT.REASONS~Ia vector [0..number of halt reasons] containing
+a bit pattern showing which activities are halted for each reason.~
+CHECKPOINT.BIT~Ia bit pattern, indicating which activity (if any) currently
+holds the checkpoint.~
+CHECKPOINT.ENTRIES~Ia count, indicating the number of calls to CHECK.OUT require
+d
+to release the checkpoint.~
+INT.ACTIVITIES~Ia bit pattern, indicating which Free Indicator bit
+positions correspond to interrupt level activities.~
+USER.ACTIVITIES~Ia bit pattern, indicating which Free Indicator bit positions
+correspond to user processes.~
+~
+~P
+~S1~O3.3 Special Notes
+~BNone
+~
+~Y
+~V9 -1
+~P
+~D15
+~HFLOWCHARTS
+~
+~
+~H                SYS011
+~V9 -1
+~F
+@TITLE SYS01(1,6)
+@COL 1S-2R-3R-4R-5R-6F
+@FLOW 1-2-3-4-5-6
+@BOX 1.0
+COORDINATOR
+@BOX 4.0
+PROCEDURES IN MODULE:
+   INT1 NEXT ACTIVITY
+   INT2 HALT
+   INT3 FREE
+   INT4 SET INTERRUPT
+   INT5 CLEAR INTERRUPT
+   INT6 CHECK IN
+   INT7 CHECK OUT
+@BOX 6.0
+END
+@BOX 1.1
+#SYS01/1
+MODULE SYS01 (NEXT.ACTIVITY, HALT, FREE, SET.INTERRUPT, CLEAR.INTERRUPT,
+   CHECK.IN, CHECK.OUT, CURRENT.ACTIVITY, CURRENT.ACTIVITY.BIT);
+@BOX 3.1
+*GLOBAL 5;
+LOGICAL CHECKPOINT.BIT, CURRENT.ACTIVITY.BIT;
+LOGICAL [NO.OF.HALTS] HALT.REASONS;
+INTEGER CHECKPOINT.ENTRIES, CURRENT.ACTIVITY;
+@BOX 4.1
+::*INIT %6000;
+*CODE 2;
+PSPEC NEXT.ACTIVITY ();
+PSPEC HALT (LOGICAL, INTEGER);
+PSPEC FREE (LOGICAL, INTEGER);
+PSPEC SET.INTERRUPT (LOGICAL, LOGICAL);
+PSPEC CLEAR.INTERRUPT ();
+PSPEC CHECK.IN (INTEGER, INTEGER);
+PSPEC CHECK.OUT (INTEGER, INTEGER);
+   #SYSINT01.1
+   #SYSINT01.2
+   #SYSINT01.3
+   #SYSINT01.4
+   #SYSINT01.5
+   #SYSINT01.6
+   #SYSINT01.7
+@BOX 6.1
+*END
+@END
+@TITLE SYS01/1(1,11)
+@COL 1S-2R-3R-4R
+@FLOW 1-2-3-4
+@BOX 1.0
+OTHER MODULES REFERENCED
+@BOX 2.0
+@BOX 3.0
+NONE
+@BOX 4.0
+@BOX 1.1
+::EXTERNAL ENVIRONMENT
+@BOX 2.1
+IMPORT VSTORE V.FI, V.HALT.MASK, V.SW.INTS;
+IMPORT VSTORE ADDR V.CALL.LINK, V.EXIT.LINK;
+IMPORT LITERAL CHECKPOINT.HALT, NO.OF.ACTIVITIES, NO.OF.HALTS, INT.ACTIVITIES;
+ADDR [NO.OF.ACTIVITIES] ACTIVITY.LINK;
+@BOX 3.1
+PSPEC UPDATE.IDLE.TIME ();
+PSPEC MSBIT (LOGICAL) / INTEGER;
+PSPEC BIT (INTEGER) / LOGICAL;
+@END
+@TITLE SYSINT01.1(1,11)
+@COL 1S-2R-4R-5T-6R-7T-3R-8R-9R-10F
+@FLOW 1-2-4-5NO-6-7NO-3-4
+@FLOW 5YES-8-9-10
+@FLOW 7YES-8
+@BOX 1.0
+NEXT ACTIVITY
+@BOX 2.0
+SAVE LINK FOR
+CURRENT ACTIVITY
+@BOX 3.0
+UPDATE IDLE TIME
+@BOX 4.0
+CONSIDER INTERRUPT ACTIVITIES
+AND CURRENT CHECKPOINT ACTIVITY
+@BOX 5.0
+ARE ANY FREE?
+@BOX 6.0
+CONSIDER ALL ACTIVITIES
+@BOX 7.0
+ARE ANY FREE?
+@BOX 8.0
+SELECT THE HIGHEST PRIORITY ACTIVITY
+@BOX 9.0
+ENTER THE ACTIVITY
+VIA ITS SAVED LINK
+@BOX 10.0
+END
+@BOX 1.1
+PROC NEXT.ACTIVITY;
+LOGICAL FREE.INDICATOR;
+@BOX 2.1
+V.CALL.LINK => ACTIVITY.LINK [CURRENT.ACTIVITY];
+@BOX 3.1
+UPDATE.IDLE.TIME ();
+@BOX 4.1
+V.FI & (CHECKPOINT.BIT ! INT.ACTIVITIES) => FREE.INDICATOR;
+@BOX 5.1
+IF FREE.INDICATOR /= 0
+@BOX 6.1
+V.FI => FREE.INDICATOR;
+@BOX 7.1
+IF FREE.INDICATOR /= 0
+@BOX 8.1
+MS.BIT (FREE.INDICATOR) => CURRENT.ACTIVITY;
+BIT (CURRENT.ACTIVITY) => CURRENT.ACTIVITY.BIT;
+@BOX 9.1
+ACTIVITY.LINK [CURRENT.ACTIVITY] => V.EXIT.LINK;
+@BOX 10.1
+END
+@END
+@TITLE SYSINT01.2(1,6)
+@COL 1S-2R-3R-4R-5F
+@FLOW 1-2-3-4-5
+@BOX 1.0
+HALT (ACTIVITIES, REASON)
+@BOX 2.0
+NOTE REASON FOR HALTING ACTIVITIES
+@BOX 3.0
+MARK ACTIVITIES AS HALTED
+@BOX 4.0
+CALL THE LOW LEVEL SCHEDULER
+(NEXT ACTIVITY)
+@BOX 5.0
+END
+@BOX 1.1
+PROC HALT (ACTIVITIES, REASON);
+@BOX 2.1
+ACTIVITIES !> HALT.REASONS [REASON];
+@BOX 3.1
+V.HALT.MASK ! ACTIVITIES => V.HALT.MASK;
+@BOX 4.1
+NEXT.ACTIVITY ();
+@BOX 5.1
+END
+@END
+@TITLE SYSINT01.3(1,6)
+@COL 1S-3R-5R-6R-7F
+@FLOW 1-3-5-6-7
+@BOX 1.0
+FREE (ACTIVITIES, REASON)
+@BOX 3.0
+SELECT ALL ACTIVITIES
+HALTED FOR THIS REASON
+@BOX 5.0
+RESET THE HALT REASON
+FOR THESE ACTIVITIES
+@BOX 6.0
+REMOVE THE HALTED STATUS
+@BOX 7.0
+END
+@BOX 1.1
+PROC FREE (ACTIVITIES, REASON);
+@BOX 3.1
+HALT.REASONS [REASON] &> ACTIVITIES;
+@BOX 5.1
+ACTIVITIES -=> HALT.REASONS [REASON];
+@BOX 6.1
+V.HALT.MASK -= ACTIVITIES => V.HALT.MASK;
+@BOX 7.1
+END
+@END
+@TITLE SYSINT01.4(1,6)
+@COL 1S-2R-3F
+@FLOW 1-2-3
+@BOX 1.0
+SET INTERRUPT (ACTIVITIES)
+@BOX 2.0
+GENERATE SOFTWARE INTERRUPT
+FOR SPECIFIED ACTIVITIES
+@BOX 3.0
+END
+@BOX 1.1
+PROC SET.INTERRUPT (ACTIVITIES, DUMMY);
+@BOX 2.1
+V.SW.INTS ! ACTIVITIES => V.SW.INTS;
+@BOX 3.1
+END
+@END
+@TITLE SYSINT01.5(1,6)
+@COL 1S-2R-3F
+@FLOW 1-2-3
+@BOX 1.0
+CLEAR INTERRUPT
+@BOX 2.0
+CLEAR SOFTWARE INTERRUPT
+FOR CURRENT ACTIVITY
+@BOX 3.0
+END
+@BOX 1.1
+PROC CLEAR.INTERRUPT;
+@BOX 2.1
+V.SW.INTS & CURRENT.ACTIVITY.BIT -= V.SW.INTS => V.SW.INTS;
+@BOX 3.1
+END
+@END
+@TITLE SYSINT01.6(1,6)
+@COL 1S-2T-3N-4T-5R-6F
+@COL 7N-8R-9N-10R
+@ROW 2-7
+@ROW 3-8
+@ROW 4-9
+@FLOW 1-2NO-3-4NO-5-6
+@FLOW 2YES-7-8-9-10-6
+@FLOW 4YES-9
+@BOX 1.0
+CHECK IN
+@BOX 2.0
+IS CHECKPOINT FREE?
+@BOX 4.0
+IS CURRENT ACTIVITY
+ALREADY IN CHECKPOINT
+@BOX 5.0
+HALT THE CURRENT ACTIVITY
+FOR CHECKPOINT
+@BOX 6.0
+END
+@BOX 8.0
+SET CURRENT ACTIVITY
+IN CHECKPOINT
+@BOX 10.0
+INCREMENT COUNT OF
+CHECKPOINT ENTRIES
+@BOX 1.1
+PROC CHECK.IN (P1, P2);
+@BOX 2.1
+IF CHECKPOINT.BIT = 0
+@BOX 4.1
+IF CURRENT.ACTIVITY.BIT = CHECKPOINT.BIT
+@BOX 5.1
+HALT (CURRENT.ACTIVITY.BIT, CHECKPOINT.HALT);
+@BOX 6.1
+END
+@BOX 8.1
+CURRENT.ACTIVITY.BIT => CHECKPOINT.BIT;
+@BOX 10.1
+1 +> CHECKPOINT.ENTRIES;
+@END
+@TITLE SYSINT01.7(1,6)
+@COL 1S-4T-5R-6T-7R-8R-10F
+@FLOW 1-4=0-5-6ACTIVITIES WAITING-7-8-10
+@FLOW 4>0-10
+@FLOW 6CHK.PT FREE-10
+@BOX 1.0
+CHECK OUT
+@BOX 4.0
+DECREMENT AND TEST COUNT
+OF CHECKPOINT ENTRIES
+@BOX 5.0
+SET CHECKPOINT FREE
+@BOX 6.0
+ANY ACTIVITIES HALTED
+FOR CHECKPOINT
+@BOX 7.0
+SELECT HIGHEST PRIORITY ACTIVITY
+AND SET IN CHECKPOINT WITH
+ENTRY COUNT OF 1
+@BOX 8.0
+FREE SELECTED ACTIVITY
+@BOX 10.0
+END
+@BOX 1.1
+PROC CHECK.OUT (P1, P2);
+@BOX 4.1
+IF 1 -> CHECKPOINT.ENTRIES > 0
+@BOX 5.1
+0 => CHECKPOINT.BIT;
+@BOX 6.1
+IF HALT.REASONS [CHECKPOINT.HALT] = 0
+@BOX 7.1
+BIT (MS.BIT (HALT.REASONS [CHECKPOINT.HALT])) => CHECKPOINT.BIT;
+1 => CHECKPOINT.ENTRIES;
+@BOX 8.1
+FREE (CHECKPOINT.BIT, CHECKPOINT.HALT);
+@BOX 10.1
+END
+@END
