@@ -1242,6 +1242,12 @@ void op_a_sub(int N)
     plant_order_extended_operand(cr(), F_SUB_A, N);
 }
 
+void op_a_reverse_sub(int N)
+{
+    log(LOG_PLANT, "%04X A RSUB %s\n", next_instruction_address(), format_operand(N));
+    plant_order_extended_operand(cr(), F_RSUB_A, N);
+}
+
 void op_a_mul(int N)
 {
     log(LOG_PLANT, "%04X A MUL %s\n", next_instruction_address(), format_operand(N));
@@ -1271,6 +1277,13 @@ void op_a_sub_store(int N)
 {
     log(LOG_PLANT, "%04X A SUB STORE %s\n", next_instruction_address(), format_operand(N));
     op_a_sub(N);
+    op_a_store(N);
+}
+
+void op_a_reverse_sub_store(int N)
+{
+    log(LOG_PLANT, "%04X A RSUB STORE %s\n", next_instruction_address(), format_operand(N));
+    op_a_reverse_sub(N);
     op_a_store(N);
 }
 
@@ -1477,7 +1490,7 @@ static MUTLOP mutl_ops[32][4] =
     { NULL, NULL, op_org_stack, NULL },
     { NULL, op_a_add, NULL, NULL },
     { NULL, op_a_sub, op_org_jump_equal, NULL },
-    { NULL, NULL, op_org_jump_not_equal, NULL },
+    { NULL, op_a_reverse_sub, op_org_jump_not_equal, NULL },
     { NULL, op_a_mul, op_org_jump_greater_than_or_equal, NULL },
     { NULL, op_a_div, op_org_jump_less_than, NULL },
     { NULL, NULL, op_org_jump_less_than_or_equal, NULL },
@@ -1493,7 +1506,7 @@ static MUTLOP mutl_ops[32][4] =
     { NULL, NULL, NULL, NULL },
     { NULL, op_a_add_store, NULL, NULL },
     { NULL, op_a_sub_store, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
+    { NULL, op_a_reverse_sub_store, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
