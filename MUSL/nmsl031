@@ -805,7 +805,7 @@ $FI
 INBACKSPACE(1);
 @BOX 4.2
 B4:
-while ((ISYM = INCH()) == ';' && MODE == 0 || ISYM == '\n' || ISYM == ' ' || ISYM == 0x9)
+while (((ISYM = INCH()) == ';' && MODE == 0) || ISYM == '\n' || ISYM == ' ' || ISYM == 0x9)
 {}
 
 if (INCH() == '*' && ISYM == '*')

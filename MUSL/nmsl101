@@ -1031,14 +1031,14 @@ PROC TL.PRINT(M);
 END;
 @BOX 1.2
 
-void TLLINE(LN)
-{
-//  if (LN == 0)
-//  {
-//    LN = IPOS();
-//  }
-//   MUBLCODE(0x21); MUBLUV(LN); ;
-}
+//void TLLINE(LN)
+//{
+////  if (LN == 0)
+////  {
+////    LN = IPOS();
+////  }
+////   MUBLCODE(0x21); MUBLUV(LN); ;
+//}
 void TLPRINT(int M)
 {
    MUBLCODE(0x18); MUBLUV(M);;

@@ -328,8 +328,9 @@ typedef struct
     uint32 run_time_address;
 } SEGMENT;
 
-static int logging = LOG_PLANT | LOG_SYMBOLS | LOG_STRUCTURE | LOG_MEMORY | LOG_LITERALS;
+static int logging = /*LOG_PLANT |*/ LOG_SYMBOLS | LOG_STRUCTURE | LOG_MEMORY | LOG_LITERALS;
 static FILE *out_file;
+static int current_line;
 static int amode = 0;
 static MUTLSYMBOL mutl_var[MAX_NAMES + 1];
 static uint8 current_literal_buf[MAX_LITERAL_LEN];
@@ -1273,6 +1274,27 @@ void op_a_sub_store(int N)
     op_a_store(N);
 }
 
+void op_a_xor_store(int N)
+{
+    log(LOG_PLANT, "%04X A XOR STORE %s\n", next_instruction_address(), format_operand(N));
+    op_a_xor(N);
+    op_a_store(N);
+}
+
+void op_a_and_store(int N)
+{
+    log(LOG_PLANT, "%04X A AND STORE %s\n", next_instruction_address(), format_operand(N));
+    op_a_and(N);
+    op_a_store(N);
+}
+
+void op_a_or_store(int N)
+{
+    log(LOG_PLANT, "%04X A OR STORE %s\n", next_instruction_address(), format_operand(N));
+    op_a_or(N);
+    op_a_store(N);
+}
+
 uint32 op_org_jump_generic_address(int F, int16 relative)
 {
     uint32 address_location;
@@ -1464,9 +1486,9 @@ static MUTLOP mutl_ops[32][4] =
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
+    { NULL, op_a_xor_store, NULL, NULL },
+    { NULL, op_a_and_store, NULL, NULL },
+    { NULL, op_a_or_store, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, NULL, NULL, NULL },
     { NULL, op_a_add_store, NULL, NULL },
@@ -1957,6 +1979,12 @@ void TLPL(int F, int N)
     {
         fatal("Plant type=%d op=0x%X n=0x%X\n", data_type, opcode, N);
     }
+}
+
+void TLLINE(LN)
+{
+    /* TODO: Line numbers are not accurate. Blank lines don't get counted, nor do line breaks in the middle of a statement */
+    current_line = LN;
 }
 
 LOOP *start_loop(int mode, int control_variable)
