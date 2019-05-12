@@ -252,6 +252,8 @@ typedef struct
     int dimension;
     int length;
     uint32 address;
+    VECTOR value;
+    uint8 valuebuf[MAX_LITERAL_LEN];
 } LITSYMBOL;
 
 typedef struct /* some fields in common with PROC so must remain in synch */
@@ -1577,7 +1579,12 @@ void TLEND(void)
             case SYM_LITERAL:
                 if (BT_IS_EXPORT(sym->data.lit.data_type))
                 {
-                    printf("Export lit %s\n", sym->name);
+                    printf("Export lit %s=", sym->name);
+                    for (size_t i = 0; i < sym->data.lit.value.length; i++)
+                    {
+                        printf("%02X", sym->data.lit.value.buffer[i]);
+                    }
+                    printf("\n");
                 }
                 break;
 
@@ -1702,7 +1709,7 @@ void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vst
     }
 }
 
-void declare_literal(VECTOR *literal, uint8 T, int D)
+void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D)
 {
     MUTLSYMBOL *var;
     int nb_offset;
@@ -1711,12 +1718,14 @@ void declare_literal(VECTOR *literal, uint8 T, int D)
     var_n = add_other_block_item();
     var = &mutl_var[var_n];
 
-    strcpy(var->name, "(literal)");
+    vecstrcpy(var->name, name, sizeof(var->name));
     var->symbol_type = SYM_LITERAL;
     var->block_level = block_level;
     var->data.lit.data_type = T;
     var->data.lit.dimension = D;
     var->data.lit.address = compute_descriptor_origin(next_data_address());
+    var->data.lit.value.buffer = &var->data.lit.valuebuf;
+    vecmemcpy(&var->data.lit.value, literal, sizeof(var->data.lit.valuebuf));
     log(LOG_SYMBOLS, "Declare literal %s %s level=%d, dim=%d, address=0x%08X in slot %d\n", var->name, format_basic_type(T), block_level, D, var->data.lit.address, var_n);
 }
 
@@ -1779,7 +1788,9 @@ void TLSDECL(VECTOR *SN, int T, int D)
 
     if (D == -1)
     {
-        declare_literal(&current_literal, T, D);
+        char *tempname = "(literal)";
+        VECTOR temp = { tempname, 9 };
+        declare_literal(&temp, &current_literal, T, D);
     }
     else
     {
@@ -1991,16 +2002,12 @@ void TLCLIT128(int BT, double VAL)
 
 void TLLIT(VECTOR *SN, int K)
 {
-    log(LOG_LITERALS, "TL.LIT %0.*s, kind=%X\n", SN->length, SN->buffer, K);
-    int sym_n;
-
-    sym_n = add_other_block_item();
-    MUTLSYMBOL *sym = &mutl_var[sym_n];
-    sym->symbol_type = SYM_LITERAL;
-    vecstrcpy(sym->name, SN, sizeof(sym->name));
-    sym->data.lit.data_type = K;
-
-    log(LOG_SYMBOLS, "Declare literal %s\n", sym->name);
+    int T = current_literal_basic_type;
+    if ((K & 0x3FFF) == 0)
+    {
+        T |= BT_EXPORT;
+    }
+    declare_literal(SN, &current_literal, T, 0);
 }
 
 void TLPL(int F, int N)
