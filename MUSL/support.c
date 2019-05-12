@@ -268,10 +268,56 @@ int DumpAR(uint16 AR[], int ap, int level)
 extern void MUSL(char *file, char *PROG, int CMPMODE, int DIR);
 int main(int argc, char *argv[])
 {
-    //set_logging(/*LOG_PLANT |*/ LOG_SYMBOLS | LOG_STRUCTURE | LOG_MEMORY | LOG_LITERALS)
-    if (argc == 4)
+    if (argc <= 1)
     {
-        set_logging(atoi(argv[3]));
+        printf("nmsl infile outfile [-i import] [-l logginglevel]");
     }
-    MUSL(argv[1], argv[2], 0x200 /* 32 bit */, 0);
+    else
+    {
+        int arg = 3;
+        while (arg < argc)
+        {
+            if (strcmp(argv[arg], "-l") == 0)
+            {
+                arg++;
+                if (arg < argc)
+                {
+                    set_logging(atoi(argv[arg++]));
+                }
+                else
+                {
+                    printf("Missing logging level");
+                    exit(0);
+                }
+            }
+            else
+            {
+                arg++;
+            }
+        }
+
+        arg = 3;
+        while (arg < argc)
+        {
+            if (strcmp(argv[arg], "-i") == 0)
+            {
+                arg++;
+                if (arg < argc)
+                {
+                    import_module(argv[arg++]);
+                }
+                else
+                {
+                    printf("Missing module file name");
+                    exit(0);
+                }
+            }
+            else
+            {
+                arg++;
+            }
+        }
+
+        MUSL(argv[1], argv[2], 0x200 /* 32 bit */, 0);
+    }
 }

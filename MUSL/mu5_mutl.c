@@ -384,6 +384,7 @@ static int current_assign_variable_area;
 static int current_proc_call_n;
 static int current_proc_call_stack_link_offset_address;
 static BLOCK block_stack[MAX_BLOCK_DEPTH];
+static BLOCK import_block;
 static int block_level = -1;
 static LOOP loop_stack[MAX_LOOP_DEPTH];
 static int loop_level = -1;
@@ -527,6 +528,7 @@ static void write_module_header(void)
                     memcpy(&buffer[buffer_size], sym->name, name_len);
                     buffer_size += name_len;
 
+                    buffer[buffer_size++] = sym->symbol_type & 0xFF;
                     buffer[buffer_size++] = (sym->data.lit.data_type >> 8) & 0xFF;
                     buffer[buffer_size++] = sym->data.lit.data_type & 0xFF;
 
@@ -1048,7 +1050,16 @@ static void plant_pop(void)
 
 BLOCK *get_current_block(void)
 {
-    BLOCK *result = &block_stack[block_level];
+    BLOCK *result;
+    if (block_level < 0)
+    {
+        result = &import_block;
+    }
+    else
+    {
+        result = &block_stack[block_level];
+    }
+
     return result;
 }
 
@@ -2211,4 +2222,50 @@ void TLREPEAT(void)
     amode = saved_amode;
 }
 
+void import_module(char * filename)
+{
+    FILE * f;
+    int i;
+ 
+    f = fopen(filename, "rb");
 
+    /* read the marker word and the header size */
+    fgetc(f);
+    fgetc(f);
+    fgetc(f);
+    fgetc(f);
+
+    uint16 symbol_count;
+    symbol_count = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
+
+    for (i = 0; i < symbol_count; i++)
+    {
+        SYMBOLTYPE sym_type;
+        char sym_name[MAX_NAME_LEN];
+        VECTOR name;
+        char sym_val[MAX_LITERAL_LEN];
+        VECTOR value;
+        uint16 data_type;
+
+        name.length = fgetc(f) & 0xFF;
+        name.buffer = sym_name;
+        fread(sym_name, 1, name.length, f);
+
+        sym_type = fgetc(f);
+
+        data_type = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
+
+        switch (sym_type)
+        {
+            case SYM_LITERAL:
+                value.length = fgetc(f) & 0xFF;
+                value.buffer = sym_val;
+                fread(sym_val, 1, value.length, f);
+                declare_literal(&name, &value, data_type, 0);
+                break;
+        }
+    }
+
+    fclose(f);
+    printf("Import %s\n", filename);
+}
