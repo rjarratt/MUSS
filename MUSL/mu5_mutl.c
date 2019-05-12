@@ -4,6 +4,48 @@
 #include "support.h"
 #include "mu5_mutl.h"
 
+/* Module format
+
+This format is made-up and is for use with the MU5 emulator and the MUSL cross compiler for Windows.
+
+A module consists of a header and then multiple segments
+
+Header Format
+-------------
+
++----------------+
+| Marker         | 16 bit word all 1's
++----------------+
+| Header size    | 16-bit number of bytes in the header. This excludes the marker
++----------------+
+| Num Symbols    | 16-bit word with the number of exported symbols
++----------------+
+
+For each symbol
+
++----------------+
+| Name length    | 8-bit byte giving the length of the symbol's name
++----------------+
+| Name           | Variable length containing the symbol name
++----------------+
+| Symbol type    | 8-bit byte 0=variable, 1=literal ?????
++----------------+
+| Data type      | 16-bit word
++----------------+
+| Value          | For literal 8-bit byte giving length in bytes, then the bytes
++----------------+
+
+Segments
+--------
+
++----------------+
+| Length         | 16-bit word giving number of 16-bit words that follow
++----------------+
+| Code           | 16-bit words of code
++----------------+
+
+*/
+
 #define FIRST_NAME 2
 #define MAX_NAMES 4031
 #define MAX_NAME_LEN 32
@@ -16,6 +58,7 @@
 #define MAX_AREAS 256
 #define MAX_SEGMENTS 32
 #define MAX_SEGMENT_SIZE 65535
+#define MAX_HEADER_SIZE_BYTES 65535
 
 #define CR_ORG 0
 #define CR_B 1
@@ -459,6 +502,54 @@ static void write_16_bit_word(uint16 word)
     fwrite(&byte, 1, 1, out_file);
     byte = word & 0xFF;
     fwrite(&byte, 1, 1, out_file);
+}
+
+static void write_module_header(void)
+{
+    int i;
+    uint8 buffer[MAX_HEADER_SIZE_BYTES];
+    uint8 buffer_size = 0;
+    uint16 exported_symbol_count = 0;
+    BLOCK *block = &block_stack[0];
+    uint8 name_len;
+
+    for (i = 0; i < block->last_mutl_var; i++)
+    {
+        MUTLSYMBOL *sym = &mutl_var[i];
+        name_len = strlen(sym->name) & 0xFF;
+        switch (sym->symbol_type)
+        {
+            case SYM_LITERAL:
+                if (BT_IS_EXPORT(sym->data.lit.data_type))
+                {
+                    exported_symbol_count++;
+                    buffer[buffer_size++] = name_len;
+                    memcpy(&buffer[buffer_size], sym->name, name_len);
+                    buffer_size += name_len;
+
+                    buffer[buffer_size++] = (sym->data.lit.data_type >> 8) & 0xFF;
+                    buffer[buffer_size++] = sym->data.lit.data_type & 0xFF;
+
+                    buffer[buffer_size++] = sym->data.lit.value.length & 0xFF;
+                    memcpy(&buffer[buffer_size], sym->data.lit.value.buffer, sym->data.lit.value.length);
+                    buffer_size += sym->data.lit.value.length;
+                }
+                break;
+
+            case SYM_VARIABLE:
+                if (BT_IS_EXPORT(sym->data.var.data_type))
+                {
+                    exported_symbol_count++;
+                }
+                break;
+        }
+    }
+
+    write_16_bit_word(0xFFFF);
+    write_16_bit_word(buffer_size + 4); /* buffer size starts from the actual list of symbols */
+    write_16_bit_word(exported_symbol_count);
+    fwrite(buffer, 1, buffer_size, out_file);
+    printf("Header exported %d symbols\n", exported_symbol_count);
 }
 
 SEGMENT *get_segment(uint16 area_number)
@@ -1569,33 +1660,7 @@ void TLEND(void)
 {
     int i;
     int s;
-    BLOCK *block = &block_stack[0];
-
-    for (i = 0; i < block->last_mutl_var; i++)
-    {
-        MUTLSYMBOL *sym = &mutl_var[i];
-        switch (sym->symbol_type)
-        {
-            case SYM_LITERAL:
-                if (BT_IS_EXPORT(sym->data.lit.data_type))
-                {
-                    printf("Export lit %s=", sym->name);
-                    for (size_t i = 0; i < sym->data.lit.value.length; i++)
-                    {
-                        printf("%02X", sym->data.lit.value.buffer[i]);
-                    }
-                    printf("\n");
-                }
-                break;
-
-            case SYM_VARIABLE:
-                if (BT_IS_EXPORT(sym->data.var.data_type))
-                {
-                    printf("Export var %s\n", sym->name);
-                }
-                break;
-        }
-    }
+    write_module_header();
     for (s = 0; s < MAX_SEGMENTS; s++)
     {
         SEGMENT *segment = &segments[s];
