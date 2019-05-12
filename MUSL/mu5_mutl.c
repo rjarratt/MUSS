@@ -2,12 +2,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include "support.h"
-
-#define LOG_PLANT 0x1
-#define LOG_SYMBOLS 0x2
-#define LOG_STRUCTURE 0x4
-#define LOG_LITERALS 0x8
-#define LOG_MEMORY 0x10
+#include "mu5_mutl.h"
 
 #define FIRST_NAME 2
 #define MAX_NAMES 4031
@@ -328,7 +323,7 @@ typedef struct
     uint32 run_time_address;
 } SEGMENT;
 
-static int logging = /*LOG_PLANT |*/ LOG_SYMBOLS | LOG_STRUCTURE | LOG_MEMORY | LOG_LITERALS;
+static int logging;
 static FILE *out_file;
 static int current_line;
 static int amode = 0;
@@ -353,6 +348,11 @@ static uint8 current_data_area = 0;
 static SEGMENT segments[MAX_SEGMENTS];
 
 uint8 k_v(void);
+
+void set_logging(int l)
+{
+    logging = l;
+}
 
 void log(int source, char *format, ...)
 {
@@ -1520,7 +1520,7 @@ void set_literal_value(t_uint64 val, int size)
     int i;
     for (i = 0; i < size; i++)
     {
-        current_literal.buffer[i] = (val >> (size - i - 1)) & 0xF;
+        current_literal.buffer[i] = (val >> 8 * (size - i - 1)) & 0xFF;
     }
     current_literal.length = size;
 }
@@ -1567,6 +1567,28 @@ void TLEND(void)
 {
     int i;
     int s;
+    BLOCK *block = &block_stack[0];
+
+    for (i = 0; i < block->last_mutl_var; i++)
+    {
+        MUTLSYMBOL *sym = &mutl_var[i];
+        switch (sym->symbol_type)
+        {
+            case SYM_LITERAL:
+                if (BT_IS_EXPORT(sym->data.lit.data_type))
+                {
+                    printf("Export lit %s\n", sym->name);
+                }
+                break;
+
+            case SYM_VARIABLE:
+                if (BT_IS_EXPORT(sym->data.var.data_type))
+                {
+                    printf("Export var %s\n", sym->name);
+                }
+                break;
+        }
+    }
     for (s = 0; s < MAX_SEGMENTS; s++)
     {
         SEGMENT *segment = &segments[s];
@@ -1923,18 +1945,21 @@ void TLLABEL(int L)
 void TLCLIT16(int BT, int16 VAL)
 {
     set_literal_value(VAL, sizeof(int16));
+    log(LOG_LITERALS, "Current 16-bit literal 0x%llx\n", get_current_literal());
     current_literal_basic_type = BT;
 }
 
 void TLCLIT32(int BT, int32 VAL)
 {
     set_literal_value(VAL, sizeof(int32));
+    log(LOG_LITERALS, "Current 32-bit literal 0x%llx\n", get_current_literal());
     current_literal_basic_type = BT;
 }
 
 void TLCLIT64(int BT, t_uint64 VAL)
 {
     set_literal_value(VAL, sizeof(t_uint64));
+    log(LOG_LITERALS, "Current 64-bit literal 0x%llx\n", get_current_literal());
     current_literal_basic_type = BT;
 }
 
@@ -1951,7 +1976,7 @@ void TLCLITS(int BT, VECTOR *VAL)
     vecmemcpy(&current_literal, VAL, MAX_LITERAL_LEN);
 
     current_literal_basic_type = BT;
-    log(LOG_LITERALS, "Current literal is");
+    log(LOG_LITERALS, "Current vector literal is");
     for (i = 0; i < VAL->length; i++)
     {
         log(LOG_LITERALS, " %02X", current_literal.buffer[i]);

@@ -250,3 +250,4 @@ ModelManifest.xml
 /MUSL/MUSL/*.c
 *.output
 /JohnTaylorFlip
+/MUSS/consys81.bin

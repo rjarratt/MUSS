@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include "support.h"
+#include "mu5_mutl.h"
 static FILE *CurrentInputStream = NULL;
 static FILE *CurrentOutputStream = NULL;
 static int LastCh;
@@ -267,5 +268,10 @@ int DumpAR(uint16 AR[], int ap, int level)
 extern void MUSL(char *file, char *PROG, int CMPMODE, int DIR);
 int main(int argc, char *argv[])
 {
+    //set_logging(/*LOG_PLANT |*/ LOG_SYMBOLS | LOG_STRUCTURE | LOG_MEMORY | LOG_LITERALS)
+    if (argc == 4)
+    {
+        set_logging(atoi(argv[3]));
+    }
     MUSL(argv[1], argv[2], 0x200 /* 32 bit */, 0);
 }
