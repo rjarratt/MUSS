@@ -1793,7 +1793,7 @@ MUTLSYMBOL *get_next_mutl_var(int n)
     return result;
 }
 
-void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vstore)
+void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vstore, int v_position)
 {
     MUTLSYMBOL *var;
     int var_n;
@@ -1817,19 +1817,26 @@ void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vst
     var->data.var.data_type = T;
     var->data.var.dimension = D;
     var->data.var.word_size = size_words;
-    var->data.var.is_vstore = is_vstore;
 
     if (!is_vstore)
     {
         BLOCK *block = get_current_block();
+        var->data.var.is_vstore = 0;
         var->data.var.position = get_block_name_offset_for_last_var(T, is_parameter);
         block->local_names_space += compute_variable_space(size_words, is_parameter);
         log(LOG_SYMBOLS, "Declare var %s %s level=%d, dim=%d, words=%d, offset=%d in slot %d\n", var->name, format_basic_type(T), block_level, D, size_words, var->data.var.position, var_n);
     }
-    else
+    else if (v_position == 0)
     {
+        var->data.var.is_vstore = 1;
         var->data.var.position = get_current_literal();
         log(LOG_SYMBOLS, "Declare vstore %s %s level=%d, dim=%d, position=0x%X in slot %d\n", var->name, format_basic_type(T), block_level, D, var->data.var.position, var_n);
+    }
+    else
+    {
+        var->data.var.is_vstore = 0;
+        var->data.var.position = mutl_var[v_position].data.var.position;
+        log(LOG_SYMBOLS, "Declare vstore (backed by var) %s %s level=%d, dim=%d, position=0x%X in slot %d\n", var->name, format_basic_type(T), block_level, D, var->data.var.position, var_n);
     }
 }
 
@@ -1931,18 +1938,13 @@ void TLSDECL(VECTOR *SN, int T, int D)
     }
     else
     {
-        declare_variable(&name, T, D, 0, 0);
+        declare_variable(&name, T, D, 0, 0, 0);
     }
 }
 
 void TLVDECL(VECTOR *SN, uint32 SA, int RS, int WS, int T, int D)
 {
-    if (SA != 0)
-    {
-        fatal("Expected TL.V.DECL to be called with a literal for the position\n");
-    }
-
-    declare_variable(SN, T, D, 0, 1);
+    declare_variable(SN, T, D, 0, 1, SA);
 }
 
 void TLASS(int VL, int AN)
@@ -2030,7 +2032,7 @@ void TLPROC(int P)
         VECTOR temp;
         temp.buffer = "(param)";
         temp.length = strlen(temp.buffer);
-        declare_variable(&temp, proc_def_var->parameters[i].data_type, proc_def_var->parameters[i].dimension, 1, 0);
+        declare_variable(&temp, proc_def_var->parameters[i].data_type, proc_def_var->parameters[i].dimension, 1, 0, 0);
     }
 }
 
