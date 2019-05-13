@@ -1726,6 +1726,16 @@ int compute_variable_size(uint8 T, int D)
     {
         result = ((BT_SIZE(T) * D) + 1) / 4;
     }
+    else if (D != -1 && D != -2048 && D != 4096)
+    {
+        LITSYMBOL *lit = &mutl_var[-D].data.lit;
+        int i;
+        result = 0;
+        for (i = 0; i < lit->value.length; i++)
+        {
+            result = (result << 8) | (lit->value.buffer[i] & 0xFF);
+        }
+    }
     else
     {
         fatal("Don't yet support computing variable size when dimension is negative\n");
@@ -1846,13 +1856,14 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D)
         {
             fatal("Import %0.*s not found", name->length, name->buffer);
         }
+        var->data.lit.data_type = import->data.lit.data_type;
         vecmemcpy(&var->data.lit.value, &import->data.lit.value, sizeof(var->data.lit.valuebuf));
     }
     else
     {
         vecmemcpy(&var->data.lit.value, literal, sizeof(var->data.lit.valuebuf));
     }
-    log(LOG_SYMBOLS, "Declare literal %s %s level=%d, dim=%d, address=0x%08X in slot %d\n", var->name, format_basic_type(T), block_level, D, var->data.lit.address, var_n);
+    log(LOG_SYMBOLS, "Declare literal %s %s level=%d, dim=%d, address=0x%08X in slot %d\n", var->name, format_basic_type(var->data.lit.data_type), block_level, D, var->data.lit.address, var_n);
 }
 
 void TLTYPE(VECTOR *N, int NAT)
