@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <memory.h>
 #include "support.h"
 #include "mu5_mutl.h"
@@ -152,17 +154,19 @@ void OUTBINB(int n)
     //printf("%02X", n & 0xFF);
 }
 
-char *format_basic_type(uint8 bt)
+char *format_basic_type(uint16 bt)
 {
     static char buf[80];
     char *modes[] = { "Real", "Signed Int", "Unsigned Int", "Decimal" };
     char *relates_to[] = { "", " pointer to", "", " bounded pointer to" };
-    sprintf(buf, "(%02X)%s %s Mode=%s bytes=%d",
+    sprintf(buf, "(%04X)%s%s%s%s Mode=%s bytes=%d",
         bt,
         (BT_NOTDEF(bt)) ? " NotDef" : "",
-                 relates_to[BT_PTR_TO(bt)],
-                 modes[BT_MODE(bt)],
-                 BT_SIZE(bt));
+        (BT_IS_EXPORT(bt)) ? " Export" : "",
+        (BT_IS_IMPORT(bt)) ? " Import" : "",
+        relates_to[BT_PTR_TO(bt)],
+        modes[BT_MODE(bt)],
+        BT_SIZE(bt));
     return buf;
 }
 
@@ -216,7 +220,7 @@ int DumpAR(uint16 AR[], int ap, int level)
             }
             else if (word == 0x7E)
             {
-                printf("%*0.*sOperator: Subscript. D reg type %s\n", level * 2, " ", format_basic_type(AR[++i]));
+                printf("%0.*sOperator: Subscript. D reg type %s\n", level * 2, " ", format_basic_type(AR[++i]));
                 i = DumpAR(AR, i, level + 1);
             }
             else

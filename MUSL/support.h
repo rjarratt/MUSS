@@ -53,5 +53,5 @@ typedef int                int32;
 
 void OUTI(int32, int);
 void OUTBINB(int);
-char *format_basic_type(uint8 bt);
+char *format_basic_type(uint16 bt);
 int DumpAR(uint16 AR[], int ap, int level);

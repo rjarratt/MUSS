@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 #include "support.h"
@@ -47,6 +48,7 @@ Segments
 */
 
 #define FIRST_NAME 2
+#define MAX_IMPORTS 256
 #define MAX_NAMES 4031
 #define MAX_NAME_LEN 32
 #define MAX_LITERAL_LEN 256
@@ -373,6 +375,7 @@ static FILE *out_file;
 static int current_line;
 static int amode = 0;
 static MUTLSYMBOL mutl_var[MAX_NAMES + 1];
+static MUTLSYMBOL mutl_import_var[MAX_IMPORTS];
 static uint8 current_literal_buf[MAX_LITERAL_LEN];
 static VECTOR current_literal;
 static int current_literal_basic_type; /* gives length */
@@ -514,7 +517,7 @@ static void write_module_header(void)
     BLOCK *block = &block_stack[0];
     uint8 name_len;
 
-    for (i = 0; i < block->last_mutl_var; i++)
+    for (i = 0; i <= block->last_mutl_var; i++)
     {
         MUTLSYMBOL *sym = &mutl_var[i];
         name_len = strlen(sym->name) & 0xFF;
@@ -1289,7 +1292,7 @@ void op_a_load(int N)
 
 void op_a_load_neg_or_ref(int N)
 {
-    VARSYMBOL *var = &mutl_var[N];
+    VARSYMBOL *var = &mutl_var[N].data.var;
     if (var->dimension == 0 && N != OPERAND_D_REF)
     {
         log(LOG_PLANT, "%04X A load negative %s\n", next_instruction_address(), format_operand(N));
@@ -1662,7 +1665,7 @@ void TLDATAAREA(int AN)
 
 void TL(int M, char *FN, int DZ)
 {
-    current_literal.buffer = &current_literal_buf;
+    current_literal.buffer = current_literal_buf;
     out_file = fopen(FN, "wb");
     TLSEG(0, MAX_SEGMENT_SIZE, -1, -1, 6);
 }
@@ -1745,6 +1748,41 @@ int compute_variable_space(int size_words, int is_parameter)
     return result;
 }
 
+MUTLSYMBOL *find_import(VECTOR *name, SYMBOLTYPE sym_type)
+{
+    int i;
+    MUTLSYMBOL *result = NULL;
+    for (i = 0; i <= import_block.last_mutl_var; i++)
+    {
+        MUTLSYMBOL *sym = &mutl_import_var[i];
+        if (name->length == strlen(sym->name) && sym->symbol_type == sym_type)
+        {
+            if (strncmp(name->buffer, sym->name, name->length) == 0)
+            {
+                result = sym;
+                break;
+            }
+        }
+    }
+
+    return result;
+}
+
+MUTLSYMBOL *get_next_mutl_var(int n)
+{
+    MUTLSYMBOL *result;
+    if (block_level < 0)
+    {
+        result = &mutl_import_var[n];
+    }
+    else
+    {
+        result = &mutl_var[n];
+    }
+
+    return result;
+}
+
 void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vstore)
 {
     MUTLSYMBOL *var;
@@ -1761,7 +1799,7 @@ void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vst
     {
         var_n = add_other_block_item();
     }
-    var = &mutl_var[var_n];
+    var = get_next_mutl_var(var_n);
 
     var->symbol_type = SYM_VARIABLE;
     vecstrcpy(var->name, name, sizeof(var->name));
@@ -1792,7 +1830,7 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D)
     int var_n;
 
     var_n = add_other_block_item();
-    var = &mutl_var[var_n];
+    var = get_next_mutl_var(var_n);
 
     vecstrcpy(var->name, name, sizeof(var->name));
     var->symbol_type = SYM_LITERAL;
@@ -1801,7 +1839,19 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D)
     var->data.lit.dimension = D;
     var->data.lit.address = compute_descriptor_origin(next_data_address());
     var->data.lit.value.buffer = &var->data.lit.valuebuf;
-    vecmemcpy(&var->data.lit.value, literal, sizeof(var->data.lit.valuebuf));
+    if (BT_IS_IMPORT(T))
+    {
+        MUTLSYMBOL *import = find_import(name, SYM_LITERAL);
+        if (import == NULL)
+        {
+            fatal("Import %0.*s not found", name->length, name->buffer);
+        }
+        vecmemcpy(&var->data.lit.value, &import->data.lit.value, sizeof(var->data.lit.valuebuf));
+    }
+    else
+    {
+        vecmemcpy(&var->data.lit.value, literal, sizeof(var->data.lit.valuebuf));
+    }
     log(LOG_SYMBOLS, "Declare literal %s %s level=%d, dim=%d, address=0x%08X in slot %d\n", var->name, format_basic_type(T), block_level, D, var->data.lit.address, var_n);
 }
 
@@ -1817,7 +1867,7 @@ void TLTYPE(VECTOR *N, int NAT)
         sym_n = add_other_block_item();
     }
 
-    current_type_def = &mutl_var[sym_n];
+    current_type_def = get_next_mutl_var(sym_n);
     vecstrcpy(current_type_def->name, N, sizeof(current_type_def->name));
     current_type_def->symbol_type = SYM_TYPE;
     current_type_def->block_level = block_level;
@@ -1922,7 +1972,7 @@ void TLASSEND(void)
 
 void TLPROCSPEC(VECTOR *NAM, int NAT)
 {
-    MUTLSYMBOL *sym = &mutl_var[add_other_block_item()];
+    MUTLSYMBOL *sym = get_next_mutl_var(add_other_block_item());
     current_proc_spec = &sym->data.proc;
     sym->symbol_type = SYM_PROC;
     vecstrcpy(sym->name, NAM, sizeof(sym->name));
@@ -2003,7 +2053,7 @@ void TLLABELSPEC(VECTOR *N, int U)
     int sym_n;
 
     sym_n = add_other_block_item();
-    MUTLSYMBOL *sym = &mutl_var[sym_n];
+    MUTLSYMBOL *sym = get_next_mutl_var(sym_n);
     sym->symbol_type = SYM_LABEL;
     if (U > 1)
     {
@@ -2079,9 +2129,10 @@ void TLCLIT128(int BT, double VAL)
 void TLLIT(VECTOR *SN, int K)
 {
     int T = current_literal_basic_type;
+    T |= (K & BT_IMPORT); /* add in import flag if this is an import */
     if ((K & 0x3FFF) == 0)
     {
-        T |= BT_EXPORT;
+        T |= (K & BT_EXPORT);
     }
     declare_literal(SN, &current_literal, T, 0);
 }
