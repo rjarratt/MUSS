@@ -251,3 +251,6 @@ ModelManifest.xml
 *.output
 /JohnTaylorFlip
 /MUSS/consys81.bin
+*.bin
+!ap8*.musl
+!consys8*.musl
