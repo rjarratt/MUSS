@@ -254,3 +254,4 @@ ModelManifest.xml
 *.bin
 !ap8*.musl
 !consys8*.musl
+!sample*.musl
