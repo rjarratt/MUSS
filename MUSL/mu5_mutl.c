@@ -845,7 +845,7 @@ static void plant_operand(uint16 n)
             }
             else
             {
-                plant_16_bit_code_word(var->data.var.position / 2);
+                plant_16_bit_code_word(var->data.var.position);
             }
         }
         else if (mutl_var[n].symbol_type == SYM_LITERAL)
