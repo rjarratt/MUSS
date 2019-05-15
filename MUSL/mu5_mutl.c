@@ -1149,7 +1149,7 @@ uint16 get_block_name_offset_for_last_var(uint8 T, int is_parameter)
     }
     else if (is_parameter)
     {
-        result = block->local_names_space;
+        result = block->local_names_space + 1;
     }
     else
     {
