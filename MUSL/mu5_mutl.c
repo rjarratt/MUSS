@@ -288,6 +288,8 @@ typedef struct
     int word_size;
     int position; /* for regular variables this is offset in 32-bit words from NB, including LINK if appropriate, vstore it is the v-line number */
     int is_vstore;
+    int v_read_proc;
+    int v_write_proc;
     uint16 initialiser_address;
 } VARSYMBOL;
 
@@ -397,6 +399,8 @@ static uint8 current_data_area = 0;
 static SEGMENT segments[MAX_SEGMENTS];
 
 uint8 k_v(void);
+void op_org_stack_link(int);
+void op_org_enter(int);
 
 void set_logging(int l)
 {
@@ -753,7 +757,7 @@ static uint8 get_operand(uint16 n)
         np = NP_DR;
         modifier = NO_OPERAND_FOLLOWS_FLAG;
     }
-    else if (n < 0x1000)
+    else if (n>= 2 && n < 0x1000)
     {
         MUTLSYMBOL *var = &mutl_var[n];
         if (var->symbol_type == SYM_VARIABLE)
@@ -834,7 +838,7 @@ static void plant_operand(uint16 n)
             }
         }
     }
-    else if (n < 0x1000)
+    else if (n >= 2 && n < 0x1000)
     {
         if (mutl_var[n].symbol_type == SYM_VARIABLE)
         {
@@ -1215,6 +1219,34 @@ void fixup_forward_label_refs(int N)
     }
 }
 
+void check_v_store_read_proc(int N)
+{
+    if (N >= 2 && N < 0x1000)
+    {
+        VARSYMBOL *var = &mutl_var[N].data.var;
+        if (var->v_read_proc != 0)
+        {
+            log(LOG_PLANT, "%04X V STORE read proc call required\n", next_instruction_address());
+            op_org_stack_link(var->v_read_proc);
+            op_org_enter(0);
+        }
+    }
+}
+
+void check_v_store_write_proc(int N)
+{
+    if (N >= 2 && N < 0x1000)
+    {
+        VARSYMBOL *var = &mutl_var[N].data.var;
+        if (var->v_write_proc != 0)
+        {
+            log(LOG_PLANT, "%04X V STORE write proc call required\n", next_instruction_address());
+            op_org_stack_link(var->v_write_proc);
+            op_org_enter(0);
+        }
+    }
+}
+
 void op_b_load(int N)
 {
     log(LOG_PLANT, "%04X B load %s\n", next_instruction_address(), format_operand(N));
@@ -1275,11 +1307,13 @@ void op_a_store(int N)
 {
     log(LOG_PLANT, "%04X A store to %s\n", next_instruction_address(), mutl_var[N].name);
     plant_order_extended_operand(cr_for_load(), F_STORE, N);
+    check_v_store_write_proc(N);
 }
 
 void op_a_load(int N)
 {
     log(LOG_PLANT, "%04X A load %s\n", next_instruction_address(), format_operand(N));
+    check_v_store_read_proc(N);
     if (BT_SIZE(amode) <= 4)
     {
         plant_order_extended_operand(cr_for_load(), F_LOAD_32, N);
@@ -1296,6 +1330,7 @@ void op_a_load_neg_or_ref(int N)
     if (var->dimension == 0 && N != OPERAND_D_REF)
     {
         log(LOG_PLANT, "%04X A load negative %s\n", next_instruction_address(), format_operand(N));
+        check_v_store_read_proc(N);
         op_a_load(N);
         plant_order(cr(), F_RSUB_A, K_IR, 34); /* 34 is the Z internal register */
     }
@@ -1316,60 +1351,70 @@ void op_a_load_neg_or_ref(int N)
 void op_a_xor(int N)
 {
     log(LOG_PLANT, "%04X A XOR 0x%X\n", next_instruction_address(), N);
+    check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_XOR_A, N);
 }
 
 void op_a_and(int N)
 {
     log(LOG_PLANT, "%04X A AND %s\n", next_instruction_address(), format_operand(N));
+    check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_AND_A, N);
 }
 
 void op_a_or(int N)
 {
     log(LOG_PLANT, "%04X A OR %s\n", next_instruction_address(), format_operand(N));
+    check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_OR_A, N);
 }
 
 void op_a_left_shift(int N)
 {
     log(LOG_PLANT, "%04X A LSH %s\n", next_instruction_address(), format_operand(N));
+    check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_SHIFT_L_A, N);
 }
 
 void op_a_add(int N)
 {
     log(LOG_PLANT, "%04X A ADD %s\n", next_instruction_address(), format_operand(N));
+    check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_ADD_A, N);
 }
 
 void op_a_sub(int N)
 {
     log(LOG_PLANT, "%04X A SUB %s\n", next_instruction_address(), format_operand(N));
+    check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_SUB_A, N);
 }
 
 void op_a_reverse_sub(int N)
 {
     log(LOG_PLANT, "%04X A RSUB %s\n", next_instruction_address(), format_operand(N));
+    check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_RSUB_A, N);
 }
 
 void op_a_mul(int N)
 {
     log(LOG_PLANT, "%04X A MUL %s\n", next_instruction_address(), format_operand(N));
+    check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_MUL_A, N);
 }
 
 void op_a_div(int N)
 {
     log(LOG_PLANT, "%04X A DIV %s\n", next_instruction_address(), format_operand(N));
+    check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_DIV_A, N);
 }
 
 void op_a_compare(int N)
 {
     log(LOG_PLANT, "%04X A COMP %s\n", next_instruction_address(), format_operand(N));
+    check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_COMP_A, N);
 }
 
@@ -1793,7 +1838,7 @@ MUTLSYMBOL *get_next_mutl_var(int n)
     return result;
 }
 
-void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vstore, int v_position)
+void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vstore, int v_position, int v_read_proc, int v_write_proc)
 {
     MUTLSYMBOL *var;
     int var_n;
@@ -1835,6 +1880,8 @@ void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vst
     else
     {
         var->data.var.is_vstore = 0;
+        var->data.var.v_read_proc = v_read_proc;
+        var->data.var.v_write_proc = v_write_proc;
         var->data.var.position = mutl_var[v_position].data.var.position;
         log(LOG_SYMBOLS, "Declare vstore (backed by var) %s %s level=%d, dim=%d, position=0x%X in slot %d\n", var->name, format_basic_type(T), block_level, D, var->data.var.position, var_n);
     }
@@ -1938,13 +1985,13 @@ void TLSDECL(VECTOR *SN, int T, int D)
     }
     else
     {
-        declare_variable(&name, T, D, 0, 0, 0);
+        declare_variable(&name, T, D, 0, 0, 0, 0, 0);
     }
 }
 
 void TLVDECL(VECTOR *SN, uint32 SA, int RS, int WS, int T, int D)
 {
-    declare_variable(SN, T, D, 0, 1, SA);
+    declare_variable(SN, T, D, 0, 1, SA, RS, WS);
 }
 
 void TLASS(int VL, int AN)
@@ -2039,7 +2086,7 @@ void TLPROC(int P)
         VECTOR temp;
         temp.buffer = "(param)";
         temp.length = strlen(temp.buffer);
-        declare_variable(&temp, proc_def_var->parameters[i].data_type, proc_def_var->parameters[i].dimension, 1, 0, 0);
+        declare_variable(&temp, proc_def_var->parameters[i].data_type, proc_def_var->parameters[i].dimension, 1, 0, 0, 0, 0);
     }
 }
 
