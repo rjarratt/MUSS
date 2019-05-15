@@ -1988,7 +1988,14 @@ void TLPROCSPEC(VECTOR *NAM, int NAT)
     MUTLSYMBOL *sym = get_next_mutl_var(add_other_block_item());
     current_proc_spec = &sym->data.proc;
     sym->symbol_type = SYM_PROC;
-    vecstrcpy(sym->name, NAM, sizeof(sym->name));
+    if (NAM == NULL)
+    {
+        strcpy(sym->name, "(generated)");
+    }
+    else
+    {
+        vecstrcpy(sym->name, NAM, sizeof(sym->name));
+    }
     log(LOG_SYMBOLS, "Declare proc %s, nature=0x%04X\n", sym->name, NAT);
 }
 
