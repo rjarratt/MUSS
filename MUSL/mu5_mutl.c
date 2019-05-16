@@ -621,13 +621,30 @@ static void plant_16_bit_data_word(uint16 word)
     plant_16_bit_word(current_data_area, word);
 }
 
-static void plant_vector(VECTOR *v)
+static void plant_vector(uint16 data_type, VECTOR *v)
 {
+    uint8 buffer[MAX_LITERAL_LEN];
     int i;
-    int words = (v->length + 1) / 2;
+    int words;
+    int data_type_len = BT_SIZE(data_type);
+    int len = v->length;
+    uint8 fill = 0;
+
+    if (BT_MODE(data_type) == BT_MODE_SIGNED_INTEGER && (current_literal.buffer[0] & 0x80 == 0x80))
+    {
+        fill = 0xFF;
+    }
+
+    if (data_type_len > v->length)
+    {
+        len = data_type_len;
+    }
+    words = (len + 1) / 2;
+    memset(buffer, fill, sizeof(buffer));
+    memcpy(&buffer[(words * 2) - v->length], v->buffer, v->length);
     for (i = 0; i < words; i++)
     {
-        uint16 word = (v->buffer[i * 2] << 8) | v->buffer[i * 2 + 1];
+        uint16 word = (buffer[i * 2] << 8) | buffer[i * 2 + 1];
         plant_16_bit_data_word(word);
     }
     block_stack[0].local_names_space += words;
@@ -2014,14 +2031,20 @@ void TLASS(int VL, int AN)
 
 void TLASSVALUE(int N, int R)
 {
+    int i;
+    LITSYMBOL *lit;
     if (N != 0)
     {
         fatal("TL.ASS.VALUE for non-zero NAME not supported\n");
     }
 
-    log(LOG_LITERALS, "TL.ASS.VALUE current literal to variable %d, repeat is %d\n", current_assign_variable, R);
-    mutl_var[current_assign_variable].data.lit.length = current_literal.length;
-    plant_vector(&current_literal);
+    lit = &mutl_var[current_assign_variable].data.lit;
+    lit->length = current_literal.length;
+    log(LOG_LITERALS, "TL.ASS.VALUE current literal to variable %d, repeat is %d\n", get_current_literal(), current_assign_variable, R);
+    for (i = 0; i < R; i++)
+    {
+        plant_vector(lit->data_type, &current_literal);
+    }
 }
 
 void TLASSEND(void)
