@@ -2013,7 +2013,11 @@ void TLVDECL(VECTOR *SN, uint32 SA, int RS, int WS, int T, int D)
 
 void TLASS(int VL, int AN)
 {
+    LITSYMBOL *lit;
     current_assign_variable = VL;
+    lit = &mutl_var[current_assign_variable].data.lit;
+    lit->dimension = 0;
+
     if (AN == -1)
     {
         current_assign_variable_area = current_data_area; /* should be code area, but don't want this */
@@ -2040,7 +2044,9 @@ void TLASSVALUE(int N, int R)
 
     lit = &mutl_var[current_assign_variable].data.lit;
     lit->length = current_literal.length;
-    log(LOG_LITERALS, "TL.ASS.VALUE current literal to variable %d, repeat is %d\n", get_current_literal(), current_assign_variable, R);
+    lit->dimension++;
+
+    log(LOG_LITERALS, "TL.ASS.VALUE current literal to variable %d, repeat is %d\n", current_assign_variable, R);
     for (i = 0; i < R; i++)
     {
         plant_vector(lit->data_type, &current_literal);
