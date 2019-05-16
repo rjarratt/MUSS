@@ -2595,14 +2595,15 @@ $EL
 ITEMISE(1)
 $FI
 @BOX15.2
-if (DVT == TLO8)
+/**/ /* There seems to be a bug here because ITEMISE parses all the way to the END, so the literals are already in LBUFF */
+/*if (DVT == TLO8)
 {
   ITEMISE(2);
 }
 else
 {
   ITEMISE(1);
-}
+}*/
 @BOX3.1
 $IF LBUFF[1+>IPTR] = EOS
 @BOX3.2
