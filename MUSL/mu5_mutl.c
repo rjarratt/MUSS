@@ -1042,9 +1042,23 @@ uint8 k_v()
 
 static void plant_stack_a(void)
 {
+    log(LOG_PLANT, "%04X Stack A\n", next_instruction_address());
     plant_org_order(F_SF_PLUS, K_LITERAL, 2);
     plant_order_extended(cr(), F_STORE, K_V64, NP_SF);
     plant_16_bit_code_word(0);
+}
+
+static void plant_pop_a(void)
+{
+    log(LOG_PLANT, "%04X Pop A\n", next_instruction_address());
+    if (BT_SIZE(amode) <= 4)
+    {
+        plant_order_extended(cr_for_load(), F_LOAD_32, K_V32, NP_STACK);
+    }
+    else
+    {
+        plant_order_extended(cr_for_load(), F_LOAD_64, K_V32, NP_STACK);
+    }
 }
 
 static void plant_stack_x(void)
@@ -1554,11 +1568,12 @@ void op_org_aconv(int N)
 {
     int kind = (N >> 14) & 1;
     int from_amode = amode;
-    amode = N;
-    log(LOG_PLANT, "Aconv kind=%d to %s\n", kind, format_basic_type(N));
-    if (type_is_vector(from_amode) && (BT_MODE(N) == BT_MODE_SIGNED_INTEGER || BT_MODE(N) == BT_MODE_UNSIGNED_INTEGER))
+    int to_amode = N;
+    log(LOG_PLANT, "Aconv kind=%d from %s to %s\n", kind, format_basic_type(from_amode), format_basic_type(to_amode));
+    if (type_is_vector(from_amode) && (BT_MODE(to_amode) == BT_MODE_SIGNED_INTEGER || BT_MODE(to_amode) == BT_MODE_UNSIGNED_INTEGER))
     {
-        log(LOG_PLANT, "Aconv get vector bound\n", kind, format_basic_type(N));
+        amode = to_amode;
+        log(LOG_PLANT, "Aconv get vector bound\n");
         log(LOG_PLANT, "  ");
         plant_stack_d();
         log(LOG_PLANT, "  %04X Load top 32 bits\n", next_instruction_address());
@@ -1569,10 +1584,20 @@ void op_org_aconv(int N)
         plant_32_bit_code_word(0x00FFFFFF);
         plant_pop();
     }
+    else if ((BT_MODE(from_amode) == BT_MODE_SIGNED_INTEGER || BT_MODE(from_amode) == BT_MODE_UNSIGNED_INTEGER)
+        &&
+        (BT_MODE(to_amode) == BT_MODE_SIGNED_INTEGER || BT_MODE(to_amode) == BT_MODE_UNSIGNED_INTEGER))
+    {
+        plant_stack_a();
+        amode = to_amode;
+        plant_pop_a();
+    }
     else
     {
-        //fatal("Conversion not implemented\n");
+        fatal("Conversion not implemented\n");
     }
+
+    amode = to_amode;
 }
 
 void op_org_set_amode(int N)
