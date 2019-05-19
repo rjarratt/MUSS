@@ -647,7 +647,7 @@ static void plant_vector(uint16 data_type, VECTOR *v)
         uint16 word = (buffer[i * 2] << 8) | buffer[i * 2 + 1];
         plant_16_bit_data_word(word);
     }
-    block_stack[0].local_names_space += words;
+    block_stack[0].local_names_space += (words +1)/2; /* names space is in 32-bit word increments */ /* TODO: is there a problem here with vectors of 16-bit integers? */
 }
 
 static int next_instruction_address(void)
@@ -1911,6 +1911,15 @@ void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vst
         var->data.var.is_vstore = 0;
         var->data.var.position = get_block_name_offset_for_last_var(T, is_parameter);
         block->local_names_space += compute_variable_space(size_words, is_parameter);
+        if (block_level == 0)
+        {
+            /* reserve space in data area by writing data words */
+            int i;
+            for (i = 0; i < 2 * size_words; i++)
+            {
+                plant_16_bit_data_word(0);
+            }
+        }
         log(LOG_SYMBOLS, "Declare var %s %s level=%d, dim=%d, words=%d, offset=%d in slot %d\n", var->name, format_basic_type(T), block_level, D, size_words, var->data.var.position, var_n);
     }
     else if (v_position == 0)
