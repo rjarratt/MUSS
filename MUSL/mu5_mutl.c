@@ -793,9 +793,13 @@ static uint8 get_operand(uint16 n)
                 {
                     np = NP_XNB;
                 }
-                else
+                else if (var->block_level == block_level)
                 {
                     np = NP_NB;
+                }
+                else
+                {
+                    fatal("Non-local non-global variable access not supported yet.");
                 }
             }
             else
