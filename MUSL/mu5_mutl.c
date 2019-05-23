@@ -21,6 +21,8 @@ Header Format
 +----------------+
 | Num Symbols    | 16-bit word with the number of exported symbols
 +----------------+
+| Global bytes   | 16-bit word with the number of bytes occupied by global variables
++----------------+
 
 For each symbol
 
@@ -555,8 +557,9 @@ static void write_module_header(void)
     }
 
     write_16_bit_word(0xFFFF);
-    write_16_bit_word(buffer_size + 4); /* buffer size starts from the actual list of symbols */
+    write_16_bit_word(buffer_size + 6); /* buffer size starts from the actual list of symbols */
     write_16_bit_word(exported_symbol_count);
+    write_16_bit_word(block_stack[0].local_names_space*4);
     fwrite(buffer, 1, buffer_size, out_file);
     printf("Header exported %d symbols\n", exported_symbol_count);
 }
@@ -2421,7 +2424,9 @@ void import_module(char * filename)
     fgetc(f);
 
     uint16 symbol_count;
+    uint16 global_bytes;
     symbol_count = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
+    global_bytes = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
 
     for (i = 0; i < symbol_count; i++)
     {
