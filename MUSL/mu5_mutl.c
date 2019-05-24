@@ -21,7 +21,11 @@ Header Format
 +----------------+
 | Num Symbols    | 16-bit word with the number of exported symbols
 +----------------+
-| Global bytes   | 16-bit word with the number of bytes occupied by global variables
+| Global bytes   | 16-bit word with the number of bytes occupied by global data
++----------------+
+| Global segment | 16-bit word with the segment where the literal to set the base address for the module's global data is to be set
++----------------+
+| Global offset  | 16-bit word with the offset (in 16-bit words) where the literal to set the base address for the module's global data is to be set
 +----------------+
 
 For each symbol
@@ -393,6 +397,8 @@ static int current_proc_call_stack_link_offset_address;
 static BLOCK block_stack[MAX_BLOCK_DEPTH];
 static BLOCK import_block;
 static int block_level = -1;
+static uint16 module_global_segment;
+static uint16 module_global_offset;
 static LOOP loop_stack[MAX_LOOP_DEPTH];
 static int loop_level = -1;
 static AREA areas[MAX_AREAS];
@@ -557,9 +563,11 @@ static void write_module_header(void)
     }
 
     write_16_bit_word(0xFFFF);
-    write_16_bit_word(buffer_size + 6); /* buffer size starts from the actual list of symbols */
+    write_16_bit_word(buffer_size + 10); /* buffer size starts from the actual list of symbols */
     write_16_bit_word(exported_symbol_count);
-    write_16_bit_word(block_stack[0].local_names_space*4);
+    write_16_bit_word(block_stack[0].local_names_space * 4);
+    write_16_bit_word(module_global_segment);
+    write_16_bit_word(module_global_offset);
     fwrite(buffer, 1, buffer_size, out_file);
     printf("Header exported %d symbols\n", exported_symbol_count);
 }
@@ -1136,6 +1144,13 @@ void start_block_level(int param_stack_size)
         nb_adjust = -param_stack_size; /* NB must be positioned at the LINK */
     }
 
+    if (block_level == 0)
+    {
+        plant_org_order_extended(F_XNB_LOAD, KP_LITERAL, NP_32_BIT_UNSIGNED_LITERAL);
+        module_global_segment = get_segment(current_code_area)->segment_number;
+        module_global_offset = next_instruction_address();
+        plant_32_bit_code_word(0);
+    }
     /* don't make the jump variable length because then we can't calculate the offset to pass to STACKLINK without more complication */
     plant_org_order_extended(F_NB_LOAD_SF_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
     plant_16_bit_code_word(nb_adjust);
@@ -2425,8 +2440,12 @@ void import_module(char * filename)
 
     uint16 symbol_count;
     uint16 global_bytes;
+    uint16 global_segment;
+    uint16 global_offset;
     symbol_count = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
     global_bytes = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
+    global_segment = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
+    global_offset = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
 
     for (i = 0; i < symbol_count; i++)
     {
