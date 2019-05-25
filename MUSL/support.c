@@ -272,9 +272,13 @@ int DumpAR(uint16 AR[], int ap, int level)
 extern void MUSL(char *file, char *PROG, int CMPMODE, int DIR);
 int main(int argc, char *argv[])
 {
+    int CMPMODE = 0x200; /* 32 bit */
     if (argc <= 1)
     {
-        printf("nmsl infile outfile [-i import] [-l logginglevel]");
+        printf("nmsl infile outfile [-i import] [-l logginglevel] [-lib]\n");
+        printf("   -i is name of binary library to import");
+        printf("   -l is bit mask of logging levels\n");
+        printf("   -lib indicates a library is being compiled, otherwise it is a program\n");
     }
     else
     {
@@ -316,12 +320,19 @@ int main(int argc, char *argv[])
                     exit(0);
                 }
             }
-            else
+            else if (strcmp(argv[arg], "-l") == 0)
             {
+                /* skip logging level, this has already been processed */
+                arg += 2;
+            }
+            else if (strcmp(argv[arg], "-lib") == 0)
+            {
+                /* skip logging level, this has already been processed */
                 arg++;
+                CMPMODE |= 0x4;
             }
         }
 
-        MUSL(argv[1], argv[2], 0x200 /* 32 bit */, 0);
+        MUSL(argv[1], argv[2], CMPMODE, 0);
     }
 }

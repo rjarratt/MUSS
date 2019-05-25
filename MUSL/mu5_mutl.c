@@ -380,6 +380,7 @@ typedef struct
 
 static int logging;
 static FILE *out_file;
+static int is_library;
 static int current_line;
 static int amode = 0;
 static MUTLSYMBOL mutl_var[MAX_NAMES + 1];
@@ -1774,6 +1775,16 @@ void TLDATAAREA(int AN)
 
 void TL(int M, char *FN, int DZ)
 {
+    is_library = (M & 0x4) == 0x4;
+    if (is_library)
+    {
+        printf("Compiling a library\n");
+    }
+    else
+    {
+        printf("Compiling a program\n");
+    }
+
     current_literal.buffer = current_literal_buf;
     out_file = fopen(FN, "wb");
     TLSEG(0, MAX_SEGMENT_SIZE, -1, -1, 6);
