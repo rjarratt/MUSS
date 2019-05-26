@@ -86,6 +86,7 @@ Segments
 #define FIRST_NAME 2
 #define MAX_IMPORT_MODULES 64
 #define MAX_IMPORTS 256
+#define NO_MODULE (-1)
 #define MAX_NAMES 4031
 #define MAX_NAME_LEN 32
 #define MAX_LITERAL_LEN 256
@@ -369,6 +370,7 @@ typedef struct
     SYMBOLTYPE symbol_type;
     char name[MAX_NAME_LEN];
     int block_level;
+    int module_number; /* the number of the import module in the module table, if the symbol is imported, -1 if not imported. */
     union
     {
         VARSYMBOL var;
@@ -1974,7 +1976,7 @@ MUTLSYMBOL *get_next_mutl_var(int n)
     return result;
 }
 
-void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vstore, int v_position, int v_read_proc, int v_write_proc)
+void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vstore, int v_position, int v_read_proc, int v_write_proc, int module)
 {
     MUTLSYMBOL *var;
     int var_n;
@@ -1995,6 +1997,7 @@ void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vst
     var->symbol_type = SYM_VARIABLE;
     vecstrcpy(var->name, name, sizeof(var->name));
     var->block_level = block_level;
+    var->module_number = module;
     var->data.var.data_type = T;
     var->data.var.dimension = D;
     var->data.var.word_size = size_words;
@@ -2032,7 +2035,7 @@ void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vst
     }
 }
 
-void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D)
+void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
 {
     MUTLSYMBOL *var;
     int nb_offset;
@@ -2044,6 +2047,7 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D)
     vecstrcpy(var->name, name, sizeof(var->name));
     var->symbol_type = SYM_LITERAL;
     var->block_level = block_level;
+    var->module_number = module;
     var->data.lit.data_type = T;
     var->data.lit.dimension = D;
     var->data.lit.address = compute_descriptor_origin(next_data_address());
@@ -2081,6 +2085,7 @@ void TLTYPE(VECTOR *N, int NAT)
     vecstrcpy(current_type_def->name, N, sizeof(current_type_def->name));
     current_type_def->symbol_type = SYM_TYPE;
     current_type_def->block_level = block_level;
+    current_type_def->module_number = NO_MODULE;
 
     log(LOG_SYMBOLS, "Start aggregate type %0.*s nature=%X level=%d in slot %d\n", N->length, N->buffer, NAT, block_level, sym_n);
 }
@@ -2126,17 +2131,17 @@ void TLSDECL(VECTOR *SN, int T, int D)
     {
         char *tempname = "(literal)";
         VECTOR temp = { tempname, 9 };
-        declare_literal(&temp, &current_literal, T, D);
+        declare_literal(&temp, &current_literal, T, D, NO_MODULE);
     }
     else
     {
-        declare_variable(&name, T, D, 0, 0, 0, 0, 0);
+        declare_variable(&name, T, D, 0, 0, 0, 0, 0, NO_MODULE);
     }
 }
 
 void TLVDECL(VECTOR *SN, uint32 SA, int RS, int WS, int T, int D)
 {
-    declare_variable(SN, T, D, 0, 1, SA, RS, WS);
+    declare_variable(SN, T, D, 0, 1, SA, RS, WS, NO_MODULE);
 }
 
 void TLASS(int VL, int AN)
@@ -2243,7 +2248,7 @@ void TLPROC(int P)
         VECTOR temp;
         temp.buffer = "(param)";
         temp.length = strlen(temp.buffer);
-        declare_variable(&temp, proc_def_var->parameters[i].data_type, proc_def_var->parameters[i].dimension, 1, 0, 0, 0, 0);
+        declare_variable(&temp, proc_def_var->parameters[i].data_type, proc_def_var->parameters[i].dimension, 1, 0, 0, 0, 0, NO_MODULE);
     }
 }
 
@@ -2358,7 +2363,7 @@ void TLLIT(VECTOR *SN, int K)
     {
         T |= (K & BT_EXPORT);
     }
-    declare_literal(SN, &current_literal, T, 0);
+    declare_literal(SN, &current_literal, T, 0, NO_MODULE);
 }
 
 void TLPL(int F, int N)
@@ -2593,7 +2598,7 @@ void import_module(char * filename)
                 value.length = fgetc(f) & 0xFF;
                 value.buffer = sym_val;
                 fread(sym_val, 1, value.length, f);
-                declare_literal(&name, &value, data_type, 0);
+                declare_literal(&name, &value, data_type, 0, imported_module_count - 1);
                 break;
         }
     }
