@@ -12,7 +12,7 @@ This format is made-up and is for use with the MU5 emulator and the MUSL cross c
 A module consists of a header and then multiple segments
 
 Header Format
--------------
+=============
 
 +----------------+
 | Marker         | 16 bit word all 1's
@@ -21,12 +21,42 @@ Header Format
 +----------------+
 | Num Symbols    | 16-bit word with the number of exported symbols
 +----------------+
+| Num Modules    | 16-bit word with the number of imported modules
++----------------+
 | Global bytes   | 16-bit word with the number of bytes occupied by global data
 +----------------+
-| Global segment | 16-bit word with the segment where the literal to set the base address for the module's global data is to be set
+| Module table   | See below
 +----------------+
-| Global offset  | 16-bit word with the offset (in 16-bit words) where the literal to set the base address for the module's global data is to be set
+| Symbol table   | See below
 +----------------+
+
+Module Table
+------------
+
+The module table contains a list of all the imported modules.
+
+Module table header:
+
+Each compiled module (library or program) contains a table of base addresses for the global data in each module imported by the current module.
+The header indicates the location (relative to the code for this module only) of the table. The table will contain one entry per imported module
+and one entry for the current module. The table is filled in at link time.
+
++----------------+
+| Global segment | 16-bit word with the segment where the base addresses are to be set
++----------------+
+| Global offset  | 16-bit word with the offset (in 16-bit words) where the base addresses are to be set
++----------------+
+
+For each imported module:
+
++----------------+
+| Name length    | 8-bit byte giving the length of the symbol's name
++----------------+
+| Name           | Variable length containing the module name
++----------------+
+
+Symbol Table
+------------
 
 For each symbol
 
@@ -54,6 +84,7 @@ Segments
 */
 
 #define FIRST_NAME 2
+#define MAX_IMPORT_MODULES 64
 #define MAX_IMPORTS 256
 #define MAX_NAMES 4031
 #define MAX_NAME_LEN 32
@@ -378,6 +409,11 @@ typedef struct
     uint32 run_time_address;
 } SEGMENT;
 
+typedef struct
+{
+    char name[MAX_NAME_LEN];
+} MODULE;
+
 static int logging;
 static FILE *out_file;
 static int is_library;
@@ -406,6 +442,8 @@ static AREA areas[MAX_AREAS];
 static uint8 current_code_area = 1;
 static uint8 current_data_area = 0;
 static SEGMENT segments[MAX_SEGMENTS];
+static int imported_module_count;
+static MODULE module_table[MAX_IMPORT_MODULES];
 
 uint8 k_v(void);
 void op_org_stack_link(int);
@@ -529,6 +567,22 @@ static void write_module_header(void)
     uint16 exported_symbol_count = 0;
     BLOCK *block = &block_stack[0];
     uint8 name_len;
+    MODULE *module;
+
+    /* write module table */
+    buffer[buffer_size++] = (module_global_segment >> 8) & 0xFF;
+    buffer[buffer_size++] = module_global_segment & 0xFF;
+    buffer[buffer_size++] = (module_global_offset >> 8) & 0xFF;
+    buffer[buffer_size++] = module_global_offset & 0xFF;
+
+    for (i = 0; i < imported_module_count; i++)
+    {
+        module = &module_table[i];
+        name_len = strlen(module->name) % MAX_NAME_LEN;
+        buffer[buffer_size++] = name_len;
+        memcpy(&buffer[buffer_size], module->name, name_len);
+        buffer_size += name_len;
+    }
 
     for (i = 0; i <= block->last_mutl_var; i++)
     {
@@ -564,11 +618,10 @@ static void write_module_header(void)
     }
 
     write_16_bit_word(0xFFFF);
-    write_16_bit_word(buffer_size + 10); /* buffer size starts from the actual list of symbols */
+    write_16_bit_word(buffer_size + 8); /* buffer size starts from the actual list of symbols */
     write_16_bit_word(exported_symbol_count);
+    write_16_bit_word(imported_module_count);
     write_16_bit_word(block_stack[0].local_names_space * 4);
-    write_16_bit_word(module_global_segment);
-    write_16_bit_word(module_global_offset);
     fwrite(buffer, 1, buffer_size, out_file);
     printf("Header exported %d symbols\n", exported_symbol_count);
 }
@@ -1277,12 +1330,16 @@ void check_v_store_read_proc(int N)
 {
     if (N >= 2 && N < 0x1000)
     {
-        VARSYMBOL *var = &mutl_var[N].data.var;
-        if (var->v_read_proc != 0)
+        MUTLSYMBOL *mutl_sym = &mutl_var[N];
+        if (mutl_sym->symbol_type == SYM_VARIABLE)
         {
-            log(LOG_PLANT, "%04X V STORE read proc call required\n", next_instruction_address());
-            op_org_stack_link(var->v_read_proc);
-            op_org_enter(0);
+            VARSYMBOL *var = &mutl_sym->data.var;
+            if (var->v_read_proc != 0)
+            {
+                log(LOG_PLANT, "%04X V STORE read proc call required\n", next_instruction_address());
+                op_org_stack_link(var->v_read_proc);
+                op_org_enter(0);
+            }
         }
     }
 }
@@ -1291,12 +1348,16 @@ void check_v_store_write_proc(int N)
 {
     if (N >= 2 && N < 0x1000)
     {
-        VARSYMBOL *var = &mutl_var[N].data.var;
-        if (var->v_write_proc != 0)
+        MUTLSYMBOL *mutl_sym = &mutl_var[N];
+        if (mutl_sym->symbol_type == SYM_VARIABLE)
         {
-            log(LOG_PLANT, "%04X V STORE write proc call required\n", next_instruction_address());
-            op_org_stack_link(var->v_write_proc);
-            op_org_enter(0);
+            VARSYMBOL *var = &mutl_sym->data.var;
+            if (var->v_write_proc != 0)
+            {
+                log(LOG_PLANT, "%04X V STORE write proc call required\n", next_instruction_address());
+                op_org_stack_link(var->v_write_proc);
+                op_org_enter(0);
+            }
         }
     }
 }
@@ -2436,12 +2497,52 @@ void TLREPEAT(void)
     amode = saved_amode;
 }
 
+
+char *extract_filename(char *path)
+{
+    char * ptr;
+    ptr = strrchr(path, '\\');
+    if (ptr != NULL)
+    {
+        ptr++;
+    }
+    if (ptr == NULL)
+    {
+        ptr = strrchr(path, '/');
+        if (ptr != NULL)
+        {
+            ptr++;
+        }
+    }
+
+    if (ptr == NULL)
+    {
+        ptr = path;
+    }
+
+    return ptr;
+}
+
 void import_module(char * filename)
 {
     FILE * f;
+    MODULE *module;
     int i;
  
+    imported_module_count++;
+    if (imported_module_count > MAX_IMPORT_MODULES)
+    {
+        fatal("Too many import module\n");
+    }
+
+    module = &module_table[imported_module_count - 1];
+    strcpy(module->name, extract_filename(filename));
+
     f = fopen(filename, "rb");
+    if (f == NULL)
+    {
+        fatal("Could not open import module %s\n", filename);
+    }
 
     /* read the marker word and the header size */
     fgetc(f);
@@ -2450,13 +2551,24 @@ void import_module(char * filename)
     fgetc(f);
 
     uint16 symbol_count;
+    uint16 module_count;
     uint16 global_bytes;
     uint16 global_segment;
     uint16 global_offset;
     symbol_count = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
+    module_count = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
     global_bytes = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
+
     global_segment = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
     global_offset = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
+
+    for (i = 0; i < module_count; i++)
+    {
+        int len;
+        char mod_name[MAX_NAME_LEN];
+        len = fgetc(f) & 0xFF;
+        fread(mod_name, 1, mod_name, f);
+    }
 
     for (i = 0; i < symbol_count; i++)
     {
