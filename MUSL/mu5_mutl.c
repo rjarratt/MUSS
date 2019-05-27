@@ -93,7 +93,9 @@ Literal
 Proc
 ----
 +----------------+
-| address        | 16-bit word
+| segment        | 16-bit word, segment part of address
++----------------+
+| address        | 16-bit word, offset part of address
 +----------------+
 
 Segments
@@ -654,7 +656,8 @@ static void write_module_header(void)
                     exported_symbol_count++;
                     write_string_to_buffer(buffer, &buffer_size, sym->name);
                     buffer[buffer_size++] = sym->symbol_type & 0xFF;
-                    write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.proc.address);
+                    write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.proc.address >> 16);
+                    write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.proc.address & 0xFFFF);
                 }
                 break;
         }
@@ -2109,7 +2112,7 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
     log(LOG_SYMBOLS, "Declare literal %s %s level=%d, dim=%d, address=0x%08X in slot %d\n", var->name, format_basic_type(var->data.lit.data_type), block_level, D, var->data.lit.address, var_n);
 }
 
-void declare_proc(VECTOR *name, uint16 address, int NAT, int module)
+void declare_proc(VECTOR *name, uint32 address, int NAT, int module)
 {
     MUTLSYMBOL *sym = get_next_mutl_var(add_other_block_item());
     current_proc_spec = &sym->data.proc;
@@ -2657,7 +2660,7 @@ void import_module(char * filename)
             case SYM_PROC:
             {
                 uint16 address;
-                address = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
+                address = (uint8)fgetc(f) << 24 | (uint8)fgetc(f) << 16 | (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
                 declare_proc(&name, address, 0, imported_module_count - 1);
                 break;
             }
