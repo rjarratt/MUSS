@@ -67,9 +67,33 @@ For each symbol
 +----------------+
 | Symbol type    | 8-bit byte 0=variable, 1=literal ?????
 +----------------+
+
+Then according to symbol type:
+
+Variable
+-------
++----------------+
+| Data type      | 16-bit word
++----------------+
+| Dimension      | 16-bit word
++----------------+
+| Position       | 16-bit word, offset in 32-bit words from XNB, vstore it is the v-line number
++----------------+
+
+VSTORE STUFF MISSING
+
+Literal
+-------
++----------------+
 | Data type      | 16-bit word
 +----------------+
 | Value          | For literal 8-bit byte giving length in bytes, then the bytes
++----------------+
+
+Proc
+----
++----------------+
+| address        | 16-bit word
 +----------------+
 
 Segments
@@ -323,12 +347,10 @@ typedef struct
 {
     int data_type;
     int dimension;
-    int word_size;
     int position; /* for regular variables this is offset in 32-bit words from NB, including LINK if appropriate, vstore it is the v-line number */
     int is_vstore;
     int v_read_proc;
     int v_write_proc;
-    uint16 initialiser_address;
 } VARSYMBOL;
 
 typedef struct
@@ -357,6 +379,7 @@ typedef struct /* some fields in common with LABEL so must remain in synch */
     uint32 forward_ref_locations[MAX_FORWARD_LOCATIONS];
     VARSYMBOL parameters[MAX_PROC_PARAMS];
     int param_count;
+    int is_export;
 } PROCSYMBOL;
 
 typedef struct
@@ -561,52 +584,60 @@ static void write_16_bit_word(uint16 word)
     fwrite(&byte, 1, 1, out_file);
 }
 
+static void write_16_bit_word_to_buffer(uint8 *buffer, uint16* buffer_size, uint16 value)
+{
+    buffer[(*buffer_size)++] = (value >> 8) & 0xFF;
+    buffer[(*buffer_size)++] = value & 0xFF;
+}
+
+static void write_string_to_buffer(uint8 *buffer, uint16* buffer_size, char *value)
+{
+    uint8 len = strlen(value) & 0xFF;
+    buffer[(*buffer_size)++] = len;
+    memcpy(&buffer[*buffer_size], value, len);
+    (*buffer_size) += len;
+}
+
+static void write_vector_to_buffer(uint8 *buffer, uint16* buffer_size, VECTOR *value)
+{
+    uint8 len = value->length & 0xFF;
+    buffer[(*buffer_size)++] = len;
+    memcpy(&buffer[*buffer_size], value->buffer, len);
+    (*buffer_size) += len;
+}
+
 static void write_module_header(void)
 {
     int i;
     uint8 buffer[MAX_HEADER_SIZE_BYTES];
-    uint8 buffer_size = 0;
+    uint16 buffer_size = 0;
     uint16 exported_symbol_count = 0;
     BLOCK *block = &block_stack[0];
-    uint8 name_len;
     MODULE *module;
 
     /* write module table */
-    buffer[buffer_size++] = (module_global_segment >> 8) & 0xFF;
-    buffer[buffer_size++] = module_global_segment & 0xFF;
-    buffer[buffer_size++] = (module_global_offset >> 8) & 0xFF;
-    buffer[buffer_size++] = module_global_offset & 0xFF;
+    write_16_bit_word_to_buffer(buffer, &buffer_size, module_global_segment);
+    write_16_bit_word_to_buffer(buffer, &buffer_size, module_global_offset);
 
     for (i = 0; i < imported_module_count; i++)
     {
         module = &module_table[i];
-        name_len = strlen(module->name) % MAX_NAME_LEN;
-        buffer[buffer_size++] = name_len;
-        memcpy(&buffer[buffer_size], module->name, name_len);
-        buffer_size += name_len;
+        write_string_to_buffer(buffer, &buffer_size, module->name);
     }
 
     for (i = 0; i <= block->last_mutl_var; i++)
     {
         MUTLSYMBOL *sym = &mutl_var[i];
-        name_len = strlen(sym->name) & 0xFF;
         switch (sym->symbol_type)
         {
             case SYM_LITERAL:
                 if (BT_IS_EXPORT(sym->data.lit.data_type))
                 {
                     exported_symbol_count++;
-                    buffer[buffer_size++] = name_len;
-                    memcpy(&buffer[buffer_size], sym->name, name_len);
-                    buffer_size += name_len;
-
+                    write_string_to_buffer(buffer, &buffer_size, sym->name);
                     buffer[buffer_size++] = sym->symbol_type & 0xFF;
-                    buffer[buffer_size++] = (sym->data.lit.data_type >> 8) & 0xFF;
-                    buffer[buffer_size++] = sym->data.lit.data_type & 0xFF;
-
-                    buffer[buffer_size++] = sym->data.lit.value.length & 0xFF;
-                    memcpy(&buffer[buffer_size], sym->data.lit.value.buffer, sym->data.lit.value.length);
-                    buffer_size += sym->data.lit.value.length;
+                    write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.lit.data_type);
+                    write_vector_to_buffer(buffer, &buffer_size, &sym->data.lit.value);
                 }
                 break;
 
@@ -614,6 +645,16 @@ static void write_module_header(void)
                 if (BT_IS_EXPORT(sym->data.var.data_type))
                 {
                     exported_symbol_count++;
+                }
+                break;
+
+            case SYM_PROC:
+                if (sym->data.proc.is_export)
+                {
+                    exported_symbol_count++;
+                    write_string_to_buffer(buffer, &buffer_size, sym->name);
+                    buffer[buffer_size++] = sym->symbol_type & 0xFF;
+                    write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.proc.address);
                 }
                 break;
         }
@@ -1857,13 +1898,13 @@ void TLEND(void)
 {
     int i;
     int s;
+    /* Write module header. This format is specific to the MU5 emulator */
     write_module_header();
     for (s = 0; s < MAX_SEGMENTS; s++)
     {
         SEGMENT *segment = &segments[s];
         if (segment->next_word > 0)
         {
-            /* Write module header. This format is specific to the MU5 emulator */
             write_16_bit_word(segment->segment_number);
             write_16_bit_word(segment->next_word);
             for (i = 0; i < segment->next_word; i++)
@@ -2000,7 +2041,6 @@ void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vst
     var->module_number = module;
     var->data.var.data_type = T;
     var->data.var.dimension = D;
-    var->data.var.word_size = size_words;
 
     if (!is_vstore)
     {
@@ -2067,6 +2107,28 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
         vecmemcpy(&var->data.lit.value, literal, sizeof(var->data.lit.valuebuf));
     }
     log(LOG_SYMBOLS, "Declare literal %s %s level=%d, dim=%d, address=0x%08X in slot %d\n", var->name, format_basic_type(var->data.lit.data_type), block_level, D, var->data.lit.address, var_n);
+}
+
+void declare_proc(VECTOR *name, uint16 address, int NAT, int module)
+{
+    MUTLSYMBOL *sym = get_next_mutl_var(add_other_block_item());
+    current_proc_spec = &sym->data.proc;
+    sym->symbol_type = SYM_PROC;
+    sym->data.proc.is_export = BT_IS_EXPORT(NAT);
+    if (address != 0)
+    {
+        sym->data.proc.address_defined = 1;
+        sym->data.proc.address = address;
+    }
+    if (name == NULL)
+    {
+        strcpy(sym->name, "(generated)");
+    }
+    else
+    {
+        vecstrcpy(sym->name, name, sizeof(sym->name));
+    }
+    log(LOG_SYMBOLS, "Declare proc %s, nature=0x%04X\n", sym->name, NAT);
 }
 
 void TLTYPE(VECTOR *N, int NAT)
@@ -2194,18 +2256,7 @@ void TLASSEND(void)
 
 void TLPROCSPEC(VECTOR *NAM, int NAT)
 {
-    MUTLSYMBOL *sym = get_next_mutl_var(add_other_block_item());
-    current_proc_spec = &sym->data.proc;
-    sym->symbol_type = SYM_PROC;
-    if (NAM == NULL)
-    {
-        strcpy(sym->name, "(generated)");
-    }
-    else
-    {
-        vecstrcpy(sym->name, NAM, sizeof(sym->name));
-    }
-    log(LOG_SYMBOLS, "Declare proc %s, nature=0x%04X\n", sym->name, NAT);
+    declare_proc(NAM, 0, NAT, NO_MODULE);
 }
 
 void TLPROCPARAM(int T, int D)
@@ -2537,7 +2588,7 @@ void import_module(char * filename)
     imported_module_count++;
     if (imported_module_count > MAX_IMPORT_MODULES)
     {
-        fatal("Too many import module\n");
+        fatal("Too many import modules\n");
     }
 
     module = &module_table[imported_module_count - 1];
@@ -2548,6 +2599,7 @@ void import_module(char * filename)
     {
         fatal("Could not open import module %s\n", filename);
     }
+    printf("Importing %s\n", filename);
 
     /* read the marker word and the header size */
     fgetc(f);
@@ -2572,7 +2624,7 @@ void import_module(char * filename)
         int len;
         char mod_name[MAX_NAME_LEN];
         len = fgetc(f) & 0xFF;
-        fread(mod_name, 1, mod_name, f);
+        fread(mod_name, 1, len, f);
     }
 
     for (i = 0; i < symbol_count; i++)
@@ -2587,22 +2639,30 @@ void import_module(char * filename)
         name.length = fgetc(f) & 0xFF;
         name.buffer = sym_name;
         fread(sym_name, 1, name.length, f);
+        printf("Importing %0.*s\n", name.length, name.buffer);
 
         sym_type = fgetc(f);
-
-        data_type = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
 
         switch (sym_type)
         {
             case SYM_LITERAL:
+            {
+                data_type = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
                 value.length = fgetc(f) & 0xFF;
                 value.buffer = sym_val;
                 fread(sym_val, 1, value.length, f);
                 declare_literal(&name, &value, data_type, 0, imported_module_count - 1);
                 break;
+            }
+            case SYM_PROC:
+            {
+                uint16 address;
+                address = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
+                declare_proc(&name, address, 0, imported_module_count - 1);
+                break;
+            }
         }
     }
 
     fclose(f);
-    printf("Import %s\n", filename);
 }
