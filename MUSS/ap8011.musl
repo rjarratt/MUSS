@@ -1,4 +1,4 @@
-:: ..\..\muss\muss\ap8011.musl ..\..\muss\muss\ap8011.bin -i ..\..\muss\muss\consys81.bin -l 255
+:: ..\..\muss\muss\ap8011.musl ..\..\muss\muss\ap8011.bin  -i ..\..\muss\muss\consys81.bin -i ..\..\muss\muss\ap8011.bin
 :: MU5
 *INFORM %FF00;
 *VTYPE LOGICAL64;
