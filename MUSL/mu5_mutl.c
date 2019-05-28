@@ -102,6 +102,8 @@ Segments
 --------
 
 +----------------+
+| Segment        | 16-bit word giving segment number for this next segment
++----------------+
 | Length         | 16-bit word giving number of 16-bit words that follow
 +----------------+
 | Code           | 16-bit words of code
@@ -672,7 +674,7 @@ static void write_module_header(void)
     printf("Header exported %d symbols\n", exported_symbol_count);
 }
 
-SEGMENT *get_segment(uint16 area_number)
+SEGMENT *get_segment_for_area(uint16 area_number)
 {
     AREA *area;
     SEGMENT *segment;
@@ -688,7 +690,7 @@ SEGMENT *get_segment(uint16 area_number)
 
 static void plant_16_bit_word(uint16 area_number, uint16 word)
 {
-    SEGMENT *segment = get_segment(area_number);
+    SEGMENT *segment = get_segment_for_area(area_number);
     if (segment->next_word > segment->size)
     {
         fatal("Segment %d is full\n", segment->segment_number);
@@ -698,7 +700,7 @@ static void plant_16_bit_word(uint16 area_number, uint16 word)
 
 static void plant_16_bit_word_update(uint16 area_number, uint16 address, uint16 word)
 {
-    SEGMENT *segment = get_segment(area_number);
+    SEGMENT *segment = get_segment_for_area(area_number);
     segment->words[address] = word;
 }
 
@@ -763,20 +765,20 @@ static void plant_vector(uint16 data_type, VECTOR *v)
 
 static int next_instruction_address(void)
 {
-    SEGMENT *segment = get_segment(current_code_area);
+    SEGMENT *segment = get_segment_for_area(current_code_area);
     return segment->next_word;
 }
 
 static int next_data_address(void)
 {
-    SEGMENT *segment = get_segment(current_data_area);
+    SEGMENT *segment = get_segment_for_area(current_data_area);
     return segment->next_word;
 }
 
 static uint32 compute_descriptor_origin(uint16 data_area_word_address)
 {
     uint32 result;
-    SEGMENT *segment = get_segment(current_data_area);
+    SEGMENT *segment = get_segment_for_area(current_data_area);
     result = segment->segment_number << 16 | ((data_area_word_address << 1) & 0xFFFF);
     return result;
 }
@@ -1247,7 +1249,7 @@ void start_block_level(int param_stack_size)
     if (block_level == 0)
     {
         plant_org_order_extended(F_XNB_LOAD, KP_LITERAL, NP_32_BIT_UNSIGNED_LITERAL);
-        module_global_segment = get_segment(current_code_area)->segment_number;
+        module_global_segment = get_segment_for_area(current_code_area)->segment_number;
         module_global_offset = next_instruction_address();
         plant_32_bit_code_word(0);
     }
@@ -1874,7 +1876,7 @@ void TLDATAAREA(int AN)
 {
     log(LOG_MEMORY, "TL.DATA.AREA area %d\n", AN);
     current_data_area = AN;
-    SEGMENT *segment = get_segment(current_data_area);
+    SEGMENT *segment = get_segment_for_area(current_data_area);
     log(LOG_PLANT, "%04X Load SN=0x%04x\n", next_instruction_address(), segment->segment_number);
     plant_org_order_extended(F_SN_LOAD, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
     plant_16_bit_code_word(segment->segment_number);
@@ -2665,6 +2667,17 @@ void import_module(char * filename)
                 break;
             }
         }
+    }
+
+    if (!is_library)
+    {
+        char buffer[16384];
+        uint16 segment;
+        uint16 length;
+        segment = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
+        length = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
+        printf("Link segment %04X of length %04X\n", segment, length);
+        fread(buffer, 1, length, f);
     }
 
     fclose(f);
