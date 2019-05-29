@@ -2613,11 +2613,25 @@ void read_vector(FILE *f, VECTOR *v)
     fread(v->buffer, 1, v->length, f);
 }
 
-void import_module(char * filename)
+void link_module(FILE *f)
 {
-    FILE * f;
-    MODULE *module;
-    uint16 marker;
+    uint16 header_length;
+    char buffer[16384];
+    uint16 segment;
+    uint16 length;
+
+    fseek(f, 2, SEEK_SET); /* skip past marker */
+    header_length = read_16_bit_word(f);
+    fseek(f, header_length + 2, SEEK_SET); /* skip past header */
+
+    segment = read_16_bit_word(f);
+    length = read_16_bit_word(f);
+    printf("Link segment %04X of length %04X\n", segment, length);
+    fread(buffer, 1, length, f);
+}
+
+void import_module_exports(FILE * f)
+{
     uint16 header_length;
     uint16 symbol_count;
     uint16 module_count;
@@ -2625,28 +2639,8 @@ void import_module(char * filename)
     uint16 global_segment;
     uint16 global_offset;
     int i;
- 
-    imported_module_count++;
-    if (imported_module_count > MAX_IMPORT_MODULES)
-    {
-        fatal("Too many import modules\n");
-    }
 
-    module = &module_table[imported_module_count - 1];
-    strcpy(module->name, extract_filename(filename));
-
-    f = fopen(filename, "rb");
-    if (f == NULL)
-    {
-        fatal("Could not open import module %s\n", filename);
-    }
-
-    marker = read_16_bit_word(f);
-    if (marker != 0xFFFF)
-    {
-        fatal("Not a valid module (marker is missing)\n");
-    }
-
+    fseek(f, 2, SEEK_SET); /* skip past marker */
     header_length = read_16_bit_word(f);
 
     symbol_count = read_16_bit_word(f);
@@ -2697,17 +2691,42 @@ void import_module(char * filename)
             }
         }
     }
+}
+
+void import_module(char * filename)
+{
+    FILE * f;
+    MODULE *module;
+    uint16 marker;
+    uint16 header_length;
+ 
+    imported_module_count++;
+    if (imported_module_count > MAX_IMPORT_MODULES)
+    {
+        fatal("Too many import modules\n");
+    }
+
+    module = &module_table[imported_module_count - 1];
+    strcpy(module->name, extract_filename(filename));
+
+    f = fopen(filename, "rb");
+    if (f == NULL)
+    {
+        fatal("Could not open import module %s\n", filename);
+    }
+
+    marker = read_16_bit_word(f);
+    if (marker != 0xFFFF)
+    {
+        fatal("Not a valid module (marker is missing)\n");
+    }
 
     if (!is_library)
     {
-        char buffer[16384];
-        uint16 segment;
-        uint16 length;
-        segment = read_16_bit_word(f);
-        length = read_16_bit_word(f);
-        printf("Link segment %04X of length %04X\n", segment, length);
-        fread(buffer, 1, length, f);
+        link_module(f);
     }
+
+    import_module_exports(f);
 
     fclose(f);
 }
