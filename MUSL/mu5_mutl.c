@@ -2584,10 +2584,46 @@ char *extract_filename(char *path)
     return ptr;
 }
 
+uint16 read_16_bit_word(FILE *f)
+{
+    uint16 result = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
+    return result;
+}
+
+uint32 read_32_bit_word(FILE *f)
+{
+    uint32 result = (uint32)fgetc(f) << 24 | (uint32)fgetc(f) << 16 | (uint32)fgetc(f) << 8 | (uint32)fgetc(f);
+    return result;
+}
+
+void read_name(FILE *f, char *buffer, int max_len)
+{
+    uint8 len = fgetc(f) & 0xFF;
+    if (len > max_len)
+    {
+        fatal("Name too long to read");
+    }
+
+    fread(buffer, 1, len, f);
+}
+
+void read_vector(FILE *f, VECTOR *v)
+{
+    v->length = fgetc(f) & 0xFF;
+    fread(v->buffer, 1, v->length, f);
+}
+
 void import_module(char * filename)
 {
     FILE * f;
     MODULE *module;
+    uint16 marker;
+    uint16 header_length;
+    uint16 symbol_count;
+    uint16 module_count;
+    uint16 global_bytes;
+    uint16 global_segment;
+    uint16 global_offset;
     int i;
  
     imported_module_count++;
@@ -2604,32 +2640,26 @@ void import_module(char * filename)
     {
         fatal("Could not open import module %s\n", filename);
     }
-    printf("Importing %s\n", filename);
 
-    /* read the marker word and the header size */
-    fgetc(f);
-    fgetc(f);
-    fgetc(f);
-    fgetc(f);
+    marker = read_16_bit_word(f);
+    if (marker != 0xFFFF)
+    {
+        fatal("Not a valid module (marker is missing)\n");
+    }
 
-    uint16 symbol_count;
-    uint16 module_count;
-    uint16 global_bytes;
-    uint16 global_segment;
-    uint16 global_offset;
-    symbol_count = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
-    module_count = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
-    global_bytes = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
+    header_length = read_16_bit_word(f);
 
-    global_segment = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
-    global_offset = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
+    symbol_count = read_16_bit_word(f);
+    module_count = read_16_bit_word(f);
+    global_bytes = read_16_bit_word(f);
+
+    global_segment = read_16_bit_word(f);
+    global_offset = read_16_bit_word(f);
 
     for (i = 0; i < module_count; i++)
     {
-        int len;
         char mod_name[MAX_NAME_LEN];
-        len = fgetc(f) & 0xFF;
-        fread(mod_name, 1, len, f);
+        read_name(f, mod_name, sizeof(mod_name));
     }
 
     for (i = 0; i < symbol_count; i++)
@@ -2641,9 +2671,8 @@ void import_module(char * filename)
         VECTOR value;
         uint16 data_type;
 
-        name.length = fgetc(f) & 0xFF;
         name.buffer = sym_name;
-        fread(sym_name, 1, name.length, f);
+        read_vector(f, &name);
         printf("Importing %0.*s\n", name.length, name.buffer);
 
         sym_type = fgetc(f);
@@ -2652,17 +2681,17 @@ void import_module(char * filename)
         {
             case SYM_LITERAL:
             {
-                data_type = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
-                value.length = fgetc(f) & 0xFF;
+                data_type = read_16_bit_word(f);
                 value.buffer = sym_val;
-                fread(sym_val, 1, value.length, f);
+                read_vector(f, &value);
                 declare_literal(&name, &value, data_type, 0, imported_module_count - 1);
                 break;
             }
             case SYM_PROC:
             {
-                uint16 address;
-                address = (uint8)fgetc(f) << 24 | (uint8)fgetc(f) << 16 | (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
+                uint32 address;
+                address = read_32_bit_word(f);
+                printf("Address %08X\n", address);
                 declare_proc(&name, address, 0, imported_module_count - 1);
                 break;
             }
@@ -2674,8 +2703,8 @@ void import_module(char * filename)
         char buffer[16384];
         uint16 segment;
         uint16 length;
-        segment = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
-        length = (uint8)fgetc(f) << 8 | (uint8)fgetc(f);
+        segment = read_16_bit_word(f);
+        length = read_16_bit_word(f);
         printf("Link segment %04X of length %04X\n", segment, length);
         fread(buffer, 1, length, f);
     }
