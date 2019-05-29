@@ -19,13 +19,17 @@ Header Format
 +----------------+
 | Header size    | 16-bit number of bytes in the header. This excludes the marker
 +----------------+
-| Num Symbols    | 16-bit word with the number of exported symbols
-+----------------+
 | Num Modules    | 16-bit word with the number of imported modules
++----------------+
+| Num Segments   | 16-bit word with the number of segments used by the module
++----------------+
+| Num Symbols    | 16-bit word with the number of exported symbols
 +----------------+
 | Global bytes   | 16-bit word with the number of bytes occupied by global data
 +----------------+
 | Module table   | See below
++----------------+
+| Segment table  | See below
 +----------------+
 | Symbol table   | See below
 +----------------+
@@ -54,6 +58,23 @@ For each imported module:
 +----------------+
 | Name           | Variable length containing the module name
 +----------------+
+
+Segment Table
+-------------
+
+For each segment used by the module
+
++--------------------+
+| Segment Number     | 16-bit MUTL segment number
++--------------------+
+| Segment Address    | 16-bit Segment address
++--------------------+
+| Segment Size       | 16-bit segment size in bytes
++--------------------+
+| Segment Kind       | 16-bit segment kind
++--------------------+
+| Segment Bytes Used | 16-bit number of bytes of the segment used by the module
++--------------------+
 
 Symbol Table
 ------------
@@ -431,9 +452,11 @@ typedef struct
 
 typedef struct
 {
-    uint16 segment_number;
+    int in_use;
+    uint16 segment_address;
     uint16 words[MAX_SEGMENT_SIZE];
     uint32 next_word;
+    uint16 kind;
     uint32 size;
     uint32 run_time_address;
 } SEGMENT;
@@ -616,6 +639,7 @@ static void write_module_header(void)
     uint8 buffer[MAX_HEADER_SIZE_BYTES];
     uint16 buffer_size = 0;
     uint16 exported_symbol_count = 0;
+    uint16 segment_count = 0;
     BLOCK *block = &block_stack[0];
     MODULE *module;
 
@@ -627,6 +651,20 @@ static void write_module_header(void)
     {
         module = &module_table[i];
         write_string_to_buffer(buffer, &buffer_size, module->name);
+    }
+
+    for (i = 0; i < MAX_SEGMENTS; i++)
+    {
+        SEGMENT *segment = &segments[i];
+        if (segment->in_use)
+        {
+            write_16_bit_word_to_buffer(buffer, &buffer_size, i);
+            write_16_bit_word_to_buffer(buffer, &buffer_size, segment->segment_address);
+            write_16_bit_word_to_buffer(buffer, &buffer_size, segment->size);
+            write_16_bit_word_to_buffer(buffer, &buffer_size, segment->kind);
+            write_16_bit_word_to_buffer(buffer, &buffer_size, segment->next_word * 2);
+            segment_count++;
+        }
     }
 
     for (i = 0; i <= block->last_mutl_var; i++)
@@ -667,8 +705,9 @@ static void write_module_header(void)
 
     write_16_bit_word(0xFFFF);
     write_16_bit_word(buffer_size + 8); /* buffer size starts from the actual list of symbols */
-    write_16_bit_word(exported_symbol_count);
     write_16_bit_word(imported_module_count);
+    write_16_bit_word(segment_count);
+    write_16_bit_word(exported_symbol_count);
     write_16_bit_word(block_stack[0].local_names_space * 4);
     fwrite(buffer, 1, buffer_size, out_file);
     printf("Header exported %d symbols\n", exported_symbol_count);
@@ -693,7 +732,7 @@ static void plant_16_bit_word(uint16 area_number, uint16 word)
     SEGMENT *segment = get_segment_for_area(area_number);
     if (segment->next_word > segment->size)
     {
-        fatal("Segment %d is full\n", segment->segment_number);
+        fatal("Segment %d is full\n", segment->segment_address);
     }
     segment->words[segment->next_word++] = word;
 }
@@ -779,7 +818,7 @@ static uint32 compute_descriptor_origin(uint16 data_area_word_address)
 {
     uint32 result;
     SEGMENT *segment = get_segment_for_area(current_data_area);
-    result = segment->segment_number << 16 | ((data_area_word_address << 1) & 0xFFFF);
+    result = segment->segment_address << 16 | ((data_area_word_address << 1) & 0xFFFF);
     return result;
 }
 
@@ -1249,7 +1288,7 @@ void start_block_level(int param_stack_size)
     if (block_level == 0)
     {
         plant_org_order_extended(F_XNB_LOAD, KP_LITERAL, NP_32_BIT_UNSIGNED_LITERAL);
-        module_global_segment = get_segment_for_area(current_code_area)->segment_number;
+        module_global_segment = get_segment_for_area(current_code_area)->segment_address;
         module_global_offset = next_instruction_address();
         plant_32_bit_code_word(0);
     }
@@ -1854,10 +1893,12 @@ void set_literal_value(t_uint64 val, int size)
 void TLSEG(int32 N, int32 S, int32 RTA, int32 CTA, int32 NL)
 {
     SEGMENT *seg = &segments[N];
-    seg->segment_number = RTA >> 16;
+    seg->in_use = 1;
+    seg->segment_address = RTA >> 16;
     seg->size = S;
+    seg->kind = NL;
     seg->run_time_address = RTA;
-    log(LOG_MEMORY, "TL.SEG MUTL segment %d, segment address %d, size %d run-time address 0x%08X\n", N, seg->segment_number, seg->size, seg->run_time_address);
+    log(LOG_MEMORY, "TL.SEG MUTL segment %d, segment address %d, size %d run-time address 0x%08X\n", N, seg->segment_address, seg->size, seg->run_time_address);
 }
 
 void TLLOAD(int SN, int AN)
@@ -1877,13 +1918,14 @@ void TLDATAAREA(int AN)
     log(LOG_MEMORY, "TL.DATA.AREA area %d\n", AN);
     current_data_area = AN;
     SEGMENT *segment = get_segment_for_area(current_data_area);
-    log(LOG_PLANT, "%04X Load SN=0x%04x\n", next_instruction_address(), segment->segment_number);
+    log(LOG_PLANT, "%04X Load SN=0x%04x\n", next_instruction_address(), segment->segment_address);
     plant_org_order_extended(F_SN_LOAD, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
-    plant_16_bit_code_word(segment->segment_number);
+    plant_16_bit_code_word(segment->segment_address);
 }
 
 void TL(int M, char *FN, int DZ)
 {
+    int i;
     is_library = (M & 0x4) == 0x4;
     if (is_library)
     {
@@ -1896,6 +1938,12 @@ void TL(int M, char *FN, int DZ)
 
     current_literal.buffer = current_literal_buf;
     out_file = fopen(FN, "wb");
+
+    for (i = 0; i < MAX_SEGMENTS; i++)
+    {
+        segments[i].in_use = 0;
+    }
+
     TLSEG(0, MAX_SEGMENT_SIZE, -1, -1, 6);
 }
 
@@ -1910,13 +1958,13 @@ void TLEND(void)
         SEGMENT *segment = &segments[s];
         if (segment->next_word > 0)
         {
-            write_16_bit_word(segment->segment_number);
+            write_16_bit_word(segment->segment_address);
             write_16_bit_word(segment->next_word);
             for (i = 0; i < segment->next_word; i++)
             {
                 write_16_bit_word(segment->words[i]);
             }
-            printf("Segment 0x%d written with %d words\n", segment->segment_number, segment->next_word - 1);
+            printf("Segment 0x%d written with %d words\n", segment->segment_address, segment->next_word - 1);
         }
     }
 
@@ -2633,8 +2681,14 @@ void link_module(FILE *f)
 void import_module_exports(FILE * f)
 {
     uint16 header_length;
-    uint16 symbol_count;
     uint16 module_count;
+    uint16 segment_count;
+    uint16 symbol_count;
+    uint16 segment_number;
+    uint16 segment_address;
+    uint16 segment_size;
+    uint16 segment_kind;
+    uint16 segment_bytes_used;
     uint16 global_bytes;
     uint16 global_segment;
     uint16 global_offset;
@@ -2643,8 +2697,9 @@ void import_module_exports(FILE * f)
     fseek(f, 2, SEEK_SET); /* skip past marker */
     header_length = read_16_bit_word(f);
 
-    symbol_count = read_16_bit_word(f);
     module_count = read_16_bit_word(f);
+    segment_count = read_16_bit_word(f);
+    symbol_count = read_16_bit_word(f);
     global_bytes = read_16_bit_word(f);
 
     global_segment = read_16_bit_word(f);
@@ -2654,6 +2709,17 @@ void import_module_exports(FILE * f)
     {
         char mod_name[MAX_NAME_LEN];
         read_name(f, mod_name, sizeof(mod_name));
+    }
+
+    for (i = 0; i < segment_count; i++)
+    {
+        segment_number = read_16_bit_word(f);
+        segment_address = read_16_bit_word(f);
+        segment_size = read_16_bit_word(f);
+        segment_kind = read_16_bit_word(f);
+        segment_bytes_used = read_16_bit_word(f);
+        TLSEG(segment_number, segment_size, segment_address << 16, -1, segment_kind);
+        segments[segment_number].next_word = segment_bytes_used / 2;
     }
 
     for (i = 0; i < symbol_count; i++)
