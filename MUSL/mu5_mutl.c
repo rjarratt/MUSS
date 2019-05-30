@@ -2778,7 +2778,6 @@ void import_module_exports(FILE * f)
 
         name.buffer = sym_name;
         read_vector(f, &name);
-        printf("Importing %0.*s\n", name.length, name.buffer);
 
         sym_type = fgetc(f);
 
