@@ -455,6 +455,7 @@ typedef struct
     int in_use;
     uint16 segment_address;
     uint16 words[MAX_SEGMENT_SIZE];
+    uint32 first_word; /* first word in the segment where the current module starts during import/link of modules */
     uint32 next_word;
     uint16 kind;
     uint32 size;
@@ -704,7 +705,7 @@ static void write_module_header(void)
     }
 
     write_16_bit_word(0xFFFF);
-    write_16_bit_word(buffer_size + 8); /* buffer size starts from the actual list of symbols */
+    write_16_bit_word(buffer_size + 10); /* buffer size starts from the actual module table */
     write_16_bit_word(imported_module_count);
     write_16_bit_word(segment_count);
     write_16_bit_word(exported_symbol_count);
@@ -724,6 +725,23 @@ SEGMENT *get_segment_for_area(uint16 area_number)
     }
 
     segment = &segments[area->segment_index];
+    return segment;
+}
+
+SEGMENT *get_segment_by_segment_number(uint16 segment_number)
+{
+    SEGMENT *segment = NULL;
+    int i;
+
+    for (i = 0; i < MAX_SEGMENTS; i++)
+    {
+        segment = &segments[i];
+        if (segment->in_use && segment->segment_address == segment_number)
+        {
+            break;
+        }
+    }
+
     return segment;
 }
 
@@ -1287,6 +1305,7 @@ void start_block_level(int param_stack_size)
 
     if (block_level == 0)
     {
+        log(LOG_PLANT, "%04X XNB LOAD\n", next_instruction_address());
         plant_org_order_extended(F_XNB_LOAD, KP_LITERAL, NP_32_BIT_UNSIGNED_LITERAL);
         module_global_segment = get_segment_for_area(current_code_area)->segment_address;
         module_global_offset = next_instruction_address();
@@ -1684,7 +1703,7 @@ void op_org_jump_generic(int N, int F, char *type)
 {
     if (mutl_var[N].data.label.address_defined)
     {
-        int16 relative = next_instruction_address() - mutl_var[N].data.label.address;
+        int16 relative = mutl_var[N].data.label.address - next_instruction_address();
         log(LOG_PLANT, "%04X ORG JUMP %s %s relative %d\n", next_instruction_address(), type, mutl_var[N].name, relative);
         op_org_jump_generic_address(F, relative);
     }
@@ -1933,7 +1952,7 @@ void TL(int M, char *FN, int DZ)
     }
     else
     {
-        printf("Compiling a program\n");
+        printf("Compiling a program. Start address is %04X\n", next_instruction_address());
     }
 
     current_literal.buffer = current_literal_buf;
@@ -2173,6 +2192,18 @@ void declare_proc(VECTOR *name, uint32 address, int NAT, int module)
         sym->data.proc.address_defined = 1;
         sym->data.proc.address = address;
     }
+
+    if (BT_IS_IMPORT(NAT))
+    {
+        MUTLSYMBOL *import = find_import(name, SYM_PROC);
+        if (import == NULL)
+        {
+            fatal("Import %0.*s not found", name->length, name->buffer);
+        }
+        sym->data.proc.address_defined = 1;
+        sym->data.proc.address = import->data.proc.address;
+    }
+    
     if (name == NULL)
     {
         strcpy(sym->name, "(generated)");
@@ -2181,7 +2212,15 @@ void declare_proc(VECTOR *name, uint32 address, int NAT, int module)
     {
         vecstrcpy(sym->name, name, sizeof(sym->name));
     }
-    log(LOG_SYMBOLS, "Declare proc %s, nature=0x%04X\n", sym->name, NAT);
+
+    if (sym->data.proc.address_defined)
+    {
+        log(LOG_SYMBOLS, "Declare proc %s, nature=0x%04X address=0x%08X\n", sym->name, NAT, sym->data.proc.address);
+    }
+    else
+    {
+        log(LOG_SYMBOLS, "Declare proc %s, nature=0x%04X\n", sym->name, NAT);
+    }
 }
 
 void TLTYPE(VECTOR *N, int NAT)
@@ -2665,17 +2704,22 @@ void link_module(FILE *f)
 {
     uint16 header_length;
     char buffer[16384];
-    uint16 segment;
+    uint16 segment_number;
     uint16 length;
+    SEGMENT *segment;
+    int i;
 
     fseek(f, 2, SEEK_SET); /* skip past marker */
     header_length = read_16_bit_word(f);
     fseek(f, header_length + 2, SEEK_SET); /* skip past header */
 
-    segment = read_16_bit_word(f);
+    segment_number = read_16_bit_word(f);
     length = read_16_bit_word(f);
-    printf("Link segment %04X of length %04X\n", segment, length);
-    fread(buffer, 1, length, f);
+    segment = get_segment_by_segment_number(segment_number);
+    for (i = 0; i < length; i++)
+    {
+        segment->words[segment->first_word + i] = read_16_bit_word(f);
+    }
 }
 
 void import_module_exports(FILE * f)
@@ -2719,7 +2763,8 @@ void import_module_exports(FILE * f)
         segment_kind = read_16_bit_word(f);
         segment_bytes_used = read_16_bit_word(f);
         TLSEG(segment_number, segment_size, segment_address << 16, -1, segment_kind);
-        segments[segment_number].next_word = segment_bytes_used / 2;
+        segments[segment_number].first_word = segments[segment_number].next_word;
+        segments[segment_number].next_word += segment_bytes_used / 2;
     }
 
     for (i = 0; i < symbol_count; i++)
@@ -2749,10 +2794,13 @@ void import_module_exports(FILE * f)
             }
             case SYM_PROC:
             {
-                uint32 address;
-                address = read_32_bit_word(f);
-                printf("Address %08X\n", address);
-                declare_proc(&name, address, 0, imported_module_count - 1);
+                uint32 sym_address;
+                uint32 relocated_address;
+                SEGMENT *seg;
+                sym_address = read_32_bit_word(f);
+                seg = get_segment_by_segment_number(sym_address >> 16);
+                relocated_address = sym_address + seg->first_word;
+                declare_proc(&name, relocated_address, 0, imported_module_count - 1);
                 break;
             }
         }
@@ -2787,12 +2835,12 @@ void import_module(char * filename)
         fatal("Not a valid module (marker is missing)\n");
     }
 
+    import_module_exports(f);
+
     if (!is_library)
     {
         link_module(f);
     }
-
-    import_module_exports(f);
 
     fclose(f);
 }
