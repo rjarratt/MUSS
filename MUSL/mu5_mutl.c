@@ -1555,7 +1555,8 @@ void op_d_load_ref(int N)
         fatal("Cannot load descriptor ref to operand\n");
     }
 
-    VARSYMBOL *var = &mutl_var[N].data.var;
+    MUTLSYMBOL *mutl_sym = &mutl_var[N];
+    VARSYMBOL *var = &mutl_sym->data.var;
     t_uint64 descriptor = build_type_0_descriptor(BT_SIZE(var->data_type), var->dimension, 0);
 
     log(LOG_PLANT, "%04X   LOAD D with fixed part %llX\n", next_instruction_segment_address(), descriptor);
@@ -1564,16 +1565,21 @@ void op_d_load_ref(int N)
 
     plant_stack_x();
 
-    if (block_level == 0)
+    if (mutl_sym->block_level == 0)
     {
         log(LOG_PLANT, "%04X   A LOAD XNB\n", next_instruction_segment_address());
         plant_order(CR_XS, F_LOAD_32, K_IR, 1);
     }
-    else
+    else if (mutl_sym->block_level == block_level)
     {
         log(LOG_PLANT, "%04X   A LOAD SN NB\n", next_instruction_segment_address());
         plant_order(CR_XS, F_LOAD_32, K_IR, 2);
     }
+    else
+    {
+        fatal("Cannot handle non-global and non-local D reference yet\n");
+    }
+
     log(LOG_PLANT, "%04X   A Add 0x%04X\n", next_instruction_segment_address(), var->position * 4);
     plant_order_extended(CR_XS, F_ADD_X, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
     plant_16_bit_code_word(var->position * 4);
@@ -2787,23 +2793,26 @@ void link_module(FILE *f)
     header_length = read_16_bit_word(f);
     fseek(f, header_length + 2, SEEK_SET); /* skip past header */
 
-    segment_number = read_16_bit_word(f);
-    length = read_16_bit_word(f);
-    segment = get_segment_by_segment_number(segment_number);
-    for (i = 0; i < length; i++)
+    while (!feof(f))
     {
-        segment->words[segment->first_word + i] = read_16_bit_word(f);
-    }
+        segment_number = read_16_bit_word(f);
+        length = read_16_bit_word(f);
+        segment = get_segment_by_segment_number(segment_number);
+        for (i = 0; i < length; i++)
+        {
+            segment->words[segment->first_word + i] = read_16_bit_word(f);
+        }
 
-    /* relocate XNB loads. Currently assumes segment 0 is where all global data resides */
-    segment = get_segment_by_segment_number(0);
-    uint32 global_data_address = segment->first_word & 0xFFFF;
-    for  (i = 0; i < relocation_count; i++)
-    {
-        SEGMENT *code_seg = get_segment_by_segment_number(relocation_table[i] >> 16);
-        uint16 offset = relocation_table[i] & 0xFFFF;
-        code_seg->words[code_seg->first_word + offset] = global_data_address >> 16;
-        code_seg->words[code_seg->first_word + offset + 1] = global_data_address & 0xFFFF;
+        /* relocate XNB loads. Currently assumes segment 0 is where all global data resides */
+        segment = get_segment_by_segment_number(0);
+        uint32 global_data_address = segment->first_word & 0xFFFF;
+        for (i = 0; i < relocation_count; i++)
+        {
+            SEGMENT *code_seg = get_segment_by_segment_number(relocation_table[i] >> 16);
+            uint16 offset = relocation_table[i] & 0xFFFF;
+            code_seg->words[code_seg->first_word + offset] = global_data_address >> 16;
+            code_seg->words[code_seg->first_word + offset + 1] = global_data_address & 0xFFFF;
+        }
     }
 }
 
