@@ -23,6 +23,8 @@ Header Format
 +----------------+
 | Num Segments   | 16-bit word with the number of segments used by the module
 +----------------+
+| Num Relocations| 16-bit word with the number of relocation table entries
++----------------+
 | Num Symbols    | 16-bit word with the number of exported symbols
 +----------------+
 | Global bytes   | 16-bit word with the number of bytes occupied by global data
@@ -75,6 +77,17 @@ For each segment used by the module
 +--------------------+
 | Segment Bytes Used | 16-bit number of bytes of the segment used by the module
 +--------------------+
+
+Relocation Table
+----------------
+
+Each entry is as follows:
+
++-------------------------+
+| Global location segment | 16-bit word, segment address where global data address to be relocated (ie XNB value) is located
++--------------------------+
+| Global location address | 16-bit word, offset where global data address to be relocated (ie XNB value) is located
++-------------------------+
 
 Symbol Table
 ------------
@@ -148,6 +161,7 @@ Segments
 #define MAX_SEGMENTS 32
 #define MAX_SEGMENT_SIZE 65535
 #define MAX_HEADER_SIZE_BYTES 65535
+#define MAX_RELOCATION_ENTRIES 128
 
 #define CR_ORG 0
 #define CR_B 1
@@ -394,6 +408,7 @@ typedef struct /* some fields in common with PROC so must remain in synch */
     uint32 address;
     int num_forward_refs;
     uint32 forward_ref_locations[MAX_FORWARD_LOCATIONS];
+    uint16 global_location; /* location where XNB value is to be stored on linking */
 } LABELSYMBOL;
 
 typedef struct /* some fields in common with LABEL so must remain in synch */
@@ -402,6 +417,7 @@ typedef struct /* some fields in common with LABEL so must remain in synch */
     uint32 address;
     int num_forward_refs;
     uint32 forward_ref_locations[MAX_FORWARD_LOCATIONS];
+    uint32 global_location; /* location where XNB value is to be stored on linking */
     VARSYMBOL parameters[MAX_PROC_PARAMS];
     int param_count;
     int is_export;
@@ -487,8 +503,7 @@ static int current_proc_call_stack_link_offset_address;
 static BLOCK block_stack[MAX_BLOCK_DEPTH];
 static BLOCK import_block;
 static int block_level = -1;
-static uint16 module_global_segment;
-static uint16 module_global_offset;
+static uint32 module_global_address_location;
 static LOOP loop_stack[MAX_LOOP_DEPTH];
 static int loop_level = -1;
 static AREA areas[MAX_AREAS];
@@ -497,6 +512,8 @@ static uint8 current_data_area = 0;
 static SEGMENT segments[MAX_SEGMENTS];
 static int imported_module_count;
 static MODULE module_table[MAX_IMPORT_MODULES];
+static int relocation_count;
+static uint32 relocation_table[MAX_RELOCATION_ENTRIES];
 
 uint8 k_v(void);
 void op_org_stack_link(int);
@@ -618,6 +635,12 @@ static void write_16_bit_word_to_buffer(uint8 *buffer, uint16* buffer_size, uint
     buffer[(*buffer_size)++] = value & 0xFF;
 }
 
+static void write_32_bit_word_to_buffer(uint8 *buffer, uint16* buffer_size, uint32 value)
+{
+    write_16_bit_word_to_buffer(buffer, buffer_size, value >> 16);
+    write_16_bit_word_to_buffer(buffer, buffer_size, value & 0xFFFF);
+}
+
 static void write_string_to_buffer(uint8 *buffer, uint16* buffer_size, char *value)
 {
     uint8 len = strlen(value) & 0xFF;
@@ -641,12 +664,12 @@ static void write_module_header(void)
     uint16 buffer_size = 0;
     uint16 exported_symbol_count = 0;
     uint16 segment_count = 0;
+    uint16 relocation_count = 0;
     BLOCK *block = &block_stack[0];
     MODULE *module;
 
     /* write module table */
-    write_16_bit_word_to_buffer(buffer, &buffer_size, module_global_segment);
-    write_16_bit_word_to_buffer(buffer, &buffer_size, module_global_offset);
+    write_32_bit_word_to_buffer(buffer, &buffer_size, module_global_address_location);
 
     for (i = 0; i < imported_module_count; i++)
     {
@@ -654,6 +677,7 @@ static void write_module_header(void)
         write_string_to_buffer(buffer, &buffer_size, module->name);
     }
 
+    /* write segment table */
     for (i = 0; i < MAX_SEGMENTS; i++)
     {
         SEGMENT *segment = &segments[i];
@@ -668,6 +692,20 @@ static void write_module_header(void)
         }
     }
 
+    /* write relocation table */
+    for (i = 0; i <= block->last_mutl_var; i++)
+    {
+        MUTLSYMBOL *sym = &mutl_var[i];
+        switch (sym->symbol_type)
+        {
+            case SYM_PROC:
+                relocation_count++;
+                write_32_bit_word_to_buffer(buffer, &buffer_size, sym->data.proc.global_location);
+                break;
+        }
+    }
+
+    /* write symbol table */
     for (i = 0; i <= block->last_mutl_var; i++)
     {
         MUTLSYMBOL *sym = &mutl_var[i];
@@ -705,9 +743,10 @@ static void write_module_header(void)
     }
 
     write_16_bit_word(0xFFFF);
-    write_16_bit_word(buffer_size + 10); /* buffer size starts from the actual module table */
+    write_16_bit_word(buffer_size + 12); /* buffer size starts from the actual module table */
     write_16_bit_word(imported_module_count);
     write_16_bit_word(segment_count);
+    write_16_bit_word(relocation_count);
     write_16_bit_word(exported_symbol_count);
     write_16_bit_word(block_stack[0].local_names_space * 4);
     fwrite(buffer, 1, buffer_size, out_file);
@@ -759,6 +798,14 @@ static void plant_16_bit_word_update(uint16 area_number, uint16 address, uint16 
 {
     SEGMENT *segment = get_segment_for_area(area_number);
     segment->words[address] = word;
+}
+
+static void plant_32_bit_word_update_by_address(uint32 address, uint32 word)
+{
+    SEGMENT *segment = get_segment_by_segment_number(address >> 16);
+    uint16 offset = address & 0xFFFF;
+    segment->words[offset] = word >> 16;
+    segment->words[offset + 1] = word & 0xFFFF;
 }
 
 static void plant_16_bit_code_word(uint16 word)
@@ -832,6 +879,14 @@ static int next_instruction_segment_address(void)
 {
     SEGMENT *segment = get_segment_for_area(current_code_area);
     return segment->next_word;
+}
+
+static uint32 global_data_start_address(void)
+{
+    uint32 result;
+    SEGMENT *segment = get_segment_for_area(current_data_area);
+    result = segment->segment_address << 16 | (segment->first_word & 0xFFFF);
+    return result;
 }
 
 static int next_data_address(void)
@@ -1311,14 +1366,18 @@ void start_block_level(int param_stack_size)
         nb_adjust = -param_stack_size; /* NB must be positioned at the LINK */
     }
 
-    if (block_level == 0)
+    log(LOG_PLANT, "%04X XNB LOAD\n", next_instruction_segment_address());
+    plant_org_order_extended(F_XNB_LOAD, KP_LITERAL, NP_32_BIT_UNSIGNED_LITERAL);
+    if (block_level <= 0)
     {
-        log(LOG_PLANT, "%04X XNB LOAD\n", next_instruction_segment_address());
-        plant_org_order_extended(F_XNB_LOAD, KP_LITERAL, NP_32_BIT_UNSIGNED_LITERAL);
-        module_global_segment = get_segment_for_area(current_code_area)->segment_address;
-        module_global_offset = next_instruction_segment_address();
-        plant_32_bit_code_word(0);
+        module_global_address_location = next_instruction_full_address();
     }
+    else
+    {
+        block->proc_def_var->data.proc.global_location = next_instruction_full_address();
+    }
+    plant_32_bit_code_word(0);
+
     /* don't make the jump variable length because then we can't calculate the offset to pass to STACKLINK without more complication */
     plant_org_order_extended(F_NB_LOAD_SF_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
     plant_16_bit_code_word(nb_adjust);
@@ -1919,12 +1978,16 @@ void set_literal_value(t_uint64 val, int size)
 
 void TLSEG(int32 N, int32 S, int32 RTA, int32 CTA, int32 NL)
 {
+    /* actual RTA is taken from current address so that module import segment definitions will resolve the address when linking.
+       This is NOT a proper solution, I am still not sure how to deal with TLSEG being called after TLMODULE.
+    */
     SEGMENT *seg = &segments[N];
+    uint32 actual_rta = (RTA == -1) ? seg->segment_address : RTA >> 16;
     seg->in_use = 1;
-    seg->segment_address = RTA >> 16;
+    seg->segment_address = actual_rta;
     seg->size = S;
     seg->kind = NL;
-    seg->run_time_address = RTA;
+    seg->run_time_address = actual_rta;
     log(LOG_MEMORY, "TL.SEG MUTL segment %d, segment address %d, size %d run-time address 0x%08X\n", N, seg->segment_address, seg->size, seg->run_time_address);
 }
 
@@ -1978,8 +2041,11 @@ void TLEND(void)
 {
     int i;
     int s;
-    /* Write module header. This format is specific to the MU5 emulator */
+
+    plant_32_bit_word_update_by_address(module_global_address_location, global_data_start_address());
+
     write_module_header();
+
     for (s = 0; s < MAX_SEGMENTS; s++)
     {
         SEGMENT *segment = &segments[s];
@@ -2728,6 +2794,17 @@ void link_module(FILE *f)
     {
         segment->words[segment->first_word + i] = read_16_bit_word(f);
     }
+
+    /* relocate XNB loads. Currently assumes segment 0 is where all global data resides */
+    segment = get_segment_by_segment_number(0);
+    uint32 global_data_address = segment->first_word & 0xFFFF;
+    for  (i = 0; i < relocation_count; i++)
+    {
+        SEGMENT *code_seg = get_segment_by_segment_number(relocation_table[i] >> 16);
+        uint16 offset = relocation_table[i] & 0xFFFF;
+        code_seg->words[code_seg->first_word + offset] = global_data_address >> 16;
+        code_seg->words[code_seg->first_word + offset + 1] = global_data_address & 0xFFFF;
+    }
 }
 
 void import_module_exports(FILE * f)
@@ -2751,18 +2828,21 @@ void import_module_exports(FILE * f)
 
     module_count = read_16_bit_word(f);
     segment_count = read_16_bit_word(f);
+    relocation_count = read_16_bit_word(f);
     symbol_count = read_16_bit_word(f);
     global_bytes = read_16_bit_word(f);
 
     global_segment = read_16_bit_word(f);
     global_offset = read_16_bit_word(f);
 
+    /* read module table */
     for (i = 0; i < module_count; i++)
     {
         char mod_name[MAX_NAME_LEN];
         read_name(f, mod_name, sizeof(mod_name));
     }
 
+    /* read segment table */
     for (i = 0; i < segment_count; i++)
     {
         segment_number = read_16_bit_word(f);
@@ -2775,6 +2855,18 @@ void import_module_exports(FILE * f)
         segments[segment_number].next_word += segment_bytes_used / 2;
     }
 
+    /* read relocation table */
+    if (relocation_count > MAX_RELOCATION_ENTRIES)
+    {
+        fatal("Too many relocation entries in the import module");
+    }
+
+    for (i = 0; i < relocation_count; i++)
+    {
+        relocation_table[i] = read_32_bit_word(f);
+    }
+
+    /* read symbol table */
     for (i = 0; i < symbol_count; i++)
     {
         SYMBOLTYPE sym_type;
@@ -2814,6 +2906,17 @@ void import_module_exports(FILE * f)
     }
 }
 
+void update_segment_starts(void)
+{
+    int i;
+    for (i = 0; i < MAX_SEGMENTS; i++)
+    {
+        if (segments[i].in_use)
+        {
+            segments[i].first_word = segments[i].next_word;
+        }
+    }
+}
 void import_module(char * filename)
 {
     FILE * f;
@@ -2848,6 +2951,8 @@ void import_module(char * filename)
     {
         link_module(f);
     }
+
+    update_segment_starts();
 
     fclose(f);
 }
