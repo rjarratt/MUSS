@@ -1323,6 +1323,20 @@ static void plant_pop(void)
     plant_org_order(F_SF_PLUS, K_LITERAL, -2);
 }
 
+static void plant_push_xnb(void)
+{
+    log(LOG_PLANT, "%04X PUSH XNB\n", next_instruction_segment_address());
+    plant_org_order(F_SF_PLUS, K_LITERAL, 2);
+    plant_org_order_extended(F_XNB_STORE, K_V32, NP_SF);
+    plant_16_bit_code_word(0);
+}
+
+static void plant_pop_xnb(void)
+{
+    log(LOG_PLANT, "%04X POP XNB\n", next_instruction_segment_address());
+    plant_org_order_extended(F_XNB_LOAD, K_V32, NP_STACK);
+}
+
 BLOCK *get_current_block(void)
 {
     BLOCK *result;
@@ -1366,6 +1380,15 @@ void start_block_level(int param_stack_size)
         nb_adjust = -param_stack_size; /* NB must be positioned at the LINK */
     }
 
+    /* don't make the jump variable length because then we can't calculate the offset to pass to STACKLINK without more complication */
+    plant_org_order_extended(F_NB_LOAD_SF_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+    plant_16_bit_code_word(nb_adjust);
+    log(LOG_PLANT, "%04X Plant NB=SF+%d\n", next_instruction_segment_address(), nb_adjust);
+    plant_org_order_extended(F_SF_LOAD_NB_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+    block->stack_offset_address = next_instruction_segment_address();
+    plant_16_bit_code_word(0); /* plant a placeholder to be filled with the size of the local variables */
+
+    plant_push_xnb();
     log(LOG_PLANT, "%04X XNB LOAD\n", next_instruction_segment_address());
     plant_org_order_extended(F_XNB_LOAD, KP_LITERAL, NP_32_BIT_UNSIGNED_LITERAL);
     if (block_level <= 0)
@@ -1377,14 +1400,6 @@ void start_block_level(int param_stack_size)
         block->proc_def_var->data.proc.global_location = next_instruction_full_address();
     }
     plant_32_bit_code_word(0);
-
-    /* don't make the jump variable length because then we can't calculate the offset to pass to STACKLINK without more complication */
-    plant_org_order_extended(F_NB_LOAD_SF_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
-    plant_16_bit_code_word(nb_adjust);
-    log(LOG_PLANT, "%04X Plant NB=SF+%d\n", next_instruction_segment_address(), nb_adjust);
-    plant_org_order_extended(F_SF_LOAD_NB_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
-    block->stack_offset_address = next_instruction_segment_address();
-    plant_16_bit_code_word(0); /* plant a placeholder to be filled with the size of the local variables */
 
     log(LOG_STRUCTURE, "Start block, level=%d, last mutl name=%d\n", block_level, block->last_mutl_var);
 }
@@ -1823,6 +1838,7 @@ void op_org_enter(int N)
 
 void op_org_return(int N)
 {
+    plant_pop_xnb();
     log(LOG_STRUCTURE, "RETURN operand %s\n", format_operand(N));
     plant_org_order_extended(F_RETURN, k_v(), NP_STACK);
 }
