@@ -1327,7 +1327,7 @@ static void plant_push_xnb(void)
 {
     log(LOG_PLANT, "%04X PUSH XNB\n", next_instruction_segment_address());
     plant_org_order(F_SF_PLUS, K_LITERAL, 2);
-    plant_org_order_extended(F_XNB_STORE, K_V32, NP_SF);
+    plant_org_order_extended(F_XNB_STORE, K_V64, NP_SF);
     plant_16_bit_code_word(0);
 }
 
