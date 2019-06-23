@@ -523,6 +523,7 @@ static int imported_module_count;
 static MODULE module_table[MAX_IMPORT_MODULES];
 static int relocation_count;
 static uint32 relocation_table[MAX_RELOCATION_ENTRIES];
+static uint32 stack_front_load_address;
 
 uint8 k_v(void);
 void op_org_stack_link(int);
@@ -818,6 +819,13 @@ static void plant_16_bit_word_update(uint16 area_number, uint16 address, uint16 
 {
     SEGMENT *segment = get_segment_for_area(area_number);
     segment->words[address] = word;
+}
+
+static void plant_16_bit_word_update_by_address(uint32 address, uint16 word)
+{
+    SEGMENT *segment = get_segment_by_segment_number(address >> 16);
+    uint16 offset = address & 0xFFFF;
+    segment->words[offset] = word;
 }
 
 static void plant_32_bit_word_update_by_address(uint32 address, uint32 word)
@@ -2098,6 +2106,10 @@ void TLEND(void)
     int s;
 
     plant_32_bit_word_update_by_address(module_global_address_location, global_data_start_address());
+    if (!is_library)
+    {
+        plant_16_bit_word_update_by_address(stack_front_load_address, next_data_address());
+    }
 
     write_module_header();
 
@@ -2124,6 +2136,13 @@ void TLMODULE(void)
     TLLOAD(0, 1);
     TLCODEAREA(1);
     TLDATAAREA(0);
+    
+    if (!is_library)
+    {
+        plant_org_order_extended(F_SF_LOAD, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
+        stack_front_load_address = next_instruction_full_address();
+        plant_16_bit_code_word(0);
+    }
 
     start_block_level(0);
 }
