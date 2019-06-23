@@ -1572,7 +1572,8 @@ void op_d_load_ref(int N)
 
     MUTLSYMBOL *mutl_sym = &mutl_var[N];
     VARSYMBOL *var = &mutl_sym->data.var;
-    t_uint64 descriptor = build_type_0_descriptor(BT_SIZE(var->data_type), var->dimension, 0);
+    LITSYMBOL *lit = &mutl_sym->data.lit;
+    t_uint64 descriptor = build_type_0_descriptor(BT_SIZE(var->data_type), var->dimension, 0); /* var and lit share the same structure for data type and dimension */
 
     log(LOG_PLANT, "%04X   LOAD D with fixed part %llX\n", next_instruction_segment_address(), descriptor);
     plant_order_extended(CR_STS2, F_LOAD_D, KP_LITERAL, NP_64_BIT_LITERAL);
@@ -1595,9 +1596,18 @@ void op_d_load_ref(int N)
         fatal("Cannot handle non-global and non-local D reference yet\n");
     }
 
-    log(LOG_PLANT, "%04X   A Add 0x%04X\n", next_instruction_segment_address(), var->position * 4);
-    plant_order_extended(CR_XS, F_ADD_X, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
-    plant_16_bit_code_word(var->position * 4);
+    if (mutl_sym->symbol_type == SYM_VARIABLE && var->position > 0)
+    {
+        log(LOG_PLANT, "%04X   A Add 0x%04X\n", next_instruction_segment_address(), var->position * 4);
+        plant_order_extended(CR_XS, F_ADD_X, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
+        plant_16_bit_code_word(var->position * 4);
+    }
+    else if (lit->address > 0)
+    {
+        log(LOG_PLANT, "%04X   A Add 0x%04X\n", next_instruction_segment_address(), lit->address);
+        plant_order_extended(CR_XS, F_ADD_X, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
+        plant_16_bit_code_word(lit->address);
+    }
 
     plant_stack_x();
 
