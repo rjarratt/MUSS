@@ -752,7 +752,7 @@ static void write_module_header(void)
     }
 
     write_16_bit_word(0xFFFF);
-    write_16_bit_word(buffer_size + (is_library) ? 14 : 18); /* buffer size starts from the actual module table */
+    write_16_bit_word(buffer_size + ((is_library) ? 14 : 18)); /* buffer size starts from the actual module table */
     if (is_library)
     {
         write_16_bit_word(LIBRARY_MODULE);
@@ -2077,7 +2077,7 @@ void TL(int M, char *FN, int DZ)
     }
     else
     {
-        start_address = next_instruction_segment_address();
+        start_address = next_instruction_full_address();
         printf("Compiling a program. Start address is %04X\n", start_address);
     }
 
