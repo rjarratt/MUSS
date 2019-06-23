@@ -900,6 +900,7 @@ static uint32 compute_descriptor_origin(uint16 data_area_word_address)
     uint32 result;
     SEGMENT *segment = get_segment_for_area(current_data_area);
     result = segment->segment_address << 16 | ((data_area_word_address << 1) & 0xFFFF);
+    result = result * 2; /* descriptor origins are byte addresses */
     return result;
 }
 
@@ -1595,6 +1596,8 @@ void op_d_load_ref(int N)
     {
         fatal("Cannot handle non-global and non-local D reference yet\n");
     }
+
+    plant_order(CR_XS, F_MUL_A, K_LITERAL, 8); /* scale to byte address from 64-bit address */
 
     if (mutl_sym->symbol_type == SYM_VARIABLE && var->position > 0)
     {
@@ -2837,7 +2840,7 @@ void link_module(FILE *f)
             SEGMENT *code_seg = get_segment_by_segment_number(relocation_table[i] >> 16);
             uint16 offset = relocation_table[i] & 0xFFFF;
             code_seg->words[code_seg->first_word + offset] = global_data_address >> 16;
-            code_seg->words[code_seg->first_word + offset + 1] = global_data_address & 0xFFFF;
+            code_seg->words[code_seg->first_word + offset + 1] = (global_data_address & 0xFFFF) >> 2; /* scale from 16-bit word to 64-bit as XNB is in 64-bit units */
         }
     }
 }
