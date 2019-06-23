@@ -14,27 +14,33 @@ A module consists of a header and then multiple segments
 Header Format
 =============
 
-+----------------+
-| Marker         | 16 bit word all 1's
-+----------------+
-| Header size    | 16-bit number of bytes in the header. This excludes the marker
-+----------------+
-| Num Modules    | 16-bit word with the number of imported modules
-+----------------+
-| Num Segments   | 16-bit word with the number of segments used by the module
-+----------------+
-| Num Relocations| 16-bit word with the number of relocation table entries
-+----------------+
-| Num Symbols    | 16-bit word with the number of exported symbols
-+----------------+
-| Global bytes   | 16-bit word with the number of bytes occupied by global data
-+----------------+
-| Module table   | See below
-+----------------+
-| Segment table  | See below
-+----------------+
-| Symbol table   | See below
-+----------------+
++--------------------+
+| Marker             | 16 bit word all 1's
++--------------------+
+| Header size        | 16-bit number of bytes in the header. This excludes the marker
++--------------------+
+| Module type        | 16-bit word 1 = program, 2 = library
++--------------------+
+| Start Addr Segment | (Program module only) 16-bit word segment for start address
++--------------------+
+| Start Addr Offset  | (Program module only) 16-bit word offset for start address
++--------------------+
+| Num Modules        | 16-bit word with the number of imported modules
++--------------------+
+| Num Segments       | 16-bit word with the number of segments used by the module
++--------------------+
+| Num Relocations    | 16-bit word with the number of relocation table entries
++--------------------+
+| Num Symbols        | 16-bit word with the number of exported symbols
++--------------------+
+| Global bytes       | 16-bit word with the number of bytes occupied by global data
++--------------------+
+| Module table       | See below
++--------------------+
+| Segment table      | See below
++--------------------+
+| Symbol table       | See below
++--------------------+
 
 Module Table
 ------------
@@ -145,6 +151,8 @@ Segments
 
 */
 
+#define PROGRAM_MODULE 1
+#define LIBRARY_MODULE 2
 #define FIRST_NAME 2
 #define MAX_IMPORT_MODULES 64
 #define MAX_IMPORTS 256
@@ -486,6 +494,7 @@ typedef struct
 static int logging;
 static FILE *out_file;
 static int is_library;
+static uint32 start_address;
 static int current_line;
 static int amode = 0;
 static MUTLSYMBOL mutl_var[MAX_NAMES + 1];
@@ -743,7 +752,18 @@ static void write_module_header(void)
     }
 
     write_16_bit_word(0xFFFF);
-    write_16_bit_word(buffer_size + 12); /* buffer size starts from the actual module table */
+    write_16_bit_word(buffer_size + (is_library) ? 14 : 18); /* buffer size starts from the actual module table */
+    if (is_library)
+    {
+        write_16_bit_word(LIBRARY_MODULE);
+    }
+    else
+    {
+        write_16_bit_word(PROGRAM_MODULE);
+        write_16_bit_word(start_address >> 16);
+        write_16_bit_word(start_address & 0xFFFF);
+    }
+
     write_16_bit_word(imported_module_count);
     write_16_bit_word(segment_count);
     write_16_bit_word(relocation_count);
@@ -2057,7 +2077,8 @@ void TL(int M, char *FN, int DZ)
     }
     else
     {
-        printf("Compiling a program. Start address is %04X\n", next_instruction_segment_address());
+        start_address = next_instruction_segment_address();
+        printf("Compiling a program. Start address is %04X\n", start_address);
     }
 
     current_literal.buffer = current_literal_buf;
@@ -2847,6 +2868,7 @@ void link_module(FILE *f)
 void import_module_exports(FILE * f)
 {
     uint16 header_length;
+    uint16 module_type;
     uint16 module_count;
     uint16 segment_count;
     uint16 symbol_count;
@@ -2862,6 +2884,12 @@ void import_module_exports(FILE * f)
 
     fseek(f, 2, SEEK_SET); /* skip past marker */
     header_length = read_16_bit_word(f);
+
+    module_type = read_16_bit_word(f);
+    if (module_type != LIBRARY_MODULE)
+    {
+        fatal("Cannot import a program, must be a library");
+    };
 
     module_count = read_16_bit_word(f);
     segment_count = read_16_bit_word(f);
