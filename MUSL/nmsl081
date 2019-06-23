@@ -168,7 +168,7 @@ typedef unsigned int       uint32;
 typedef unsigned long long t_uint64;
 
 #define LBUFFZ 125
-#define CLISTZ 125
+#define CLISTZ 1250
 #define PLISTZ 320
 #define PARAMSZ 270
 #define TLISTZ 250

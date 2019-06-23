@@ -334,7 +334,7 @@ typedef unsigned int       uint32;
 typedef unsigned long long t_uint64;
 
 #define LBUFFZ 125
-#define CLISTZ 125
+#define CLISTZ 1250
 #define PLISTZ 320
 #define PARAMSZ 270
 #define TLISTZ 250
@@ -2717,7 +2717,7 @@ if (DVT == 0x2C)
 IF TAG OF LBUFF[IPTR] = 1
 AND MUTLN(IND OF LBUFF[IPTR]) => N > 1
 @BOX2.2
-N = MUTLN(LBUFF[IPTR].IND);
+if (LBUFF[IPTR].TAG == 1) N = MUTLN(LBUFF[IPTR].IND);
 if (LBUFF[IPTR].TAG == 1 &&  N > 1)
 @BOX3.1
 1 -> IPTR;

@@ -900,7 +900,6 @@ static uint32 compute_descriptor_origin(uint16 data_area_word_address)
     uint32 result;
     SEGMENT *segment = get_segment_for_area(current_data_area);
     result = segment->segment_address << 16 | ((data_area_word_address << 1) & 0xFFFF);
-    result = result * 2; /* descriptor origins are byte addresses */
     return result;
 }
 
