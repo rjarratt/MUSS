@@ -2105,7 +2105,6 @@ void TLEND(void)
     int i;
     int s;
 
-    plant_32_bit_word_update_by_address(module_global_address_location, global_data_start_address());
     if (!is_library)
     {
         plant_16_bit_word_update_by_address(stack_front_load_address, next_data_address());
