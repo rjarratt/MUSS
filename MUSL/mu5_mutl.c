@@ -2107,7 +2107,7 @@ void TLEND(void)
 
     if (!is_library)
     {
-        plant_16_bit_word_update_by_address(stack_front_load_address, next_data_address());
+        plant_16_bit_word_update_by_address(stack_front_load_address, (next_data_address() + 4)/4);
     }
 
     write_module_header();
@@ -2123,7 +2123,7 @@ void TLEND(void)
             {
                 write_16_bit_word(segment->words[i]);
             }
-            printf("Segment 0x%d written with %d words\n", segment->segment_address, segment->next_word - 1);
+            printf("Segment 0x%d written with %d words\n", segment->segment_address, segment->next_word);
         }
     }
 
