@@ -2236,7 +2236,7 @@ MUTLSYMBOL *get_next_mutl_var(int n)
     return result;
 }
 
-void declare_variable(VECTOR *name, uint8 T, int D, int is_parameter, int is_vstore, int v_position, int v_read_proc, int v_write_proc, int module)
+void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vstore, int v_position, int v_read_proc, int v_write_proc, int module)
 {
     MUTLSYMBOL *var;
     int var_n;
