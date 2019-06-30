@@ -119,6 +119,8 @@ Variable
 +----------------+
 | Position       | 16-bit word, offset in 32-bit words from XNB, vstore it is the v-line number
 +----------------+
+| Is Vstore      | 8-bit word, 0 = normal variable, 1 = vstore
++----------------+
 
 VSTORE STUFF MISSING
 
@@ -736,6 +738,12 @@ static void write_module_header(void)
                 if (BT_IS_EXPORT(sym->data.var.data_type))
                 {
                     exported_symbol_count++;
+                    write_string_to_buffer(buffer, &buffer_size, sym->name);
+                    buffer[buffer_size++] = sym->symbol_type & 0xFF;
+                    write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.var.data_type);
+                    write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.var.dimension);
+                    write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.var.position);
+                    buffer[buffer_size++] = sym->data.var.is_vstore;
                 }
                 break;
 
@@ -2972,6 +2980,18 @@ void import_module_exports(FILE * f)
                 value.buffer = sym_val;
                 read_vector(f, &value);
                 declare_literal(&name, &value, data_type, 0, imported_module_count - 1);
+                break;
+            }
+            case SYM_VARIABLE:
+            {
+                uint16 dimension;
+                uint16 position;
+                uint8 is_vstore;
+                data_type = read_16_bit_word(f);
+                dimension = read_16_bit_word(f);
+                position = read_16_bit_word(f);
+                is_vstore = (uint8)fgetc(f);
+                declare_variable(&name, data_type, dimension, 0, 0, position, 0, 0, imported_module_count - 1);
                 break;
             }
             case SYM_PROC:
