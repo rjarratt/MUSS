@@ -5,6 +5,22 @@
 #include "support.h"
 #include "mu5_mutl.h"
 
+/* Information on code organisation
+
+Global Variables
+================
+A module can have a number of global variables. These have to accessed using the XNB register. It would be possible
+to record every global variable access and have the linker embed the XNB address of each global variable before
+each global variable access. However, XNB is 64-bit aligned, so every global variable would need to be 64-bit aligned.
+The alternative is to have XNB be loaded with the base of each global variable segment and then use a Name offset
+to get the variable. However, it is possible for a module to use directives to put globals in different areas, so it
+would be necessary to track the areas and have different base addresses loaded by the linker for different global variables.
+
+The approach taken is to have XNB loaded with the base address of the area on each global variable access as it is more
+space efficient.
+
+*/
+
 /* Module format
 
 This format is made-up and is for use with the MU5 emulator and the MUSL cross compiler for Windows.
@@ -90,9 +106,11 @@ Relocation Table
 Each entry is as follows:
 
 +-------------------------+
-| Global location segment | 16-bit word, segment address where global data address to be relocated (ie XNB value) is located
+| Segment number          | 16-bit MUTL segment number whose base address is to be set.
++-------------------------+
+| Global location segment | 16-bit word, segment address where the segment's global data address to be relocated (ie XNB value) is located
 +--------------------------+
-| Global location address | 16-bit word, offset where global data address to be relocated (ie XNB value) is located
+| Global location address | 16-bit word, offset where segment's global data address to be relocated (ie XNB value) is located
 +-------------------------+
 
 Symbol Table
@@ -418,6 +436,7 @@ typedef struct /* some fields in common with PROC so must remain in synch */
     uint32 address;
     int num_forward_refs;
     uint32 forward_ref_locations[MAX_FORWARD_LOCATIONS];
+    uint16 segment_number;
     uint16 global_location; /* location where XNB value is to be stored on linking */
 } LABELSYMBOL;
 
@@ -427,6 +446,7 @@ typedef struct /* some fields in common with LABEL so must remain in synch */
     uint32 address;
     int num_forward_refs;
     uint32 forward_ref_locations[MAX_FORWARD_LOCATIONS];
+    uint16 segment_number;
     uint32 global_location; /* location where XNB value is to be stored on linking */
     VARSYMBOL parameters[MAX_PROC_PARAMS];
     int param_count;
@@ -712,6 +732,7 @@ static void write_module_header(void)
         {
             case SYM_PROC:
                 relocation_count++;
+                write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.proc.segment_number);
                 write_32_bit_word_to_buffer(buffer, &buffer_size, sym->data.proc.global_location);
                 break;
         }
@@ -901,6 +922,14 @@ static void plant_vector(uint16 data_type, VECTOR *v)
         plant_16_bit_data_word(word);
     }
     block_stack[0].local_names_space += (words +1)/2; /* names space is in 32-bit word increments */ /* TODO: is there a problem here with vectors of 16-bit integers? */
+}
+
+static uint16 next_instruction_segment_number(void)
+{
+    uint32 result;
+    SEGMENT *segment = get_segment_for_area(current_code_area);
+    result = segment->segment_address;
+    return result;
 }
 
 static uint32 next_instruction_full_address(void)
@@ -1433,6 +1462,7 @@ void start_block_level(int param_stack_size)
     }
     else
     {
+        block->proc_def_var->data.proc.segment_number = next_instruction_segment_number();
         block->proc_def_var->data.proc.global_location = next_instruction_full_address();
     }
     plant_32_bit_code_word(0);
@@ -2954,6 +2984,7 @@ void import_module_exports(FILE * f)
 
     for (i = 0; i < relocation_count; i++)
     {
+        read_16_bit_word(f); /* TODO: handle segment number */
         relocation_table[i] = read_32_bit_word(f);
     }
 
