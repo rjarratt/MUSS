@@ -5,6 +5,7 @@
 #include "support.h"
 #include "mu5_mutl.h"
 
+/* TODO global ref check on every call, but check for literals when they are vectors planted in code rather than literals */
 /* Information on code organisation
 
 Global Variables
@@ -189,7 +190,7 @@ Segments
 #define MAX_SEGMENTS 32
 #define MAX_SEGMENT_SIZE 65535
 #define MAX_HEADER_SIZE_BYTES 65535
-#define MAX_RELOCATION_ENTRIES 128
+#define MAX_RELOCATION_ENTRIES 1024
 
 #define CR_ORG 0
 #define CR_B 1
@@ -403,6 +404,7 @@ Segments
 #define OPERAND_D_REF 0x1004
 #define NO_OPERAND_FOLLOWS_FLAG 0x80
 #define OPERAND_FOLLOWS(kn) ((kn & NO_OPERAND_FOLLOWS_FLAG) == 0)
+#define IS_MUTL_VAR(n) (n>= 2 && n < 0x1000)
 
 #define UNKNOWN_ADDRESS 0x7FFF
 
@@ -513,6 +515,13 @@ typedef struct
     char name[MAX_NAME_LEN];
 } MODULE;
 
+/* type to record global references for relocation */
+typedef struct
+{
+    uint16 referenced_segment_number; /* the segment number for which the base address is to be filled in by the linker */
+    uint32 referencing_address; /* the address where the address of the referenced segment must be placed */
+} GLOBALREF;
+
 static int logging;
 static FILE *out_file;
 static int is_library;
@@ -544,7 +553,9 @@ static SEGMENT segments[MAX_SEGMENTS];
 static int imported_module_count;
 static MODULE module_table[MAX_IMPORT_MODULES];
 static int relocation_count;
-static uint32 relocation_table[MAX_RELOCATION_ENTRIES];
+static GLOBALREF relocation_table[MAX_RELOCATION_ENTRIES];
+static int global_ref_count;
+static GLOBALREF global_refs[MAX_RELOCATION_ENTRIES];
 static uint32 stack_front_load_address;
 
 uint8 k_v(void);
@@ -725,18 +736,25 @@ static void write_module_header(void)
     }
 
     /* write relocation table */
-    for (i = 0; i <= block->last_mutl_var; i++)
+    for (i = 0; i <= global_ref_count; i++)
     {
-        MUTLSYMBOL *sym = &mutl_var[i];
-        switch (sym->symbol_type)
-        {
-            case SYM_PROC:
-                relocation_count++;
-                write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.proc.segment_number);
-                write_32_bit_word_to_buffer(buffer, &buffer_size, sym->data.proc.global_location);
-                break;
-        }
+        GLOBALREF *ref = &global_refs[i];
+        write_16_bit_word_to_buffer(buffer, &buffer_size, ref->referenced_segment_number);
+        write_32_bit_word_to_buffer(buffer, &buffer_size, ref->referencing_address);
     }
+
+    //for (i = 0; i <= block->last_mutl_var; i++)
+    //{
+    //    MUTLSYMBOL *sym = &mutl_var[i];
+    //    switch (sym->symbol_type)
+    //    {
+    //        case SYM_PROC:
+    //            relocation_count++;
+    //            write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.proc.segment_number);
+    //            write_32_bit_word_to_buffer(buffer, &buffer_size, sym->data.proc.global_location);
+    //            break;
+    //    }
+    //}
 
     /* write symbol table */
     for (i = 0; i <= block->last_mutl_var; i++)
@@ -932,6 +950,14 @@ static uint16 next_instruction_segment_number(void)
     return result;
 }
 
+static uint16 next_code_segment_number(void)
+{
+    uint32 result;
+    SEGMENT *segment = get_segment_for_area(current_data_area);
+    result = segment->segment_address;
+    return result;
+}
+
 static uint32 next_instruction_full_address(void)
 {
     uint32 result;
@@ -1072,7 +1098,7 @@ static uint8 get_operand(uint16 n)
         np = NP_DR;
         modifier = NO_OPERAND_FOLLOWS_FLAG;
     }
-    else if (n>= 2 && n < 0x1000)
+    else if (IS_MUTL_VAR(n))
     {
         MUTLSYMBOL *var = &mutl_var[n];
         if (var->symbol_type == SYM_VARIABLE)
@@ -1388,20 +1414,6 @@ static void plant_pop(void)
     plant_org_order(F_SF_PLUS, K_LITERAL, -2);
 }
 
-static void plant_push_xnb(void)
-{
-    log(LOG_PLANT, "%04X PUSH XNB\n", next_instruction_segment_address());
-    plant_org_order(F_SF_PLUS, K_LITERAL, 2);
-    plant_org_order_extended(F_XNB_STORE, K_V64, NP_SF);
-    plant_16_bit_code_word(0);
-}
-
-static void plant_pop_xnb(void)
-{
-    log(LOG_PLANT, "%04X POP XNB\n", next_instruction_segment_address());
-    plant_org_order_extended(F_XNB_LOAD, K_V32, NP_STACK);
-}
-
 BLOCK *get_current_block(void)
 {
     BLOCK *result;
@@ -1453,19 +1465,6 @@ void start_block_level(int param_stack_size)
     block->stack_offset_address = next_instruction_segment_address();
     plant_16_bit_code_word(0); /* plant a placeholder to be filled with the size of the local variables */
 
-    plant_push_xnb();
-    log(LOG_PLANT, "%04X XNB LOAD\n", next_instruction_segment_address());
-    plant_org_order_extended(F_XNB_LOAD, KP_LITERAL, NP_32_BIT_UNSIGNED_LITERAL);
-    if (block_level <= 0)
-    {
-        module_global_address_location = next_instruction_full_address();
-    }
-    else
-    {
-        block->proc_def_var->data.proc.segment_number = next_instruction_segment_number();
-        block->proc_def_var->data.proc.global_location = next_instruction_full_address();
-    }
-    plant_32_bit_code_word(0);
 
     log(LOG_STRUCTURE, "Start block, level=%d, last mutl name=%d\n", block_level, block->last_mutl_var);
 }
@@ -1612,6 +1611,28 @@ void check_v_store_write_proc(int N)
                 op_org_stack_link(var->v_write_proc);
                 op_org_enter(0);
             }
+        }
+    }
+}
+
+void check_global_ref(int N)
+{
+    MUTLSYMBOL *mutl_sym;
+    if (IS_MUTL_VAR(N))
+    {
+        mutl_sym = &mutl_var[N];
+        if (mutl_sym->block_level == 0 && (mutl_sym->symbol_type == SYM_VARIABLE))
+        {
+            if (global_ref_count >= MAX_RELOCATION_ENTRIES)
+            {
+                fatal("Too many global references\n");
+            }
+
+            plant_org_order_extended(F_XNB_LOAD, KP_LITERAL, NP_32_BIT_UNSIGNED_LITERAL);
+            GLOBALREF *ref = &global_refs[global_ref_count++];
+            ref->referenced_segment_number = next_code_segment_number();
+            ref->referencing_address = next_instruction_full_address();
+            plant_32_bit_code_word(0);
         }
     }
 }
@@ -1916,7 +1937,6 @@ void op_org_enter(int N)
 
 void op_org_return(int N)
 {
-    plant_pop_xnb();
     log(LOG_STRUCTURE, "RETURN operand %s\n", format_operand(N));
     plant_org_order_extended(F_RETURN, k_v(), NP_STACK);
 }
@@ -2702,6 +2722,7 @@ void TLPL(int F, int N)
     op = mutl_ops[opcode][data_type].op;
     if (op != NULL)
     {
+        check_global_ref(N);
         op(N);
     }
     else
@@ -2913,8 +2934,8 @@ void link_module(FILE *f)
         uint32 global_data_address = segment->first_word & 0xFFFF;
         for (i = 0; i < relocation_count; i++)
         {
-            SEGMENT *code_seg = get_segment_by_segment_number(relocation_table[i] >> 16);
-            uint16 offset = relocation_table[i] & 0xFFFF;
+            SEGMENT *code_seg = get_segment_by_segment_number(relocation_table[i].referenced_segment_number);
+            uint16 offset = relocation_table[i].referencing_address & 0xFFFF;
             code_seg->words[code_seg->first_word + offset] = global_data_address >> 16;
             code_seg->words[code_seg->first_word + offset + 1] = (global_data_address & 0xFFFF) >> 2; /* scale from 16-bit word to 64-bit as XNB is in 64-bit units */
         }
@@ -2984,8 +3005,8 @@ void import_module_exports(FILE * f)
 
     for (i = 0; i < relocation_count; i++)
     {
-        read_16_bit_word(f); /* TODO: handle segment number */
-        relocation_table[i] = read_32_bit_word(f);
+        relocation_table[i].referenced_segment_number = read_16_bit_word(f);
+        relocation_table[i].referencing_address = read_32_bit_word(f);
     }
 
     /* read symbol table */
