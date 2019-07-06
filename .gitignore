@@ -255,3 +255,4 @@ ModelManifest.xml
 !ap8*.musl
 !consys8*.musl
 !sample*.musl
+!Reference*.musl
