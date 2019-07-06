@@ -452,7 +452,7 @@ typedef struct /* some fields in common with LABEL so must remain in synch */
     uint32 global_location; /* location where XNB value is to be stored on linking */
     VARSYMBOL parameters[MAX_PROC_PARAMS];
     int param_count;
-    int is_export;
+    int nature;
 } PROCSYMBOL;
 
 typedef struct
@@ -787,7 +787,7 @@ static void write_module_header(void)
                 break;
 
             case SYM_PROC:
-                if (sym->data.proc.is_export)
+                if (BT_IS_EXPORT(sym->data.proc.nature))
                 {
                     exported_symbol_count++;
                     write_string_to_buffer(buffer, &buffer_size, sym->name);
@@ -2391,7 +2391,7 @@ void declare_proc(VECTOR *name, uint32 address, int NAT, int module)
     MUTLSYMBOL *sym = get_next_mutl_var(add_other_block_item());
     current_proc_spec = &sym->data.proc;
     sym->symbol_type = SYM_PROC;
-    sym->data.proc.is_export = BT_IS_EXPORT(NAT);
+    sym->data.proc.nature = NAT;
     if (address != 0)
     {
         sym->data.proc.address_defined = 1;
