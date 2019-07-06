@@ -1140,7 +1140,8 @@ if (memcmp(&LBUFF[IPTR+1], &MINUS, sizeof(ITYPE)) != 0 || SINGLEOPD == 0)
 IF TAG OF LBUFF[1+>IPTR+1] /= TCONST
 OR ST OF LBUFF[IPTR+1] ->> 6 = 1
 @B7.2
-if (LBUFF[++IPTR+1].TAG != TCONST || (LBUFF[IPTR+1].ST >> 6) == 1)
+++IPTR;
+if (LBUFF[IPTR+1].TAG != TCONST || (LBUFF[IPTR+1].ST >> 6) == 1)
 @B8.1
 2 => AR[OK.AP]
 @B8.2
