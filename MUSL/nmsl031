@@ -394,6 +394,126 @@ ITYPE LBUFF[LBUFFZ];
 unsigned char CLIST[CLISTZ];
 int TINT,TLO,TRE,TBYADDR,TVST;
 int IPTR,SPTR;
+/* Manual format of the documentation
+
+         TYPE---------------- ----------------STARTER
+   BASIC TYPE-------------- | | --------------FINISHER
+  BUILT IN FN------------ | | | | ------------CONDITIONAL
+  COMP TERMTR---------- | | | | | | ----------OPERATOR
+   SHIFT OP-------- | | | | | | | | --------COMPARATOR
+             ------ | | | | | | | | | | ------STORE OP
+             ---- | | | | | | | | | | | | ----INIT COMP OP
+             -- | | | | | | | | | | | | | | --COND TERMTR
+              | | | | | | | | | | | | | | | | 
+          EOS | | | | |X| | | | | | | | | | |X|
+        BEGIN | | | | | | | | |X|X| | | | | | |
+         PROC | | | | | | | | |X| | | | | | | |
+       MODULE | | | | | | | | |X| | | | | | | |
+          END | | | | | | | | |X|X| | | | | | |
+           IF | | | | | | | | |X| |X| | | | | |
+         THEN | | | | |X| | | | |X|X| | | | |X|
+         ELSE | | | | |X| | | |X|X|X| | | | | |
+           FI | | | | |X| | | |X|X|X| | | | | |
+        WHILE | | | | | | | | |X| | | | | | | |
+          FOR | | | | | | | | |X| | | | | | | |
+           DO | | | | |X| | | | |X| | | | | |X|
+           OD | | | | | | | | |X|X| | | | | | |
+       SWITCH | | | | | | | | |X| | | | | | | |
+   ALTERNATIVE| | | | | | | | |X| | | | | | | |
+        SPACE | | | | | | | | |X| | | | | | | |
+         EXIT | | | | | | | | |X|X| | | | | | |
+        PSPEC | | | | | | | | |X| | | | | | | |
+      LITERAL | | | | | | | | |X| | | | | | | |
+      DATAVEC | | | | | | | | |X| | | | | | | |
+         TYPE | | | | | | | | |X| | | | | | | |
+       SELECT | | | | | | | | |X| | | | | | | |
+         ADDR | | | | | | | |X| | | | | | | | |
+       INTEGER| | | | | | |X|X| | | | | | | | |
+       LOGICAL| | | | | | |X|X| | | | | | | | |
+         REAL | | | | | | |X|X| | | | | | | | |
+       VSTORE | | | | | | | | |X| | | | | | | |
+       IMPORT | | | | | | | | |X| | | | | | | |
+        LSPEC | | | | | | | | |X| | | | | | | |
+         BYTE | | | | | |X| | | | | | | | | | |
+         MAKE | | | | | |X| | | | | | | | | | |
+         POSN | | | | | |X| | | | | | | | | | |
+         PART | | | | | |X| | | | | | | | | | |
+         SIZE | | | | | |X| | | | | | | | | | |
+         LLST | | | | | |X| | | | | | | | | | |
+         LPST | | | | | |X| | | | | | | | | | |
+         LENT | | | | | |X| | | | | | | | | | |
+         X1XX | | | | | |X| | | | | | | | | | |
+        BSPEC | | | | | | | | |X| | | | | | | |
+       WITHIN | | | | | | | | |X| | | | | | | |
+        LABEL | | | | | | |X|X| | | | | | | | |
+          OF  | | | | | | | | | | | | | | | | |
+          IS  | | | | | | | | | | | | | | | | |
+          AND | | | | |X| | | | | | | | | | |X|
+
+         TYPE---------------- ----------------STARTER
+   BASIC TYPE-------------- | | --------------FINISHER
+  BUILT IN FN------------ | | | | ------------CONDITIONAL
+  COMP TERMTR---------- | | | | | | ----------OPERATOR
+     SHIFT OP-------- | | | | | | | | --------COMPARATOR
+             ------ | | | | | | | | | | ------STORE OP
+             ---- | | | | | | | | | | | | ----INIT COMP OP
+             -- | | | | | | | | | | | | | | --COND TERMTR
+              | | | | | | | | | | | | | | | | 
+           OR | | | | |X| | | | | | | | | | |X|
+         FROM | | | | |X| | | | |X| | | | | | |
+           >= | | | | |X| | | | | | | |X| | | |
+           =< | | | | |X| | | | | | | |X| | | |
+            > | | | | |X| | | | | | | |X| | | |
+            < | | | | |X| | | | | | | |X| | | |
+           /= | | | | |X| | | | | | | |X| | | |
+            = | | | | |X| | | | | | | |X| | | |
+            + | | | | | | | | | | | |X| | |X| |
+            - | | | | | | | | | | | |X| | |X| |
+            * | | | | | | | | | | | |X| | | | |
+            / | | | | | | | | | | | |X| | | | |
+           -: | | | | | | | | | | | |X| | | | |
+           /: | | | | | | | | | | | |X| | | | |
+            & | | | | | | | | | | | |X| | | | |
+            ! | | | | | | | | | | | |X| | | | |
+           -= | | | | | | | | | | | |X| | | | |
+           => | | | | | | | | | | | |X| |X| | |
+           +> | | | | | | | | | | | |X| |X| | |
+           -> | | | | | | | | | | | |X| |X| | |
+           *> | | | | | | | | | | | |X| |X| | |
+           /> | | | | | | | | | | | |X| |X| | |
+          -:> | | | | | | | | | | | |X| |X| | |
+          /:> | | | | | | | | | | | |X| |X| | |
+           &> | | | | | | | | | | | |X| |X| | |
+           !> | | | | | | | | | | | |X| |X| | |
+          -=> | | | | | | | | | | | |X| |X| | |
+           << | | | | | | | | | | | | | | | | |
+          ->> | | | |X| | | | | | | |X| | | | |
+          <<- | | | |X| | | | | | | |X| | | | |
+            ^ | | | | | | | | | | | | | | |X| |
+            ; | | | | | | | | | |X| | | | | | |
+            , | | | | |X| | | | | | | | | | |X|
+            [ | | | | | | | | | | | | | | | | |
+            ] | | | | |X| | | | | | | | | | |X|
+            ( | | | | | | | | | | | | | | |X| |
+            ) | | | | |X| | | | | | | | | | | |
+            \ | | | | |X| | | | | | | | | | | |
+           >: | | | | | | | | | |X| | | | | | |
+            : | | | | | | | | | |X| | | | | | |
+       FLTSYM | | | | | | | | | | | | | | | | |
+   UNARY MINUS| | | | | | | | | | | |X| | | | |
+            # | | | | | | | | |X| | | | | | | |
+          EOL | | | | | | | | | | | | | | | | |
+
+
+My interpretation of the bits:
+0x1000 - Shift Operator
+0x0800 - Terminator (as in terminates a set of delimiters I think)
+0x0010 - Computation terminator?????
+0x0080 - Initial delimiter
+0x0040 - Teminal delimiter
+0x0020 - Conditional ?
+0x0004 - Store operator
+*/
 unsigned short DLIST[] = {
 0x801, 0xC0, 0x80, 0x2080, 0xC0, 0xA0, 0x861, 0x8E0,
 0x8E0, 0x80, 0x80, 0x841, 0xC0, 0x80, 0x80, 0x80,
@@ -2072,16 +2192,13 @@ if ((int)I >= EQ && EQ <=NEQ)
 {
   SYM = I+10;
 }
+else if (I==MINUSSTORE)
+{
+  SYM = RIGHTSHIFT;
+}
 else
 {
-  if (I==MINUSSTORE)
-  {
-    SYM = RIGHTSHIFT;
-  }
-  else
-  {
-    goto DELIM;
-  }
+  goto DELIM;
 }
 @BOX 8.1
 LT0:
@@ -2096,14 +2213,14 @@ LT0:
 if (I==LT)
 {
   SYM = LTLT;
-  if (I==EQ)
-  {
-    SYM = LE;
-  }
-  else
-  {
-    goto DELIM;
-  }
+}
+else if (I==EQ)
+{
+  SYM = LE;
+}
+else
+{
+  goto DELIM;
 }
 @BOX 9.1
 MINUS:
