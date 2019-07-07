@@ -21,7 +21,7 @@ PROC SUB(A,B);
     INTEGER TEMP;
     A => R2SUBINPUT1;
     B => R2SUBINPUT2;
-    TEMP = ADD(A, -B)
+    ADD(A, 0-B) => TEMP;
     IF TEMP = R1ADDRESULT THEN
         R1ADDRESULT => R2SUBRESULT;
         TEMP => SUB;
