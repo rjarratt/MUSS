@@ -2398,17 +2398,6 @@ void declare_proc(VECTOR *name, uint32 address, int NAT, int module)
         sym->data.proc.address = address;
     }
 
-    if (BT_IS_IMPORT(NAT))
-    {
-        MUTLSYMBOL *import = find_import(name, SYM_PROC);
-        if (import == NULL)
-        {
-            fatal("Import %0.*s not found", name->length, name->buffer);
-        }
-        sym->data.proc.address_defined = 1;
-        sym->data.proc.address = import->data.proc.address;
-    }
-    
     if (name == NULL)
     {
         strcpy(sym->name, "(generated)");
@@ -2602,6 +2591,7 @@ void TLPROC(int P)
 
 void TLPROCKIND(int K)
 {
+    fatal("TLPROCKIND");
     log(LOG_STRUCTURE, "Define proc kind 0x%04X\n", K);
 }
 
@@ -2613,15 +2603,17 @@ void TLENDPROC(void)
 
 void TLBLOCK(void)
 {
-    log(LOG_STRUCTURE, "Start block\n");
+    fatal("TLBLOCK");
 }
 
 void TLENDBLOCK(void)
 {
+    fatal("TLENDBLOCK");
     log(LOG_STRUCTURE, "End block\n");
 }
 void TLENTRY(int N)
 {
+    fatal("TLENTRY");
     log(LOG_STRUCTURE, "Enter proc %s\n", mutl_var[N].name);
 }
 void TLLABELSPEC(VECTOR *N, int U)
