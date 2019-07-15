@@ -256,3 +256,4 @@ ModelManifest.xml
 !consys8*.musl
 !sample*.musl
 !Reference*.musl
+*.pdf

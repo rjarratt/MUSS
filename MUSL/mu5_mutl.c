@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include "support.h"
 #include "mu5_mutl.h"
+#include "elf.h"
 
 /* TODO global ref check on every call, but check for literals when they are vectors planted in code rather than literals */
 /* Information on code organisation
@@ -524,6 +525,7 @@ typedef struct
 
 static int logging;
 static FILE *out_file;
+static char out_file_name[_MAX_PATH + 1];
 static int is_library;
 static uint32 start_address;
 static int current_line;
@@ -549,6 +551,8 @@ static int loop_level = -1;
 static AREA areas[MAX_AREAS];
 static uint8 current_code_area = 1;
 static uint8 current_data_area = 0;
+static int current_elf_code_section;
+static int current_elf_data_section;
 static SEGMENT segments[MAX_SEGMENTS];
 static int imported_module_count;
 static MODULE module_table[MAX_IMPORT_MODULES];
@@ -557,6 +561,7 @@ static GLOBALREF relocation_table[MAX_RELOCATION_ENTRIES];
 static int global_ref_count;
 static GLOBALREF global_refs[MAX_RELOCATION_ENTRIES];
 static uint32 stack_front_load_address;
+static void *elf_module_context;
 
 uint8 k_v(void);
 void op_org_stack_link(int);
@@ -1886,6 +1891,7 @@ uint32 op_org_jump_generic_address(int F, int16 relative)
     return address_location;
 }
 
+/* this function relies on labels and procs having the same initial structure. */
 void op_org_jump_generic(int N, int F, char *type)
 {
     if (mutl_var[N].data.label.address_defined)
@@ -2140,15 +2146,21 @@ void TL(int M, char *FN, int DZ)
     if (is_library)
     {
         printf("Compiling a library\n");
+        elf_module_context = elf_new_file(ET_REL, 0, 0, 0);
     }
     else
     {
         start_address = next_instruction_full_address();
+        elf_module_context = elf_new_file(ET_REL, 0, start_address, 0);
         printf("Compiling a program. Start address is %04X\n", start_address);
     }
 
+    current_elf_code_section = elf_add_code_section(elf_module_context, 2, SHF_ALLOC | SHF_EXECINSTR, next_instruction_full_address());
+    current_elf_data_section = elf_add_data_section(elf_module_context, 4, SHF_WRITE | SHF_EXECINSTR, next_data_address());
+
+    strcpy(out_file_name, FN);
     current_literal.buffer = current_literal_buf;
-    out_file = fopen(FN, "wb");
+    out_file = fopen(out_file_name, "wb");
 
     for (i = 0; i < MAX_SEGMENTS; i++)
     {
@@ -2168,6 +2180,7 @@ void TLEND(void)
         plant_16_bit_word_update_by_address(stack_front_load_address, (next_data_address() + 4)/4);
     }
 
+    elf_write_file(elf_module_context, "test.elf"); /* TODO: change to out_file_name */
     write_module_header();
 
     for (s = 0; s < MAX_SEGMENTS; s++)
@@ -2350,6 +2363,11 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
         var->data.var.position = mutl_var[v_position].data.var.position;
         log(LOG_SYMBOLS, "Declare vstore (backed by var) %s %s level=%d, dim=%d, position=0x%X in slot %d\n", var->name, format_basic_type(T), block_level, D, var->data.var.position, var_n);
     }
+
+    if (BT_IS_EXPORT(T))
+    {
+        elf_add_global_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STT_OBJECT, SHN_ABS);
+    }
 }
 
 void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
@@ -2414,6 +2432,11 @@ void declare_proc(VECTOR *name, uint32 address, int NAT, int module)
     else
     {
         log(LOG_SYMBOLS, "Declare proc %s, nature=0x%04X\n", sym->name, NAT);
+    }
+
+    if (BT_IS_EXPORT(NAT))
+    {
+        elf_add_global_symbol(elf_module_context, sym->name, 0, 4, STT_FUNC, current_elf_code_section);
     }
 }
 
