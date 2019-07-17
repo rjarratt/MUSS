@@ -13,6 +13,8 @@ typedef struct elf32_section
     Elf32_Half section_index;
     struct elf32_section *next_section;
     void *data;
+    void *(*encode_data_entry)(void *);
+    void *(*decode_data_entry)(void *);
 } Elf32_Section;
 
 typedef struct elf32_context
@@ -36,6 +38,7 @@ static int add_string(Elf32_Section *section, char *string);
 
 static Elf32_Ehdr *encode_ehdr(Elf32_Ehdr *header);
 static Elf32_Shdr *encode_shdr(Elf32_Shdr *header);
+static Elf32_Sym *encode_sym(Elf32_Sym *sym);
 static Elf32_Half encode_half(Elf32_Half half);
 static Elf32_Word encode_word(Elf32_Word word);
 static Elf32_Off encode_off(Elf32_Off off);
@@ -119,12 +122,12 @@ void elf_add_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Wo
     }
 
     Elf32_Sym *sym = (Elf32_Sym *)ctx->symbol_table_section->data + num_symbols;
-    sym->st_name = encode_word(add_string(ctx->string_table_section, name));
-    sym->st_value = encode_addr(value);
-    sym->st_size = encode_word(size);
+    sym->st_name = add_string(ctx->string_table_section, name);
+    sym->st_value = value;
+    sym->st_size = size;
     sym->st_info = ELF32_ST_INFO(STB_GLOBAL, type);
     sym->st_other = 0;
-    sym->st_shndx = encode_half(section_index);
+    sym->st_shndx = section_index;
     ctx->symbol_table_section->section_header.sh_size += sizeof(Elf32_Sym);
 }
 
@@ -162,7 +165,21 @@ void elf_write_file(void *context, char *file_name)
     while (section != NULL)
     {
         int section_size = section->section_header.sh_size;
-        fwrite(section->data, 1, section_size, f);
+        int entry_size = section->section_header.sh_entsize;
+        if (section->encode_data_entry == NULL)
+        {
+            fwrite(section->data, 1, section_size, f);
+        }
+        else
+        {
+            int i;
+            int n = section_size / entry_size;
+            for (i = 0; i < n; i++)
+            {
+                void *buffer = section->encode_data_entry((char *)(section->data) + (i * entry_size));
+                fwrite(buffer, entry_size, 1, f);
+            }
+        }
         section = section->next_section;
     }
 
@@ -177,6 +194,8 @@ static Elf32_Section *add_section(Elf32_Context *ctx, Elf32_Shdr *header)
     new_section->data = NULL;
     new_section->next_section = NULL;
     new_section->section_index = ctx->elf_header.e_shnum - 1;
+    new_section->encode_data_entry = NULL;
+    new_section->decode_data_entry = NULL;
 
     if (ctx->section_list_head == NULL)
     {
@@ -219,6 +238,7 @@ static void create_symbol_table(Elf32_Context *ctx)
     header.sh_entsize = sizeof(Elf32_Sym);
     ctx->symbol_table_section = add_section(ctx, &header);
     ctx->symbol_table_section->data = calloc(MAX_SYMBOLS, sizeof(Elf32_Sym));
+    ctx->symbol_table_section->encode_data_entry = encode_sym;
 
     Elf32_Sym *empty_sym = ctx->symbol_table_section->data;
     empty_sym->st_shndx = encode_half(SHN_UNDEF);
@@ -311,6 +331,20 @@ static Elf32_Shdr *encode_shdr(Elf32_Shdr *header)
     result.sh_addralign = encode_word(header->sh_addralign);
     result.sh_entsize = encode_word(header->sh_entsize);
 
+
+    return &result;
+}
+
+static Elf32_Sym *encode_sym(Elf32_Sym *sym)
+{
+    static Elf32_Sym result;
+
+    result.st_name = encode_word(sym->st_name);
+    result.st_value = encode_addr(sym->st_value);
+    result.st_size = encode_word(sym->st_size);
+    result.st_info = sym->st_info;
+    result.st_other = sym->st_other;
+    result.st_shndx = encode_half(sym->st_shndx);
 
     return &result;
 }
