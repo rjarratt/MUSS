@@ -35,6 +35,7 @@ static void create_string_table(Elf32_Context *ctx);
 static int add_string(Elf32_Section *section, char *string);
 
 static Elf32_Ehdr *encode_ehdr(Elf32_Ehdr *header);
+static Elf32_Shdr *encode_shdr(Elf32_Shdr *header);
 static Elf32_Half encode_half(Elf32_Half half);
 static Elf32_Word encode_word(Elf32_Word word);
 static Elf32_Off encode_off(Elf32_Off off);
@@ -79,11 +80,11 @@ int elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr address
     Elf32_Shdr header;
     Elf32_Section *section;
     memset(&header, 0, sizeof(Elf32_Shdr));
-    header.sh_name = encode_word(add_string(ctx->section_header_string_table_section, ".text"));
-    header.sh_type = encode_word(SHT_PROGBITS);
-    header.sh_flags = encode_word(SHF_ALLOC | SHF_EXECINSTR);
-    header.sh_addr = encode_addr(address);
-    header.sh_entsize = encode_word(word_size);
+    header.sh_name = add_string(ctx->section_header_string_table_section, ".text");
+    header.sh_type = SHT_PROGBITS;
+    header.sh_flags = SHF_ALLOC | SHF_EXECINSTR;
+    header.sh_addr = address;
+    header.sh_entsize = word_size;
     section = add_section(ctx, &header);
     section->data = calloc(1, 100);
     section->section_header.sh_size = 100;
@@ -96,11 +97,11 @@ int elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address
     Elf32_Shdr header;
     Elf32_Section *section;
     memset(&header, 0, sizeof(Elf32_Shdr));
-    header.sh_name = encode_word(add_string(ctx->section_header_string_table_section, ".data"));
-    header.sh_type = encode_word(SHT_PROGBITS);
-    header.sh_flags = encode_word(SHF_ALLOC | SHF_WRITE);
-    header.sh_addr = encode_addr(address);
-    header.sh_entsize = encode_word(word_size);
+    header.sh_name = add_string(ctx->section_header_string_table_section, ".data");
+    header.sh_type = SHT_PROGBITS;
+    header.sh_flags = SHF_ALLOC | SHF_WRITE;
+    header.sh_addr = address;
+    header.sh_entsize = word_size;
     section = add_section(ctx, &header);
     section->data = calloc(1, 100);
     section->section_header.sh_size = 100;
@@ -147,12 +148,12 @@ void elf_write_file(void *context, char *file_name)
     {
         if (!is_empty_section(section))
         {
-            section->section_header.sh_offset = encode_off(section_offset);
+            section->section_header.sh_offset = section_offset;
         }
 
         section_offset += section->section_header.sh_size;
-        section->section_header.sh_size = encode_word(section->section_header.sh_size);
-        fwrite(&section->section_header, sizeof(Elf32_Shdr), 1, f);
+        section->section_header.sh_size = section->section_header.sh_size;
+        fwrite(encode_shdr(&section->section_header), sizeof(Elf32_Shdr), 1, f);
         section = section->next_section;
     }
 
@@ -160,7 +161,7 @@ void elf_write_file(void *context, char *file_name)
     section = ctx->section_list_head;
     while (section != NULL)
     {
-        int section_size = decode_off(section->section_header.sh_size);
+        int section_size = section->section_header.sh_size;
         fwrite(section->data, 1, section_size, f);
         section = section->next_section;
     }
@@ -193,16 +194,16 @@ static Elf32_Section *add_section(Elf32_Context *ctx, Elf32_Shdr *header)
 
 static int is_empty_section(Elf32_Section *section)
 {
-    return section->section_header.sh_type == encode_word(SHT_NULL);
+    return section->section_header.sh_type == SHT_NULL;
 }
 
 static void create_empty_section(Elf32_Context *ctx)
 {
     Elf32_Shdr header;
     memset(&header, 0, sizeof(Elf32_Shdr));
-    header.sh_name = encode_word(0);
-    header.sh_type = encode_word(SHT_NULL);
-    header.sh_link = encode_word(SHN_UNDEF);
+    header.sh_name = 0;
+    header.sh_type = SHT_NULL;
+    header.sh_link = SHN_UNDEF;
     add_section(ctx, &header);
 }
 
@@ -210,12 +211,12 @@ static void create_symbol_table(Elf32_Context *ctx)
 {
     Elf32_Shdr header;
     memset(&header, 0, sizeof(Elf32_Shdr));
-    header.sh_name = encode_word(add_string(ctx->section_header_string_table_section, ".symtab"));
-    header.sh_type = encode_word(SHT_SYMTAB);
-    header.sh_flags = encode_word(0);
-    header.sh_addr = encode_addr(0);
-    header.sh_link = encode_word(ctx->string_table_section->section_index);
-    header.sh_entsize = encode_word(sizeof(Elf32_Sym));
+    header.sh_name = add_string(ctx->section_header_string_table_section, ".symtab");
+    header.sh_type = SHT_SYMTAB;
+    header.sh_flags = 0;
+    header.sh_addr = 0;
+    header.sh_link = ctx->string_table_section->section_index;
+    header.sh_entsize = sizeof(Elf32_Sym);
     ctx->symbol_table_section = add_section(ctx, &header);
     ctx->symbol_table_section->data = calloc(MAX_SYMBOLS, sizeof(Elf32_Sym));
 
@@ -228,11 +229,11 @@ static void create_section_header_string_table(Elf32_Context *ctx)
 {
     Elf32_Shdr header;
     memset(&header, 0, sizeof(Elf32_Shdr));
-    header.sh_name = encode_word(1);
-    header.sh_type = encode_word(SHT_STRTAB);
-    header.sh_flags = encode_word(0);
-    header.sh_addr = encode_addr(0);
-    header.sh_entsize = encode_word(0);
+    header.sh_name = 1;
+    header.sh_type = SHT_STRTAB;
+    header.sh_flags = 0;
+    header.sh_addr = 0;
+    header.sh_entsize = 0;
     ctx->section_header_string_table_section = add_section(ctx, &header);
     ctx->section_header_string_table_section->data = calloc(1, MAX_STRING_DATA);
     ctx->section_header_string_table_section->section_header.sh_size = 1;
@@ -245,11 +246,11 @@ static void create_string_table(Elf32_Context *ctx)
 {
     Elf32_Shdr header;
     memset(&header, 0, sizeof(Elf32_Shdr));
-    header.sh_name = encode_word(add_string(ctx->section_header_string_table_section, ".strtab"));
-    header.sh_type = encode_word(SHT_STRTAB);
-    header.sh_flags = encode_word(0);
-    header.sh_addr = encode_addr(0);
-    header.sh_entsize = encode_word(0);
+    header.sh_name = add_string(ctx->section_header_string_table_section, ".strtab");
+    header.sh_type = SHT_STRTAB;
+    header.sh_flags = 0;
+    header.sh_addr = 0;
+    header.sh_entsize = 0;
     ctx->string_table_section = add_section(ctx, &header);
     ctx->string_table_section->data = calloc(1, MAX_STRING_DATA);
     ctx->string_table_section->section_header.sh_size = 1;
@@ -291,6 +292,25 @@ static Elf32_Ehdr *encode_ehdr(Elf32_Ehdr *header)
     result.e_shentsize = encode_half(header->e_shentsize);
     result.e_shnum = encode_half(header->e_shnum);
     result.e_shstrndx = encode_half(header->e_shstrndx);
+
+    return &result;
+}
+
+static Elf32_Shdr *encode_shdr(Elf32_Shdr *header)
+{
+    static Elf32_Shdr result;
+
+    result.sh_name = encode_word(header->sh_name);
+    result.sh_type = encode_word(header->sh_type);
+    result.sh_flags = encode_word(header->sh_flags);
+    result.sh_addr = encode_addr(header->sh_addr);
+    result.sh_offset = encode_off(header->sh_offset);
+    result.sh_size = encode_word(header->sh_size);
+    result.sh_link = encode_word(header->sh_link);
+    result.sh_info = encode_word(header->sh_info);
+    result.sh_addralign = encode_word(header->sh_addralign);
+    result.sh_entsize = encode_word(header->sh_entsize);
+
 
     return &result;
 }
