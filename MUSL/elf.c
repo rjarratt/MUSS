@@ -34,6 +34,7 @@ static void create_string_table(Elf32_Context *ctx);
 
 static int add_string(Elf32_Section *section, char *string);
 
+static Elf32_Ehdr *encode_ehdr(Elf32_Ehdr *header);
 static Elf32_Half encode_half(Elf32_Half half);
 static Elf32_Word encode_word(Elf32_Word word);
 static Elf32_Off encode_off(Elf32_Off off);
@@ -55,14 +56,14 @@ void *elf_new_file(Elf32_Half e_type, Elf32_Half e_machine, Elf32_Addr e_entry, 
     ctx->elf_header.e_ident[EI_DATA] = ELFDATA2MSB; /* big endian */
     ctx->elf_header.e_ident[EI_VERSION] = EV_CURRENT;
 
-    ctx->elf_header.e_type = encode_half(e_type);
-    ctx->elf_header.e_machine = encode_half(0);
-    ctx->elf_header.e_version = encode_word(EV_CURRENT);
-    ctx->elf_header.e_entry = encode_addr(e_entry);
-    ctx->elf_header.e_flags = encode_word(e_flags);
-    ctx->elf_header.e_ehsize = encode_half(sizeof(ctx->elf_header));
+    ctx->elf_header.e_type = e_type;
+    ctx->elf_header.e_machine = 0;
+    ctx->elf_header.e_version = EV_CURRENT;
+    ctx->elf_header.e_entry = e_entry;
+    ctx->elf_header.e_flags = e_flags;
+    ctx->elf_header.e_ehsize = sizeof(ctx->elf_header);
 
-    ctx->elf_header.e_shentsize = encode_half(sizeof(Elf32_Shdr));
+    ctx->elf_header.e_shentsize = sizeof(Elf32_Shdr);
 
     create_empty_section(ctx);
     create_section_header_string_table(ctx);
@@ -134,10 +135,10 @@ void elf_write_file(void *context, char *file_name)
     FILE *f = fopen(file_name, "wb");
 
     num_sections = ctx->elf_header.e_shnum;
-    ctx->elf_header.e_shoff = encode_off(sizeof(ctx->elf_header));
-    ctx->elf_header.e_shnum = encode_half(ctx->elf_header.e_shnum);
+    ctx->elf_header.e_shoff = sizeof(ctx->elf_header);
+    ctx->elf_header.e_shnum = ctx->elf_header.e_shnum;
 
-    fwrite(&ctx->elf_header, sizeof(ctx->elf_header), 1, f);
+    fwrite(encode_ehdr(&ctx->elf_header), sizeof(ctx->elf_header), 1, f);
 
     /* write section table */
     Elf32_Section *section = ctx->section_list_head;
@@ -235,7 +236,7 @@ static void create_section_header_string_table(Elf32_Context *ctx)
     ctx->section_header_string_table_section = add_section(ctx, &header);
     ctx->section_header_string_table_section->data = calloc(1, MAX_STRING_DATA);
     ctx->section_header_string_table_section->section_header.sh_size = 1;
-    ctx->elf_header.e_shstrndx = encode_half(ctx->section_header_string_table_section->section_index);
+    ctx->elf_header.e_shstrndx = ctx->section_header_string_table_section->section_index;
 
     add_string(ctx->section_header_string_table_section, ".shstrtab");
 }
@@ -270,6 +271,28 @@ static int add_string(Elf32_Section *section, char *string)
     section->section_header.sh_size += len;
 
     return result;
+}
+
+static Elf32_Ehdr *encode_ehdr(Elf32_Ehdr *header)
+{
+    static Elf32_Ehdr result;
+
+    memcpy(&result.e_ident, &header->e_ident, EI_NIDENT);
+    result.e_type = encode_half(header->e_type);
+    result.e_machine = encode_half(header->e_machine);
+    result.e_version = encode_word(header->e_version);
+    result.e_entry = encode_addr(header->e_entry);
+    result.e_phoff = encode_off(header->e_phoff);
+    result.e_shoff = encode_off(header->e_shoff);
+    result.e_flags = encode_word(header->e_flags);
+    result.e_ehsize = encode_half(header->e_ehsize);
+    result.e_phentsize = encode_half(header->e_phentsize);
+    result.e_phnum = encode_half(header->e_phnum);
+    result.e_shentsize = encode_half(header->e_shentsize);
+    result.e_shnum = encode_half(header->e_shnum);
+    result.e_shstrndx = encode_half(header->e_shstrndx);
+
+    return &result;
 }
 
 static Elf32_Half encode_half(Elf32_Half half)
