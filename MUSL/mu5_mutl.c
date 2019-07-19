@@ -2368,6 +2368,10 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
     {
         elf_add_global_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STT_OBJECT, SHN_ABS);
     }
+    else if (BT_IS_IMPORT(T))
+    {
+        elf_add_global_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STT_OBJECT, SHN_UNDEF);
+    }
 }
 
 void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
@@ -2437,6 +2441,10 @@ void declare_proc(VECTOR *name, uint32 address, int NAT, int module)
     if (BT_IS_EXPORT(NAT))
     {
         elf_add_global_symbol(elf_module_context, sym->name, 0, 4, STT_FUNC, current_elf_code_section);
+    }
+    else if (BT_IS_IMPORT(NAT))
+    {
+        elf_add_global_symbol(elf_module_context, sym->name, 0, 4, STT_FUNC, SHN_UNDEF);
     }
 }
 
