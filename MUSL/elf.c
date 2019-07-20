@@ -6,12 +6,12 @@
 
 #define MAX_SYMBOLS 1024
 #define MAX_STRING_DATA 10240
+#define MAX_SECTIONS 32
 
 typedef struct elf32_section
 {
     Elf32_Shdr section_header;
     Elf32_Half section_index;
-    struct elf32_section *next_section;
     void *data;
     void *(*encode_data_entry)(void *);
     void *(*decode_data_entry)(void *);
@@ -23,8 +23,7 @@ typedef struct elf32_context
     Elf32_Section *symbol_table_section;
     Elf32_Section *section_header_string_table_section;
     Elf32_Section *string_table_section;
-    Elf32_Section *section_list_head;
-    Elf32_Section *section_list_tail;
+    Elf32_Section section_table[MAX_SECTIONS];
 } Elf32_Context;
 
 static Elf32_Section *add_section(Elf32_Context *ctx, Elf32_Shdr *header);
@@ -77,7 +76,7 @@ void *elf_new_file(Elf32_Half e_type, Elf32_Half e_machine, Elf32_Addr e_entry, 
     return ctx;
 }
 
-int elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr address)
+int elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data)
 {
     Elf32_Context *ctx = context;
     Elf32_Shdr header;
@@ -89,8 +88,7 @@ int elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr address
     header.sh_addr = address;
     header.sh_entsize = word_size;
     section = add_section(ctx, &header);
-    section->data = calloc(1, 100);
-    section->section_header.sh_size = 100;
+    section->data = data;
     return section->section_index;
 }
 
@@ -108,6 +106,21 @@ int elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address
     section = add_section(ctx, &header);
     section->data = calloc(1, 100);
     section->section_header.sh_size = 100;
+    return section->section_index;
+}
+
+int elf_add_bss_section(void *context, Elf32_Word word_size, Elf32_Addr address)
+{
+    Elf32_Context *ctx = context;
+    Elf32_Shdr header;
+    Elf32_Section *section;
+    memset(&header, 0, sizeof(Elf32_Shdr));
+    header.sh_name = add_string(ctx->section_header_string_table_section, ".bss");
+    header.sh_type = SHT_NOBITS;
+    header.sh_flags = SHF_ALLOC | SHF_WRITE;
+    header.sh_addr = address;
+    header.sh_entsize = word_size;
+    section = add_section(ctx, &header);
     return section->section_index;
 }
 
@@ -131,11 +144,23 @@ void elf_add_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Wo
     ctx->symbol_table_section->section_header.sh_size += sizeof(Elf32_Sym);
 }
 
+void elf_add_binary_data_to_section(void *context, Elf32_Half section_index, char *data, int length)
+{
+    Elf32_Context *ctx = context;
+    Elf32_Section *section = &ctx->section_table[section_index];
+    if (section->section_header.sh_type != SHT_NOBITS)
+    {
+        memcpy((char *)section->data + section->section_header.sh_size, data, length);
+    }
+    section->section_header.sh_size += length;
+}
+
 void elf_write_file(void *context, char *file_name)
 {
     Elf32_Off section_offset;
     int num_sections;
     Elf32_Context *ctx = context;
+    int section_index;
     FILE *f = fopen(file_name, "wb");
 
     num_sections = ctx->elf_header.e_shnum;
@@ -145,10 +170,10 @@ void elf_write_file(void *context, char *file_name)
     fwrite(encode_ehdr(&ctx->elf_header), sizeof(ctx->elf_header), 1, f);
 
     /* write section table */
-    Elf32_Section *section = ctx->section_list_head;
     section_offset = sizeof(Elf32_Ehdr) + (num_sections * sizeof(Elf32_Shdr));
-    while (section != NULL)
+    for (section_index = 0; section_index < num_sections; section_index++)
     {
+        Elf32_Section *section = &ctx->section_table[section_index];
         if (!is_empty_section(section))
         {
             section->section_header.sh_offset = section_offset;
@@ -157,30 +182,31 @@ void elf_write_file(void *context, char *file_name)
         section_offset += section->section_header.sh_size;
         section->section_header.sh_size = section->section_header.sh_size;
         fwrite(encode_shdr(&section->section_header), sizeof(Elf32_Shdr), 1, f);
-        section = section->next_section;
     }
 
     /* write sections */
-    section = ctx->section_list_head;
-    while (section != NULL)
+    for (section_index = 0; section_index < num_sections; section_index++)
     {
+        Elf32_Section *section = &ctx->section_table[section_index];
         int section_size = section->section_header.sh_size;
         int entry_size = section->section_header.sh_entsize;
-        if (section->encode_data_entry == NULL)
+        if (section->section_header.sh_type != SHT_NOBITS)
         {
-            fwrite(section->data, 1, section_size, f);
-        }
-        else
-        {
-            int i;
-            int n = section_size / entry_size;
-            for (i = 0; i < n; i++)
+            if (section->encode_data_entry == NULL)
             {
-                void *buffer = section->encode_data_entry((char *)(section->data) + (i * entry_size));
-                fwrite(buffer, entry_size, 1, f);
+                fwrite(section->data, 1, section_size, f);
+            }
+            else
+            {
+                int i;
+                int n = section_size / entry_size;
+                for (i = 0; i < n; i++)
+                {
+                    void *buffer = section->encode_data_entry((char *)(section->data) + (i * entry_size));
+                    fwrite(buffer, entry_size, 1, f);
+                }
             }
         }
-        section = section->next_section;
     }
 
     fclose(f);
@@ -189,24 +215,18 @@ void elf_write_file(void *context, char *file_name)
 static Elf32_Section *add_section(Elf32_Context *ctx, Elf32_Shdr *header)
 {
     ctx->elf_header.e_shnum++;
-    Elf32_Section *new_section = (Elf32_Section *)malloc(sizeof(Elf32_Section));
+    if (ctx->elf_header.e_shnum >= MAX_SECTIONS)
+    {
+        perror("Too many sections");
+        exit(1);
+    }
+
+    Elf32_Section *new_section = &ctx->section_table[ctx->elf_header.e_shnum - 1];
     memcpy(&new_section->section_header, header, sizeof(Elf32_Shdr));
     new_section->data = NULL;
-    new_section->next_section = NULL;
     new_section->section_index = ctx->elf_header.e_shnum - 1;
     new_section->encode_data_entry = NULL;
     new_section->decode_data_entry = NULL;
-
-    if (ctx->section_list_head == NULL)
-    {
-        ctx->section_list_head = new_section;
-    }
-    else
-    {
-        ctx->section_list_tail->next_section = new_section;
-    }
-
-    ctx->section_list_tail = new_section;
 
     return new_section;
 }

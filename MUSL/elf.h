@@ -180,7 +180,9 @@ typedef struct elf32_sym {
 } Elf32_Sym;
 
 void *elf_new_file(Elf32_Half e_type, Elf32_Half e_machine, Elf32_Addr e_entry, Elf32_Word e_flags);
-int elf_add_text_section(void *context, Elf32_Word word_size, Elf32_Addr address);
+int elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data);
 int elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address);
+int elf_add_bss_section(void *context, Elf32_Word word_size, Elf32_Addr address);
 void elf_add_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, Elf32_Half section_index);
+void elf_add_binary_data_to_section(void *context, Elf32_Half section_index, char *data, int length);
 void elf_write_file(void *context, char *file_name);

@@ -502,6 +502,7 @@ typedef struct
 typedef struct
 {
     int in_use;
+    int elf_section_index;
     uint16 segment_address;
     uint16 words[MAX_SEGMENT_SIZE];
     uint32 first_word; /* first word in the segment where the current module starts during import/link of modules */
@@ -524,7 +525,6 @@ typedef struct
 } GLOBALREF;
 
 static int logging;
-static FILE *out_file;
 static char out_file_name[_MAX_PATH + 1];
 static int is_library;
 static uint32 start_address;
@@ -551,8 +551,6 @@ static int loop_level = -1;
 static AREA areas[MAX_AREAS];
 static uint8 current_code_area = 1;
 static uint8 current_data_area = 0;
-static int current_elf_code_section;
-static int current_elf_data_section;
 static SEGMENT segments[MAX_SEGMENTS];
 static int imported_module_count;
 static MODULE module_table[MAX_IMPORT_MODULES];
@@ -668,15 +666,6 @@ static char *format_operand(uint16 n)
     return buf;
 }
 
-static void write_16_bit_word(uint16 word)
-{
-    uint8 byte;
-    byte = (word >> 8) & 0xFF;
-    fwrite(&byte, 1, 1, out_file);
-    byte = word & 0xFF;
-    fwrite(&byte, 1, 1, out_file);
-}
-
 static void write_16_bit_word_to_buffer(uint8 *buffer, uint16* buffer_size, uint16 value)
 {
     buffer[(*buffer_size)++] = (value >> 8) & 0xFF;
@@ -703,127 +692,6 @@ static void write_vector_to_buffer(uint8 *buffer, uint16* buffer_size, VECTOR *v
     buffer[(*buffer_size)++] = len;
     memcpy(&buffer[*buffer_size], value->buffer, len);
     (*buffer_size) += len;
-}
-
-static void write_module_header(void)
-{
-    int i;
-    uint8 buffer[MAX_HEADER_SIZE_BYTES];
-    uint16 buffer_size = 0;
-    uint16 exported_symbol_count = 0;
-    uint16 segment_count = 0;
-    uint16 relocation_count = 0;
-    BLOCK *block = &block_stack[0];
-    MODULE *module;
-
-    /* write module table */
-    write_32_bit_word_to_buffer(buffer, &buffer_size, module_global_address_location);
-
-    for (i = 0; i < imported_module_count; i++)
-    {
-        module = &module_table[i];
-        write_string_to_buffer(buffer, &buffer_size, module->name);
-    }
-
-    /* write segment table */
-    for (i = 0; i < MAX_SEGMENTS; i++)
-    {
-        SEGMENT *segment = &segments[i];
-        if (segment->in_use)
-        {
-            write_16_bit_word_to_buffer(buffer, &buffer_size, i);
-            write_16_bit_word_to_buffer(buffer, &buffer_size, segment->segment_address);
-            write_16_bit_word_to_buffer(buffer, &buffer_size, segment->size);
-            write_16_bit_word_to_buffer(buffer, &buffer_size, segment->kind);
-            write_16_bit_word_to_buffer(buffer, &buffer_size, segment->next_word * 2);
-            segment_count++;
-        }
-    }
-
-    /* write relocation table */
-    for (i = 0; i <= global_ref_count; i++)
-    {
-        GLOBALREF *ref = &global_refs[i];
-        write_16_bit_word_to_buffer(buffer, &buffer_size, ref->referenced_segment_number);
-        write_32_bit_word_to_buffer(buffer, &buffer_size, ref->referencing_address);
-    }
-
-    //for (i = 0; i <= block->last_mutl_var; i++)
-    //{
-    //    MUTLSYMBOL *sym = &mutl_var[i];
-    //    switch (sym->symbol_type)
-    //    {
-    //        case SYM_PROC:
-    //            relocation_count++;
-    //            write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.proc.segment_number);
-    //            write_32_bit_word_to_buffer(buffer, &buffer_size, sym->data.proc.global_location);
-    //            break;
-    //    }
-    //}
-
-    /* write symbol table */
-    for (i = 0; i <= block->last_mutl_var; i++)
-    {
-        MUTLSYMBOL *sym = &mutl_var[i];
-        switch (sym->symbol_type)
-        {
-            case SYM_LITERAL:
-                if (BT_IS_EXPORT(sym->data.lit.data_type))
-                {
-                    exported_symbol_count++;
-                    write_string_to_buffer(buffer, &buffer_size, sym->name);
-                    buffer[buffer_size++] = sym->symbol_type & 0xFF;
-                    write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.lit.data_type);
-                    write_vector_to_buffer(buffer, &buffer_size, &sym->data.lit.value);
-                }
-                break;
-
-            case SYM_VARIABLE:
-                if (BT_IS_EXPORT(sym->data.var.data_type))
-                {
-                    exported_symbol_count++;
-                    write_string_to_buffer(buffer, &buffer_size, sym->name);
-                    buffer[buffer_size++] = sym->symbol_type & 0xFF;
-                    write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.var.data_type);
-                    write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.var.dimension);
-                    write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.var.position);
-                    buffer[buffer_size++] = sym->data.var.is_vstore;
-                }
-                break;
-
-            case SYM_PROC:
-                if (BT_IS_EXPORT(sym->data.proc.nature))
-                {
-                    exported_symbol_count++;
-                    write_string_to_buffer(buffer, &buffer_size, sym->name);
-                    buffer[buffer_size++] = sym->symbol_type & 0xFF;
-                    write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.proc.address >> 16);
-                    write_16_bit_word_to_buffer(buffer, &buffer_size, sym->data.proc.address & 0xFFFF);
-                }
-                break;
-        }
-    }
-
-    write_16_bit_word(0xFFFF);
-    write_16_bit_word(buffer_size + ((is_library) ? 14 : 18)); /* buffer size starts from the actual module table */
-    if (is_library)
-    {
-        write_16_bit_word(LIBRARY_MODULE);
-    }
-    else
-    {
-        write_16_bit_word(PROGRAM_MODULE);
-        write_16_bit_word(start_address >> 16);
-        write_16_bit_word(start_address & 0xFFFF);
-    }
-
-    write_16_bit_word(imported_module_count);
-    write_16_bit_word(segment_count);
-    write_16_bit_word(relocation_count);
-    write_16_bit_word(exported_symbol_count);
-    write_16_bit_word(block_stack[0].local_names_space * 4);
-    fwrite(buffer, 1, buffer_size, out_file);
-    printf("Header exported %d symbols\n", exported_symbol_count);
 }
 
 SEGMENT *get_segment_for_area(uint16 area_number)
@@ -857,6 +725,11 @@ SEGMENT *get_segment_by_segment_number(uint16 segment_number)
     return segment;
 }
 
+static uint16 encode_16_bit_word(uint16 word)
+{
+    return ((word >> 8) & 0xFF) | ((word & 0xFF) << 8);
+}
+
 static void plant_16_bit_word(uint16 area_number, uint16 word)
 {
     SEGMENT *segment = get_segment_for_area(area_number);
@@ -864,28 +737,30 @@ static void plant_16_bit_word(uint16 area_number, uint16 word)
     {
         fatal("Segment %d is full\n", segment->segment_address);
     }
-    segment->words[segment->next_word++] = word;
+    
+    uint16 encoded_word = encode_16_bit_word(word);
+    elf_add_binary_data_to_section(elf_module_context, segment->elf_section_index, &encoded_word, 2);
 }
 
 static void plant_16_bit_word_update(uint16 area_number, uint16 address, uint16 word)
 {
     SEGMENT *segment = get_segment_for_area(area_number);
-    segment->words[address] = word;
+    segment->words[address] = encode_16_bit_word(word);
 }
 
 static void plant_16_bit_word_update_by_address(uint32 address, uint16 word)
 {
     SEGMENT *segment = get_segment_by_segment_number(address >> 16);
     uint16 offset = address & 0xFFFF;
-    segment->words[offset] = word;
+    segment->words[offset] = encode_16_bit_word(word);
 }
 
 static void plant_32_bit_word_update_by_address(uint32 address, uint32 word)
 {
     SEGMENT *segment = get_segment_by_segment_number(address >> 16);
     uint16 offset = address & 0xFFFF;
-    segment->words[offset] = word >> 16;
-    segment->words[offset + 1] = word & 0xFFFF;
+    segment->words[offset] = encode_16_bit_word(word >> 16);
+    segment->words[offset + 1] = encode_16_bit_word(word & 0xFFFF);
 }
 
 static void plant_16_bit_code_word(uint16 word)
@@ -2119,8 +1994,26 @@ void TLSEG(int32 N, int32 S, int32 RTA, int32 CTA, int32 NL)
 
 void TLLOAD(int SN, int AN)
 {
+    SEGMENT *segment;
     log(LOG_MEMORY, "TL.LOAD segment %d area %d\n", SN, AN);
     areas[AN].segment_index = SN;/* TODO: the code here is naive, it should not have a 1:1 mapping from area to segment, we should scan segment table for a free entry */
+
+    if (AN == current_code_area)
+    {
+        segment = get_segment_for_area(current_code_area);
+        if (segment->elf_section_index == 0)
+        {
+            segment->elf_section_index = elf_add_code_section(elf_module_context, 2, next_instruction_full_address(), (char *)segment->words);
+        }
+    }
+    else if (AN == current_data_area)
+    {
+        segment = get_segment_for_area(current_data_area);
+        if (segment->elf_section_index == 0)
+        {
+            segment->elf_section_index = elf_add_bss_section(elf_module_context, 4, next_data_address());
+        }
+    }
 }
 
 void TLCODEAREA(int AN)
@@ -2142,6 +2035,9 @@ void TLDATAAREA(int AN)
 void TL(int M, char *FN, int DZ)
 {
     int i;
+
+    strcpy(out_file_name, FN);
+
     is_library = (M & 0x4) == 0x4;
     if (is_library)
     {
@@ -2155,19 +2051,14 @@ void TL(int M, char *FN, int DZ)
         printf("Compiling a program. Start address is %04X\n", start_address);
     }
 
-    current_elf_code_section = elf_add_code_section(elf_module_context, 2, SHF_ALLOC | SHF_EXECINSTR, next_instruction_full_address());
-    current_elf_data_section = elf_add_data_section(elf_module_context, 4, SHF_WRITE | SHF_EXECINSTR, next_data_address());
-
-    strcpy(out_file_name, FN);
-    current_literal.buffer = current_literal_buf;
-    out_file = fopen(out_file_name, "wb");
-
     for (i = 0; i < MAX_SEGMENTS; i++)
     {
         segments[i].in_use = 0;
     }
 
     TLSEG(0, MAX_SEGMENT_SIZE, -1, -1, 6);
+
+    current_literal.buffer = current_literal_buf;
 }
 
 void TLEND(void)
@@ -2180,25 +2071,7 @@ void TLEND(void)
         plant_16_bit_word_update_by_address(stack_front_load_address, (next_data_address() + 4)/4);
     }
 
-    elf_write_file(elf_module_context, "test.elf"); /* TODO: change to out_file_name */
-    write_module_header();
-
-    for (s = 0; s < MAX_SEGMENTS; s++)
-    {
-        SEGMENT *segment = &segments[s];
-        if (segment->next_word > 0)
-        {
-            write_16_bit_word(segment->segment_address);
-            write_16_bit_word(segment->next_word);
-            for (i = 0; i < segment->next_word; i++)
-            {
-                write_16_bit_word(segment->words[i]);
-            }
-            printf("Segment 0x%d written with %d words\n", segment->segment_address, segment->next_word);
-        }
-    }
-
-    fclose(out_file);
+    elf_write_file(elf_module_context, out_file_name);
 }
 
 void TLMODULE(void)
@@ -2440,7 +2313,8 @@ void declare_proc(VECTOR *name, uint32 address, int NAT, int module)
 
     if (BT_IS_EXPORT(NAT))
     {
-        elf_add_global_symbol(elf_module_context, sym->name, 0, 4, STT_FUNC, current_elf_code_section);
+        SEGMENT *segment = get_segment_for_area(current_code_area);
+        elf_add_global_symbol(elf_module_context, sym->name, 0, 4, STT_FUNC, segment->elf_section_index);
     }
     else if (BT_IS_IMPORT(NAT))
     {
