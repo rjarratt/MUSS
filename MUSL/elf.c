@@ -107,7 +107,7 @@ int elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr address
     return section->section_index;
 }
 
-int elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address)
+int elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data)
 {
     Elf32_Context *ctx = context;
     Elf32_Shdr header;
@@ -119,8 +119,7 @@ int elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address
     header.sh_addr = address;
     header.sh_entsize = word_size;
     section = add_section(ctx, &header);
-    section->data = calloc(1, 100);
-    section->section_header.sh_size = 100;
+    section->data = data;
     return section->section_index;
 }
 

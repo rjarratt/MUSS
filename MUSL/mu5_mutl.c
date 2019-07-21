@@ -2047,7 +2047,7 @@ void TLLOAD(int SN, int AN)
         segment = get_segment_for_area(current_data_area);
         if (segment->elf_section_index == 0)
         {
-            segment->elf_section_index = elf_add_bss_section(elf_module_context, 4, next_data_address());
+            segment->elf_section_index = elf_add_data_section(elf_module_context, 4, segment->run_time_address, (char *)segment->words);
         }
         else
         {

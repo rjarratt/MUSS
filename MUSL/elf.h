@@ -193,7 +193,7 @@ typedef struct elf32_sym {
 void *elf_new_file(Elf32_Half e_type, Elf32_Half e_machine, Elf32_Word e_flags);
 void elf_set_entry(void *context, Elf32_Addr e_entry);
 int elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data);
-int elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address);
+int elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data);
 int elf_add_bss_section(void *context, Elf32_Word word_size, Elf32_Addr address);
 void elf_update_section(void *context, Elf32_Half section_index, Elf32_Addr address);
 void elf_add_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, Elf32_Half section_index);
