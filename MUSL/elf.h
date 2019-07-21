@@ -7,6 +7,17 @@ typedef unsigned int   Elf32_Off;
 typedef int            Elf32_SWord;
 typedef unsigned int   Elf32_Word;
 
+/* These constants are for the segment types stored in the image headers */
+#define PT_NULL    0
+#define PT_LOAD    1
+#define PT_DYNAMIC 2
+#define PT_INTERP  3
+#define PT_NOTE    4
+#define PT_SHLIB   5
+#define PT_PHDR    6
+#define PT_LOPROC  0x70000000
+#define PT_HIPROC  0x7fffffff
+#
 /* These constants define the different elf file types */
 #define ET_NONE   0
 #define ET_REL    1
@@ -179,10 +190,16 @@ typedef struct elf32_sym {
     Elf32_Half	st_shndx;
 } Elf32_Sym;
 
-void *elf_new_file(Elf32_Half e_type, Elf32_Half e_machine, Elf32_Addr e_entry, Elf32_Word e_flags);
+void *elf_new_file(Elf32_Half e_type, Elf32_Half e_machine, Elf32_Word e_flags);
+void elf_set_entry(void *context, Elf32_Addr e_entry);
 int elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data);
 int elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address);
 int elf_add_bss_section(void *context, Elf32_Word word_size, Elf32_Addr address);
+void elf_update_section(void *context, Elf32_Half section_index, Elf32_Addr address);
 void elf_add_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, Elf32_Half section_index);
 void elf_add_binary_data_to_section(void *context, Elf32_Half section_index, char *data, int length);
 void elf_write_file(void *context, char *file_name);
+void *elf_read_file(FILE *f, int check_is_elf);
+void elf_get_elf_header(void *context, Elf32_Ehdr *header);
+void elf_get_program_header(void *context, Elf32_Phdr *header, int header_index);
+void elf_get_section_header(void *context, Elf32_Shdr *header, char **data, int section_index);

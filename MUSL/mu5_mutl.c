@@ -23,6 +23,13 @@ space efficient.
 
 */
 
+/* ELF Notes
+
+To make things simple all addresses are stored in the ELF as byte addresses. They can then be adjusted when loading.
+
+*/
+
+
 /* Module format
 
 This format is made-up and is for use with the MU5 emulator and the MUSL cross compiler for Windows.
@@ -1988,7 +1995,11 @@ void TLSEG(int32 N, int32 S, int32 RTA, int32 CTA, int32 NL)
     seg->segment_address = actual_rta;
     seg->size = S;
     seg->kind = NL;
-    seg->run_time_address = actual_rta;
+    seg->run_time_address = RTA;
+    if (seg->elf_section_index!= 0)
+    {
+        elf_update_section(elf_module_context, seg->elf_section_index, seg->run_time_address);
+    }
     log(LOG_MEMORY, "TL.SEG MUTL segment %d, segment address %d, size %d run-time address 0x%08X\n", N, seg->segment_address, seg->size, seg->run_time_address);
 }
 
@@ -2003,7 +2014,11 @@ void TLLOAD(int SN, int AN)
         segment = get_segment_for_area(current_code_area);
         if (segment->elf_section_index == 0)
         {
-            segment->elf_section_index = elf_add_code_section(elf_module_context, 2, next_instruction_full_address(), (char *)segment->words);
+            segment->elf_section_index = elf_add_code_section(elf_module_context, 2, segment->run_time_address, (char *)segment->words);
+        }
+        else
+        {
+            elf_update_section(elf_module_context, segment->elf_section_index, segment->run_time_address);
         }
     }
     else if (AN == current_data_area)
@@ -2012,6 +2027,10 @@ void TLLOAD(int SN, int AN)
         if (segment->elf_section_index == 0)
         {
             segment->elf_section_index = elf_add_bss_section(elf_module_context, 4, next_data_address());
+        }
+        else
+        {
+            elf_update_section(elf_module_context, segment->elf_section_index, segment->run_time_address);
         }
     }
 }
@@ -2047,7 +2066,7 @@ void TL(int M, char *FN, int DZ)
     else
     {
         start_address = next_instruction_full_address();
-        elf_module_context = elf_new_file(ET_REL, 0, start_address, 0);
+        elf_module_context = elf_new_file(ET_EXEC, 0, start_address, 0);
         printf("Compiling a program. Start address is %04X\n", start_address);
     }
 
@@ -2082,6 +2101,7 @@ void TLMODULE(void)
     
     if (!is_library)
     {
+        elf_set_entry(elf_module_context, next_instruction_full_address());
         plant_org_order_extended(F_SF_LOAD, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
         stack_front_load_address = next_instruction_full_address();
         plant_16_bit_code_word(0);
