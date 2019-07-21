@@ -701,6 +701,12 @@ static void write_vector_to_buffer(uint8 *buffer, uint16* buffer_size, VECTOR *v
     (*buffer_size) += len;
 }
 
+uint16 get_segment_number_from_full_address(uint32 address)
+{
+    uint16 result = address >> 16;
+    return result;
+}
+
 SEGMENT *get_segment_for_area(uint16 area_number)
 {
     AREA *area;
@@ -732,6 +738,12 @@ SEGMENT *get_segment_by_segment_number(uint16 segment_number)
     return segment;
 }
 
+SEGMENT *get_segment_by_full_address(uint32 address)
+{
+    SEGMENT *segment = get_segment_by_segment_number(get_segment_number_from_full_address(address));
+    return segment;
+}
+
 static uint16 encode_16_bit_word(uint16 word)
 {
     return ((word >> 8) & 0xFF) | ((word & 0xFF) << 8);
@@ -757,14 +769,14 @@ static void plant_16_bit_word_update(uint16 area_number, uint16 address, uint16 
 
 static void plant_16_bit_word_update_by_address(uint32 address, uint16 word)
 {
-    SEGMENT *segment = get_segment_by_segment_number(address >> 16);
+    SEGMENT *segment = get_segment_by_full_address(address);
     uint16 offset = address & 0xFFFF;
     segment->words[offset] = encode_16_bit_word(word);
 }
 
 static void plant_32_bit_word_update_by_address(uint32 address, uint32 word)
 {
-    SEGMENT *segment = get_segment_by_segment_number(address >> 16);
+    SEGMENT *segment = get_segment_by_full_address(address);
     uint16 offset = address & 0xFFFF;
     segment->words[offset] = encode_16_bit_word(word >> 16);
     segment->words[offset + 1] = encode_16_bit_word(word & 0xFFFF);
@@ -1990,7 +2002,15 @@ void TLSEG(int32 N, int32 S, int32 RTA, int32 CTA, int32 NL)
        This is NOT a proper solution, I am still not sure how to deal with TLSEG being called after TLMODULE.
     */
     SEGMENT *seg = &segments[N];
-    uint32 actual_rta = (RTA == -1) ? seg->segment_address : RTA >> 16;
+    uint32 actual_rta = (RTA == -1) ? seg->segment_address : get_segment_number_from_full_address(RTA);
+
+    if (seg == get_segment_by_full_address(start_address))
+    {
+        /* update start address*/
+        start_address = actual_rta << 16 | (start_address & 0xFFFF);
+        elf_set_entry(elf_module_context, start_address);
+    }
+
     seg->in_use = 1;
     seg->segment_address = actual_rta;
     seg->size = S;
@@ -2000,6 +2020,7 @@ void TLSEG(int32 N, int32 S, int32 RTA, int32 CTA, int32 NL)
     {
         elf_update_section(elf_module_context, seg->elf_section_index, seg->run_time_address);
     }
+
     log(LOG_MEMORY, "TL.SEG MUTL segment %d, segment address %d, size %d run-time address 0x%08X\n", N, seg->segment_address, seg->size, seg->run_time_address);
 }
 
@@ -2065,9 +2086,8 @@ void TL(int M, char *FN, int DZ)
     }
     else
     {
-        start_address = next_instruction_full_address();
-        elf_module_context = elf_new_file(ET_EXEC, 0, start_address, 0);
-        printf("Compiling a program. Start address is %04X\n", start_address);
+        elf_module_context = elf_new_file(ET_EXEC, 0, 0);
+        printf("Compiling a program\n");
     }
 
     for (i = 0; i < MAX_SEGMENTS; i++)
@@ -2101,7 +2121,8 @@ void TLMODULE(void)
     
     if (!is_library)
     {
-        elf_set_entry(elf_module_context, next_instruction_full_address());
+        start_address = next_instruction_full_address();
+        elf_set_entry(elf_module_context, start_address);
         plant_org_order_extended(F_SF_LOAD, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
         stack_front_load_address = next_instruction_full_address();
         plant_16_bit_code_word(0);
@@ -2853,7 +2874,7 @@ void link_module(FILE *f)
         {
             SEGMENT *code_seg = get_segment_by_segment_number(relocation_table[i].referenced_segment_number);
             uint16 offset = relocation_table[i].referencing_address & 0xFFFF;
-            code_seg->words[code_seg->first_word + offset] = global_data_address >> 16;
+            code_seg->words[code_seg->first_word + offset] = get_segment_number_from_full_address(global_data_address);
             code_seg->words[code_seg->first_word + offset + 1] = (global_data_address & 0xFFFF) >> 2; /* scale from 16-bit word to 64-bit as XNB is in 64-bit units */
         }
     }
@@ -2969,7 +2990,7 @@ void import_module_exports(FILE * f)
                 uint32 relocated_address;
                 SEGMENT *seg;
                 sym_address = read_32_bit_word(f);
-                seg = get_segment_by_segment_number(sym_address >> 16);
+                seg = get_segment_by_full_address(sym_address);
                 relocated_address = sym_address + seg->first_word;
                 declare_proc(&name, relocated_address, 0, imported_module_count - 1);
                 break;
