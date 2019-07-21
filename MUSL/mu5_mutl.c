@@ -759,6 +759,7 @@ static void plant_16_bit_word(uint16 area_number, uint16 word)
     
     uint16 encoded_word = encode_16_bit_word(word);
     elf_add_binary_data_to_section(elf_module_context, segment->elf_section_index, &encoded_word, 2);
+    segment->next_word++;
 }
 
 static void plant_16_bit_word_update(uint16 area_number, uint16 address, uint16 word)
@@ -2008,6 +2009,7 @@ void TLSEG(int32 N, int32 S, int32 RTA, int32 CTA, int32 NL)
     {
         /* update start address*/
         start_address = actual_rta << 16 | (start_address & 0xFFFF);
+        stack_front_load_address = actual_rta << 16 | (stack_front_load_address & 0xFFFF);
         elf_set_entry(elf_module_context, start_address);
     }
 
@@ -2087,6 +2089,8 @@ void TL(int M, char *FN, int DZ)
     else
     {
         elf_module_context = elf_new_file(ET_EXEC, 0, 0);
+        start_address = next_instruction_full_address();
+        elf_set_entry(elf_module_context, start_address);
         printf("Compiling a program\n");
     }
 
@@ -2121,8 +2125,6 @@ void TLMODULE(void)
     
     if (!is_library)
     {
-        start_address = next_instruction_full_address();
-        elf_set_entry(elf_module_context, start_address);
         plant_org_order_extended(F_SF_LOAD, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
         stack_front_load_address = next_instruction_full_address();
         plant_16_bit_code_word(0);
