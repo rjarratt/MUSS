@@ -416,7 +416,8 @@ Segments
 
 #define UNKNOWN_ADDRESS 0x7FFF
 
-typedef struct { void(*op)(int); } MUTLOP;
+typedef enum { OP_NULL, OP_REGULAR, OP_MODE } OPERANDTYPE;
+typedef struct { void(*op)(int); OPERANDTYPE op_type; } MUTLOP;
 
 typedef enum { SYM_VARIABLE, SYM_LITERAL, SYM_LABEL, SYM_PROC, SYM_TYPE } SYMBOLTYPE;
 
@@ -1521,7 +1522,7 @@ void check_global_ref(int N)
     if (IS_MUTL_VAR(N))
     {
         mutl_sym = &mutl_var[N];
-        if (mutl_sym->block_level == 0 && (mutl_sym->symbol_type == SYM_VARIABLE))
+        if (mutl_sym->block_level == 0 && (mutl_sym->symbol_type == SYM_VARIABLE) && !mutl_sym->data.var.is_vstore)
         {
             if (global_ref_count >= MAX_RELOCATION_ENTRIES)
             {
@@ -1847,7 +1848,8 @@ void op_org_aconv(int N)
     int kind = (N >> 14) & 1;
     int from_amode = amode;
     int to_amode = N;
-    log(LOG_PLANT, "Aconv kind=%d from %s to %s\n", kind, format_basic_type(from_amode), format_basic_type(to_amode));
+    log(LOG_PLANT, "Aconv kind=%d from %s", kind, format_basic_type(from_amode));
+    log(LOG_PLANT, " to %s\n", format_basic_type(to_amode));
     if (type_is_vector(from_amode) && (BT_MODE(to_amode) == BT_MODE_SIGNED_INTEGER || BT_MODE(to_amode) == BT_MODE_UNSIGNED_INTEGER))
     {
         amode = to_amode;
@@ -1862,9 +1864,11 @@ void op_org_aconv(int N)
         plant_32_bit_code_word(0x00FFFFFF);
         plant_pop();
     }
-    else if ((BT_MODE(from_amode) == BT_MODE_SIGNED_INTEGER || BT_MODE(from_amode) == BT_MODE_UNSIGNED_INTEGER)
-        &&
-        (BT_MODE(to_amode) == BT_MODE_SIGNED_INTEGER || BT_MODE(to_amode) == BT_MODE_UNSIGNED_INTEGER))
+    else if ((BT_MODE(from_amode) == BT_MODE(to_amode)) || (BT_MODE(from_amode) == BT_MODE_SIGNED_INTEGER && BT_MODE(to_amode) == BT_MODE_UNSIGNED_INTEGER))
+    {
+        /* do nothing */
+    }
+    else if ((BT_MODE(from_amode) == BT_MODE_UNSIGNED_INTEGER) && (BT_MODE(to_amode) == BT_MODE_SIGNED_INTEGER))
     {
         plant_stack_a();
         amode = to_amode;
@@ -1952,38 +1956,38 @@ void op_org_jump_seg(int N)
 
 static MUTLOP mutl_ops[32][4] =
 {
-    { NULL, op_a_store, op_org_stack_link, NULL },
-    { NULL, op_a_load_neg_or_ref, op_org_stack_parameter, op_d_load_ref },
-    { op_b_load, op_a_load, op_org_enter, op_d_load },
-    { NULL, op_a_xor, op_org_return, NULL },
-    { NULL, op_a_and, NULL, op_d_select_element },
-    { NULL, op_a_or, op_org_aconv, NULL },
-    { NULL, op_a_left_shift, op_org_set_amode, NULL },
-    { NULL, NULL, op_org_stack, NULL },
-    { NULL, op_a_add, NULL, NULL },
-    { NULL, op_a_sub, op_org_jump_equal, NULL },
-    { NULL, op_a_reverse_sub, op_org_jump_not_equal, NULL },
-    { NULL, op_a_mul, op_org_jump_greater_than_or_equal, NULL },
-    { NULL, op_a_div, op_org_jump_less_than, NULL },
-    { NULL, NULL, op_org_jump_less_than_or_equal, NULL },
-    { NULL, NULL, op_org_jump_greater_than, NULL },
-    { NULL, op_a_compare, op_org_jump_seg, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, op_a_xor_store, NULL, NULL },
-    { NULL, op_a_and_store, NULL, NULL },
-    { NULL, op_a_or_store, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, op_a_add_store, NULL, NULL },
-    { NULL, op_a_sub_store, NULL, NULL },
-    { NULL, op_a_reverse_sub_store, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL },
-    { NULL, NULL, NULL, NULL }
+    { { NULL, OP_NULL },         { op_a_store, OP_REGULAR },            { op_org_stack_link, OP_REGULAR },                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { op_a_load_neg_or_ref, OP_REGULAR },  { op_org_stack_parameter, OP_REGULAR },           { op_d_load_ref, OP_REGULAR } },
+    { { op_b_load, OP_REGULAR }, { op_a_load, OP_REGULAR },             { op_org_enter, OP_REGULAR },                     { op_d_load, OP_REGULAR } },
+    { { NULL, OP_NULL },         { op_a_xor, OP_REGULAR },              { op_org_return, OP_REGULAR },                    { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { op_a_and, OP_REGULAR },              { NULL, OP_NULL },                                { op_d_select_element, OP_REGULAR } },
+    { { NULL, OP_NULL },         { op_a_or, OP_REGULAR },               { op_org_aconv, OP_MODE},                         { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { op_a_left_shift, OP_REGULAR },       { op_org_set_amode, OP_MODE},                     { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { NULL, OP_NULL },                     { op_org_stack, OP_REGULAR },                     { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { op_a_add, OP_REGULAR },              { NULL, OP_NULL },                                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { op_a_sub, OP_REGULAR },              { op_org_jump_equal, OP_REGULAR },                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { op_a_reverse_sub, OP_REGULAR },      { op_org_jump_not_equal, OP_REGULAR },            { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { op_a_mul, OP_REGULAR },              { op_org_jump_greater_than_or_equal, OP_REGULAR },{ NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { op_a_div, OP_REGULAR },              { op_org_jump_less_than, OP_REGULAR },            { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { NULL, OP_NULL },                     { op_org_jump_less_than_or_equal, OP_REGULAR },   { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { NULL, OP_NULL },                     { op_org_jump_greater_than, OP_REGULAR },         { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { op_a_compare, OP_REGULAR },          { op_org_jump_seg, OP_REGULAR },                  { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { NULL, OP_NULL },                     { NULL, OP_NULL },                                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { NULL, OP_NULL },                     { NULL, OP_NULL },                                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { NULL, OP_NULL },                     { NULL, OP_NULL },                                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { op_a_xor_store, OP_REGULAR },        { NULL, OP_NULL },                                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { op_a_and_store, OP_REGULAR },        { NULL, OP_NULL },                                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { op_a_or_store, OP_REGULAR },         { NULL, OP_NULL },                                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { NULL, OP_NULL },                     { NULL, OP_NULL },                                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { NULL, OP_NULL },                     { NULL, OP_NULL },                                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { op_a_add_store, OP_REGULAR },        { NULL, OP_NULL },                                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { op_a_sub_store, OP_REGULAR },        { NULL, OP_NULL },                                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { op_a_reverse_sub_store, OP_REGULAR },{ NULL, OP_NULL },                                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { NULL, OP_NULL },                     { NULL, OP_NULL },                                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { NULL, OP_NULL },                     { NULL, OP_NULL },                                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { NULL, OP_NULL },                     { NULL, OP_NULL },                                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { NULL, OP_NULL },                     { NULL, OP_NULL },                                { NULL, OP_NULL } },
+    { { NULL, OP_NULL },         { NULL, OP_NULL },                     { NULL, OP_NULL },                                { NULL, OP_NULL } }
 };
 
 void set_literal_value(t_uint64 val, int size)
@@ -2662,7 +2666,10 @@ void TLPL(int F, int N)
     op = mutl_ops[opcode][data_type].op;
     if (op != NULL)
     {
-        check_global_ref(N);
+        if (mutl_ops[opcode][data_type].op_type == OP_REGULAR)
+        {
+            check_global_ref(N);
+        }
         op(N);
     }
     else
