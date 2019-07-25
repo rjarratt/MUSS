@@ -187,7 +187,7 @@ void elf_write_file(void *context, char *file_name)
 
     num_sections = ctx->elf_header.e_shnum;
 
-    ctx->elf_header.e_phoff = sizeof(ctx->elf_header);
+    ctx->elf_header.e_phoff = (ctx->elf_header.e_type == ET_EXEC) ? sizeof(ctx->elf_header) : 0;
     ctx->elf_header.e_shoff = sizeof(ctx->elf_header) + ctx->elf_header.e_phentsize * ctx->elf_header.e_phnum;
 
     fwrite(encode_ehdr(&ctx->elf_header), sizeof(ctx->elf_header), 1, f);
@@ -399,7 +399,7 @@ static Elf32_Section *add_section(Elf32_Context *ctx, Elf32_Shdr *header)
     new_section->encode_data_entry = NULL;
     new_section->decode_data_entry = NULL;
 
-    if (is_section_loadable(new_section))
+    if (ctx->elf_header.e_type == ET_EXEC && is_section_loadable(new_section))
     {
         ctx->elf_header.e_phnum++;
     }
