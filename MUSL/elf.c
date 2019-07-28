@@ -425,7 +425,7 @@ void elf_get_section_header(void *context, Elf32_Shdr *header, char **data, int 
     *data = ctx->section_table[section_index].data;
 }
 
-void elf_process_defined_symbols(void *context, void *(*process_symbol)(char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other))
+void elf_process_defined_symbols(void *context, void *(*process_symbol)(char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index))
 {
     int sym_index;
     int num_syms;
@@ -434,7 +434,10 @@ void elf_process_defined_symbols(void *context, void *(*process_symbol)(char *na
     for (sym_index = 1; sym_index  < num_syms; sym_index++)
     {
         Elf32_Sym *sym = get_symbol(ctx->symbol_table_section, sym_index);
-        process_symbol(get_string(ctx->string_table_section, sym->st_name), sym->st_value, sym->st_size, ELF_ST_TYPE(sym->st_info), sym->st_other);
+        if (sym->st_shndx != SHN_UNDEF)
+        {
+            process_symbol(get_string(ctx->string_table_section, sym->st_name), sym->st_value, sym->st_size, ELF_ST_TYPE(sym->st_info), sym->st_other, sym->st_shndx);
+        }
     }
 }
 
