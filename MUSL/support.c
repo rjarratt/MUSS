@@ -4,6 +4,7 @@
 #include <memory.h>
 #include "support.h"
 #include "mu5_mutl.h"
+#include "mu5_mutl_link.h"
 static FILE *CurrentInputStream = NULL;
 static FILE *CurrentOutputStream = NULL;
 static int LastCh;
@@ -298,41 +299,52 @@ int main(int argc, char *argv[])
                     exit(0);
                 }
             }
+            else if (strcmp(argv[arg], "-lib") == 0)
+            {
+                arg++;
+                CMPMODE |= 0x4;
+            }
             else
             {
                 arg++;
             }
         }
 
-        arg = 3;
-        while (arg < argc)
+        MUSL(argv[1], argv[2], CMPMODE, 0);
+
+        if ((CMPMODE & 0x4) == 0)
         {
-            if (strcmp(argv[arg], "-i") == 0)
+            arg = 3;
+            while (arg < argc)
             {
-                arg++;
-                if (arg < argc)
+                if (strcmp(argv[arg], "-i") == 0)
                 {
-                    import_module(argv[arg++]);
+                    arg++;
+                    if (arg < argc)
+                    {
+                        import_module(argv[arg++]);
+                    }
+                    else
+                    {
+                        printf("Missing module file name");
+                        exit(0);
+                    }
                 }
-                else
+                else if (strcmp(argv[arg], "-l") == 0)
                 {
-                    printf("Missing module file name");
-                    exit(0);
+                    /* skip logging level, this has already been processed */
+                    arg += 2;
+                }
+                else if (strcmp(argv[arg], "-lib") == 0)
+                {
+                    /* skip logging level, this has already been processed */
+                    arg++;
                 }
             }
-            else if (strcmp(argv[arg], "-l") == 0)
-            {
-                /* skip logging level, this has already been processed */
-                arg += 2;
-            }
-            else if (strcmp(argv[arg], "-lib") == 0)
-            {
-                /* skip logging level, this has already been processed */
-                arg++;
-                CMPMODE |= 0x4;
-            }
+
+            import_module(argv[2]);
+            link_modules("test.bin");
         }
 
-        MUSL(argv[1], argv[2], CMPMODE, 0);
     }
 }

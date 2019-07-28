@@ -183,7 +183,6 @@ Segments
 #define PROGRAM_MODULE 1
 #define LIBRARY_MODULE 2
 #define FIRST_NAME 2
-#define MAX_IMPORT_MODULES 64
 #define MAX_IMPORTS 256
 #define NO_MODULE (-1)
 #define MAX_NAMES 4031
@@ -521,12 +520,6 @@ typedef struct
     uint32 run_time_address;
 } SEGMENT;
 
-typedef struct
-{
-    char name[MAX_NAME_LEN];
-    void *elf_context;
-} MODULE;
-
 /* type to record global references for relocation */
 typedef struct
 {
@@ -563,7 +556,6 @@ static uint8 current_code_area = 1;
 static uint8 current_data_area = 0;
 static SEGMENT segments[MAX_SEGMENTS];
 static int imported_module_count;
-static MODULE module_table[MAX_IMPORT_MODULES];
 static int relocation_count;
 static GLOBALREF relocation_table[MAX_RELOCATION_ENTRIES];
 static int global_ref_count;
@@ -3032,41 +3024,4 @@ void import_symbol(char *name, Elf32_Addr value, Elf32_Word size, int type, unsi
     {
         declare_proc(&vname, value, 0, imported_module_count - 1);
     }
-}
-
-void import_module(char * filename)
-{
-    FILE * f;
-    MODULE *module;
- 
-    imported_module_count++;
-    if (imported_module_count > MAX_IMPORT_MODULES)
-    {
-        fatal("Too many import modules\n");
-    }
-
-    module = &module_table[imported_module_count - 1];
-    strcpy(module->name, extract_filename(filename));
-
-    f = fopen(filename, "rb");
-    if (f == NULL)
-    {
-        perror("Could not open import file");
-        exit(0);
-    }
-    module->elf_context = elf_read_file(f, 0);
-    fclose(f);
-
-    elf_process_defined_symbols(module->elf_context, import_symbol);
-
-    //import_module_exports(f);
-
-    //if (!is_library)
-    //{
-    //    link_module(f);
-    //}
-
-    //update_segment_starts();
-
-    //fclose(f);
 }

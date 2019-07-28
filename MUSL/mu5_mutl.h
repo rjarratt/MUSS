@@ -17,4 +17,3 @@
 #define BT_IS_IMPORT(n) ((n & BT_IMPORT) == BT_IMPORT)
 
 void set_logging(int);
-void import_module(char *);
