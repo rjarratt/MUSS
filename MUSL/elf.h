@@ -168,6 +168,8 @@ typedef struct elf32_phdr {
 #define ELF32_ST_TYPE(x)	ELF_ST_TYPE(x)
 #define ELF32_ST_INFO(b,t) (((b)<<4)+((t)&0xf))
 
+#define ELF32_R_INFO(s,t) (((s)<<8)+(unsigned char)(t))
+
 typedef struct elf32_shdr {
     Elf32_Word	sh_name;
     Elf32_Word	sh_type;
@@ -203,6 +205,7 @@ int elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr address
 int elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data);
 int elf_add_bss_section(void *context, Elf32_Word word_size, Elf32_Addr address);
 void elf_update_section(void *context, Elf32_Half section_index, Elf32_Addr address);
+void elf_add_relocation_entry(void *context, Elf32_Half code_section_index, Elf32_Addr offset, void *symbol, int relocation_type, Elf32_Sword addend);
 void *elf_add_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, Elf32_Half section_index);
 void elf_update_symbol(void *symbol, Elf32_Addr value);
 void elf_add_binary_data_to_section(void *context, Elf32_Half section_index, char *data, int length);

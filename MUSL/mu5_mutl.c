@@ -1452,7 +1452,14 @@ int param_instruction_size(int N)
 
 void register_forward_label_ref(int N)
 {
-    LABELSYMBOL *label = &mutl_var[N].data.label;
+    MUTLSYMBOL *sym = &mutl_var[N];
+    LABELSYMBOL *label = &sym->data.label;
+    if (sym->symbol_type == SYM_PROC)
+    {
+        SEGMENT *segment = get_segment_for_area(current_code_area);
+        elf_add_relocation_entry(elf_module_context, segment->elf_section_index, next_instruction_segment_address(), sym->elf_symbol, 0, 0);
+    }
+
     if (label->num_forward_refs >= MAX_FORWARD_LOCATIONS)
     {
         fatal("Forward ref list for %s is full\n", mutl_var[N].name);

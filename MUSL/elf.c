@@ -43,6 +43,7 @@ static int add_string(Elf32_Section *section, char *string);
 static char *get_string(Elf32_Section *section, int string_index);
 
 static Elf32_Sym *get_symbol(Elf32_Section *section, int string_index);
+static int get_symbol_index(Elf32_Section *section, Elf32_Sym *sym);
 static Elf32_Rela *get_rela(Elf32_Section *section, int rela_index);
 
 static Elf32_Ehdr *encode_ehdr(Elf32_Ehdr *header);
@@ -159,6 +160,30 @@ void elf_update_section(void *context, Elf32_Half section_index, Elf32_Addr addr
     section->section_header.sh_addr = address;
 }
 
+void elf_add_relocation_entry(void *context, Elf32_Half code_section_index, Elf32_Addr offset, void *symbol, int relocation_type, Elf32_Sword addend)
+{
+    Elf32_Context *ctx = context;
+    Elf32_Section *code_section;
+    Elf32_Section *rela_section;
+    Elf32_Sym *sym = symbol;
+    int num_relas;
+
+    code_section = &ctx->section_table[code_section_index];
+    rela_section = code_section->related_section;
+
+    num_relas = rela_section->section_header.sh_size / sizeof(Elf32_Rela);
+    if (num_relas >= MAX_RELOCATIONS)
+    {
+        perror("Too many relocations");
+        exit(1);
+    }
+
+    Elf32_Rela *rela = (Elf32_Rela *)rela_section->data + num_relas;
+    rela->r_offset = offset;
+    rela->r_info = ELF32_R_INFO(get_symbol_index(ctx->symbol_table_section, sym), relocation_type);
+    rela->r_addend = addend;
+    rela_section->section_header.sh_size += sizeof(Elf32_Rela);
+}
 
 void *elf_add_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, Elf32_Half section_index)
 {
@@ -615,6 +640,13 @@ static Elf32_Sym *get_symbol(Elf32_Section *section, int symbol_index)
     Elf32_Sym *result = (Elf32_Sym *)((char *)section->data + symbol_index * section->section_header.sh_entsize);
     return result;
 }
+
+static int get_symbol_index(Elf32_Section *section, Elf32_Sym *sym)
+{
+    int result = sym - (Elf32_Sym *)section->data;
+    return result;
+}
+
 
 static Elf32_Rela *get_rela(Elf32_Section *section, int rela_index)
 {
