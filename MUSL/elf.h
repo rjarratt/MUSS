@@ -4,7 +4,7 @@
 typedef unsigned int   Elf32_Addr;
 typedef unsigned short Elf32_Half;
 typedef unsigned int   Elf32_Off;
-typedef int            Elf32_SWord;
+typedef int            Elf32_Sword;
 typedef unsigned int   Elf32_Word;
 
 /* These constants are for the segment types stored in the image headers */
@@ -189,6 +189,13 @@ typedef struct elf32_sym {
     unsigned char	st_other;
     Elf32_Half	st_shndx;
 } Elf32_Sym;
+
+typedef struct elf32_rela {
+    Elf32_Addr	r_offset;
+    Elf32_Word	r_info;
+    Elf32_Sword	r_addend;
+} Elf32_Rela;
+
 
 void *elf_new_file(Elf32_Half e_type, Elf32_Half e_machine, Elf32_Word e_flags);
 void elf_set_entry(void *context, Elf32_Addr e_entry);
