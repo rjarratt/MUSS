@@ -196,7 +196,8 @@ int elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr address
 int elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data);
 int elf_add_bss_section(void *context, Elf32_Word word_size, Elf32_Addr address);
 void elf_update_section(void *context, Elf32_Half section_index, Elf32_Addr address);
-void elf_add_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, Elf32_Half section_index);
+void *elf_add_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, Elf32_Half section_index);
+void elf_update_symbol(void *symbol, Elf32_Addr value);
 void elf_add_binary_data_to_section(void *context, Elf32_Half section_index, char *data, int length);
 void elf_write_file(void *context, char *file_name);
 void *elf_read_file(FILE *f, int check_is_elf);

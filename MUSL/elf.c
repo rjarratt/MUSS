@@ -151,7 +151,7 @@ void elf_update_section(void *context, Elf32_Half section_index, Elf32_Addr addr
 }
 
 
-void elf_add_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, Elf32_Half section_index)
+void *elf_add_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, Elf32_Half section_index)
 {
     Elf32_Context *ctx = context;
     int num_symbols = ctx->symbol_table_section->section_header.sh_size / sizeof(Elf32_Sym);
@@ -169,6 +169,13 @@ void elf_add_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Wo
     sym->st_other = 0;
     sym->st_shndx = section_index;
     ctx->symbol_table_section->section_header.sh_size += sizeof(Elf32_Sym);
+    return sym;
+}
+
+void elf_update_symbol(void *symbol, Elf32_Addr value)
+{
+    Elf32_Sym *sym = symbol;
+    sym->st_value = value;
 }
 
 void elf_add_binary_data_to_section(void *context, Elf32_Half section_index, char *data, int length)

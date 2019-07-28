@@ -476,6 +476,7 @@ typedef struct
     char name[MAX_NAME_LEN];
     int block_level;
     int module_number; /* the number of the import module in the module table, if the symbol is imported, -1 if not imported. */
+    void *elf_symbol;
     union
     {
         VARSYMBOL var;
@@ -2287,11 +2288,11 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
 
     if (BT_IS_EXPORT(T))
     {
-        elf_add_global_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STT_OBJECT, SHN_ABS);
+        var->elf_symbol = elf_add_global_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STT_OBJECT, SHN_ABS);
     }
     else if (BT_IS_IMPORT(T))
     {
-        elf_add_global_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STT_OBJECT, SHN_UNDEF);
+        var->elf_symbol = elf_add_global_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STT_OBJECT, SHN_UNDEF);
     }
 }
 
@@ -2362,11 +2363,11 @@ void declare_proc(VECTOR *name, uint32 address, int NAT, int module)
     if (BT_IS_EXPORT(NAT))
     {
         SEGMENT *segment = get_segment_for_area(current_code_area);
-        elf_add_global_symbol(elf_module_context, sym->name, 0, 4, STT_FUNC, segment->elf_section_index);
+        sym->elf_symbol = elf_add_global_symbol(elf_module_context, sym->name, 0, 4, STT_FUNC, segment->elf_section_index);
     }
     else if (BT_IS_IMPORT(NAT))
     {
-        elf_add_global_symbol(elf_module_context, sym->name, 0, 4, STT_FUNC, SHN_UNDEF);
+        sym->elf_symbol = elf_add_global_symbol(elf_module_context, sym->name, 0, 4, STT_FUNC, SHN_UNDEF);
     }
 }
 
@@ -2530,6 +2531,7 @@ void TLPROC(int P)
     log(LOG_STRUCTURE, "Define proc %s at 0x%04X\n", current_proc_def->name, next_instruction_segment_address());
     proc_def_var->address_defined = 1;
     proc_def_var->address = next_instruction_full_address();
+    elf_update_symbol(current_proc_def->elf_symbol, next_instruction_segment_address());
 
     fixup_forward_label_refs(P);
     start_block_level(param_stack_size(P));
