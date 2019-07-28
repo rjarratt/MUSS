@@ -15,7 +15,6 @@ typedef struct elf32_section
     Elf32_Half section_index;
     void *data;
     void *(*encode_data_entry)(void *);
-    void *(*decode_data_entry)(void *);
 } Elf32_Section;
 
 typedef struct elf32_context
@@ -38,6 +37,9 @@ static int is_section_loadable(Elf32_Section *section);
 static Elf32_Off calculate_section_offset(Elf32_Context *ctx, Elf32_Section *section);
 
 static int add_string(Elf32_Section *section, char *string);
+static char *get_string(Elf32_Section *section, int string_index);
+
+static Elf32_Sym *get_symbol(Elf32_Section *section, int string_index);
 
 static Elf32_Ehdr *encode_ehdr(Elf32_Ehdr *header);
 static Elf32_Shdr *encode_shdr(Elf32_Shdr *header);
@@ -50,6 +52,8 @@ static Elf32_Addr encode_addr(Elf32_Addr addr);
 
 static void decode_ehdr(Elf32_Ehdr *header);
 static void decode_shdr(Elf32_Shdr *header);
+static void decode_phdr(Elf32_Shdr *header);
+static void decode_sym(Elf32_Shdr *header);
 static Elf32_Half decode_half(Elf32_Half half);
 static Elf32_Word decode_word(Elf32_Word word);
 static Elf32_Off decode_off(Elf32_Off off);
@@ -320,6 +324,11 @@ void *elf_read_file(FILE *f, int check_is_elf)
                 perror("Could not read the program headers");
                 exit(1);
             }
+
+            for (i = 0; i < ctx->elf_header.e_phnum; i++)
+            {
+                decode_phdr(&ctx->program_header_table[i]);
+            }
         }
 
         fseek(f, ctx->elf_header.e_shoff, SEEK_SET);
@@ -341,11 +350,37 @@ void *elf_read_file(FILE *f, int check_is_elf)
             Elf32_Section *section = &ctx->section_table[i];
             if (section->section_header.sh_type != SHT_NULL && section->section_header.sh_type != SHT_NOBITS)
             {
-                section->data = malloc(section->section_header.sh_size);
-                if (fread(section->data, section->section_header.sh_size, 1, f) != 1)
+                if (section->section_header.sh_size != 0)
                 {
-                    perror("Could not read section data");
-                    exit(1);
+                    section->data = malloc(section->section_header.sh_size);
+                    fseek(f, section->section_header.sh_offset, SEEK_SET);
+                    if (fread(section->data, section->section_header.sh_size, 1, f) != 1)
+                    {
+                        perror("Could not read section data");
+                        exit(1);
+                    }
+
+                    if (section->section_header.sh_type == SHT_SYMTAB)
+                    {
+                        int sym_index;
+                        int num_syms = section->section_header.sh_size / section->section_header.sh_entsize;
+                        ctx->symbol_table_section = section;
+                        for (sym_index = 0; sym_index < num_syms; sym_index++)
+                        {
+                            decode_sym(get_symbol(section, sym_index));
+                        }
+                    }
+                    else if (section->section_header.sh_type == SHT_STRTAB)
+                    {
+                        if (i == ctx->elf_header.e_shstrndx)
+                        {
+                            ctx->section_header_string_table_section = section;
+                        }
+                        else
+                        {
+                            ctx->string_table_section = section;
+                        }
+                    }
                 }
             }
         }
@@ -383,6 +418,20 @@ void elf_get_section_header(void *context, Elf32_Shdr *header, char **data, int 
     *data = ctx->section_table[section_index].data;
 }
 
+void elf_process_defined_symbols(void *context, void *(*process_symbol)(char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other))
+{
+    int sym_index;
+    int num_syms;
+    Elf32_Context *ctx = context;
+    num_syms = ctx->symbol_table_section->section_header.sh_size / ctx->symbol_table_section->section_header.sh_entsize;
+    for (sym_index = 1; sym_index  < num_syms; sym_index++)
+    {
+        Elf32_Sym *sym = get_symbol(ctx->symbol_table_section, sym_index);
+        process_symbol(get_string(ctx->string_table_section, sym->st_name), sym->st_value, sym->st_size, ELF_ST_TYPE(sym->st_info), sym->st_other);
+    }
+}
+
+
 static Elf32_Section *add_section(Elf32_Context *ctx, Elf32_Shdr *header)
 {
     ctx->elf_header.e_shnum++;
@@ -397,7 +446,6 @@ static Elf32_Section *add_section(Elf32_Context *ctx, Elf32_Shdr *header)
     new_section->data = NULL;
     new_section->section_index = ctx->elf_header.e_shnum - 1;
     new_section->encode_data_entry = NULL;
-    new_section->decode_data_entry = NULL;
 
     if (ctx->elf_header.e_type == ET_EXEC && is_section_loadable(new_section))
     {
@@ -508,6 +556,18 @@ static int add_string(Elf32_Section *section, char *string)
     return result;
 }
 
+static char *get_string(Elf32_Section *section, int string_index)
+{
+    char *ptr = (char *)(section->data) + string_index;
+    return ptr;
+}
+
+static Elf32_Sym *get_symbol(Elf32_Section *section, int symbol_index)
+{
+    Elf32_Sym *result = (Elf32_Sym *)((char *)section->data + symbol_index * section->section_header.sh_entsize);
+    return result;
+}
+
 static Elf32_Ehdr *encode_ehdr(Elf32_Ehdr *header)
 {
     static Elf32_Ehdr result;
@@ -596,6 +656,18 @@ static Elf32_Phdr *encode_phdr(Elf32_Phdr *header)
     return &result;
 }
 
+static void decode_phdr(Elf32_Phdr *header)
+{
+    header->p_type = decode_word(header->p_type);
+    header->p_offset = decode_off(header->p_offset);
+    header->p_vaddr = decode_addr(header->p_vaddr);
+    header->p_paddr = decode_addr(header->p_paddr);
+    header->p_filesz = decode_word(header->p_filesz);
+    header->p_memsz = decode_word(header->p_memsz);
+    header->p_flags = decode_word(header->p_flags);
+    header->p_align = decode_word(header->p_align);
+}
+
 static Elf32_Sym *encode_sym(Elf32_Sym *sym)
 {
     static Elf32_Sym result;
@@ -608,6 +680,14 @@ static Elf32_Sym *encode_sym(Elf32_Sym *sym)
     result.st_shndx = encode_half(sym->st_shndx);
 
     return &result;
+}
+
+static void decode_sym(Elf32_Sym *sym)
+{
+    sym->st_name = decode_word(sym->st_name);
+    sym->st_value = decode_addr(sym->st_value);
+    sym->st_size = decode_word(sym->st_size);
+    sym->st_shndx = decode_half(sym->st_shndx);
 }
 
 static Elf32_Half encode_half(Elf32_Half half)

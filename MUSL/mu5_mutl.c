@@ -523,6 +523,7 @@ typedef struct
 typedef struct
 {
     char name[MAX_NAME_LEN];
+    void *elf_context;
 } MODULE;
 
 /* type to record global references for relocation */
@@ -3019,12 +3020,22 @@ void update_segment_starts(void)
         }
     }
 }
+
+void import_symbol(char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other)
+{
+    VECTOR vname;
+    vname.buffer = name;
+    vname.length = strlen(name);
+    if (type == STT_FUNC)
+    {
+        declare_proc(&vname, value, 0, imported_module_count - 1);
+    }
+}
+
 void import_module(char * filename)
 {
     FILE * f;
     MODULE *module;
-    uint16 marker;
-    uint16 header_length;
  
     imported_module_count++;
     if (imported_module_count > MAX_IMPORT_MODULES)
@@ -3038,23 +3049,22 @@ void import_module(char * filename)
     f = fopen(filename, "rb");
     if (f == NULL)
     {
-        fatal("Could not open import module %s\n", filename);
+        perror("Could not open import file");
+        exit(0);
     }
-
-    marker = read_16_bit_word(f);
-    if (marker != 0xFFFF)
-    {
-        fatal("Not a valid module (marker is missing)\n");
-    }
-
-    import_module_exports(f);
-
-    if (!is_library)
-    {
-        link_module(f);
-    }
-
-    update_segment_starts();
-
+    module->elf_context = elf_read_file(f, 0);
     fclose(f);
+
+    elf_process_defined_symbols(module->elf_context, import_symbol);
+
+    //import_module_exports(f);
+
+    //if (!is_library)
+    //{
+    //    link_module(f);
+    //}
+
+    //update_segment_starts();
+
+    //fclose(f);
 }

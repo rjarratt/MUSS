@@ -203,3 +203,4 @@ void *elf_read_file(FILE *f, int check_is_elf);
 void elf_get_elf_header(void *context, Elf32_Ehdr *header);
 void elf_get_program_header(void *context, Elf32_Phdr *header, int header_index);
 void elf_get_section_header(void *context, Elf32_Shdr *header, char **data, int section_index);
+void elf_process_defined_symbols(void *context, void *(*process_symbol)(char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other));
