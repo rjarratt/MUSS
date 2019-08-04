@@ -23,6 +23,7 @@ typedef struct
     Elf32_Addr segment_relocated_start_address;
 } LINKER_SEGMENT;
 
+static Elf32_Addr entry_point;
 static int num_modules;
 static void *elf_modules[MAX_IMPORT_MODULES];
 static int num_segments;
@@ -31,6 +32,7 @@ static LINKER_SYMBOL *symbol_table;
 static int total_symbol_count;
 static int loaded_symbol_count;
 
+static void check_module_for_start_address(void *elf_module);
 static void count_symbol(char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index);
 static void add_symbol(char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index);
 static void compute_total_symbols(void);
@@ -65,18 +67,31 @@ void import_module(char * filename)
         exit(0);
     }
     elf_modules[num_modules++] = elf_read_file(f, 0);
+    check_module_for_start_address(elf_modules[num_modules - 1]);
     fclose(f);
 }
 
 void link_modules(char *filename)
 {
     void *out_elf_context = elf_new_file(ET_EXEC, 0, 0);
+    elf_set_entry(out_elf_context, entry_point);
     build_symbol_table();
     define_segments();
     resolve_symbols();
     add_segments_to_output(out_elf_context);
     elf_write_file(out_elf_context, filename);
 }
+
+static void check_module_for_start_address(void *elf_module)
+{
+    Elf32_Ehdr elf_header;
+    elf_get_elf_header(elf_module, &elf_header);
+    if (elf_header.e_type == ET_EXEC)
+    {
+        entry_point = elf_header.e_entry;
+    }
+}
+
 
 static void count_symbol(char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index)
 {
