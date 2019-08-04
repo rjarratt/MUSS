@@ -8,6 +8,7 @@
 typedef struct
 {
     char *name;
+    int type;
     Elf32_Addr value;
 } LINKER_SYMBOL;
 
@@ -32,9 +33,10 @@ static LINKER_SYMBOL *symbol_table;
 static int total_symbol_count;
 static int loaded_symbol_count;
 
+static LINKER_SEGMENT *get_linker_segment_for_section(void *context, int section_index);
 static void check_module_for_start_address(void *elf_module);
-static void count_symbol(char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index);
-static void add_symbol(char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index);
+static void count_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index);
+static void add_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index);
 static void compute_total_symbols(void);
 static int compare_symbol_name(const void *sym1, const void *sym2);
 static int compare_segment_by_section_address(const void *seg1, const void *seg2);
@@ -75,11 +77,29 @@ void link_modules(char *filename)
 {
     void *out_elf_context = elf_new_file(ET_EXEC, 0, 0);
     elf_set_entry(out_elf_context, entry_point);
-    build_symbol_table();
     define_segments();
+    build_symbol_table();
     resolve_symbols();
     add_segments_to_output(out_elf_context);
     elf_write_file(out_elf_context, filename);
+}
+
+static LINKER_SEGMENT *get_linker_segment_for_section(void *context, int section_index)
+{
+    int i;
+    LINKER_SEGMENT *result = NULL;
+    LINKER_SEGMENT *current_seg;
+    for (i = 0; i < num_segments; i++)
+    {
+        current_seg = &segment_table[i];
+        if (current_seg->elf_module_context == context && current_seg->elf_input_section_index == section_index)
+        {
+            result = current_seg;
+            break;
+        }
+    }
+
+    return result;
 }
 
 static void check_module_for_start_address(void *elf_module)
@@ -92,17 +112,18 @@ static void check_module_for_start_address(void *elf_module)
     }
 }
 
-
-static void count_symbol(char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index)
+static void count_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index)
 {
     total_symbol_count++;
 }
 
-static void add_symbol(char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index)
+static void add_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index)
 {
     LINKER_SYMBOL *link_sym = &symbol_table[loaded_symbol_count++];
+    LINKER_SEGMENT *link_seg = get_linker_segment_for_section(context, section_index);
     link_sym->name = name;
-    link_sym->value = value;
+    link_sym->type = type;
+    link_sym->value = link_seg->segment_relocated_start_address + value;
 }
 
 static void  compute_total_symbols()
@@ -270,7 +291,16 @@ static void resolve_symbol_in_segment(LINKER_SEGMENT *linker_segment)
                 exit(0);
             }
 
-            Elf32_Addr new_addr = linker_segment->segment_relocated_start_address + linker_symbol->value + rela_entry->r_addend;
+            Elf32_Addr new_addr;
+            if (linker_symbol->type == STT_FUNC)
+            {
+                new_addr = linker_symbol->value / 2 + rela_entry->r_addend;
+            }
+            else
+            {
+                new_addr = linker_symbol->value + rela_entry->r_addend;
+            }
+
             char *ptr = &linker_segment->data[rela_entry->r_offset];
             *ptr++ = (new_addr >> 24) & 0xFF;
             *ptr++ = (new_addr >> 16) & 0xFF;

@@ -26,157 +26,7 @@ space efficient.
 /* ELF Notes
 
 To make things simple all addresses are stored in the ELF as byte addresses. They can then be adjusted when loading.
-
-*/
-
-
-/* Module format
-
-This format is made-up and is for use with the MU5 emulator and the MUSL cross compiler for Windows.
-
-A module consists of a header and then multiple segments
-
-Header Format
-=============
-
-+--------------------+
-| Marker             | 16 bit word all 1's
-+--------------------+
-| Header size        | 16-bit number of bytes in the header. This excludes the marker
-+--------------------+
-| Module type        | 16-bit word 1 = program, 2 = library
-+--------------------+
-| Start Addr Segment | (Program module only) 16-bit word segment for start address
-+--------------------+
-| Start Addr Offset  | (Program module only) 16-bit word offset for start address
-+--------------------+
-| Num Modules        | 16-bit word with the number of imported modules
-+--------------------+
-| Num Segments       | 16-bit word with the number of segments used by the module
-+--------------------+
-| Num Relocations    | 16-bit word with the number of relocation table entries
-+--------------------+
-| Num Symbols        | 16-bit word with the number of exported symbols
-+--------------------+
-| Global bytes       | 16-bit word with the number of bytes occupied by global data
-+--------------------+
-| Module table       | See below
-+--------------------+
-| Segment table      | See below
-+--------------------+
-| Symbol table       | See below
-+--------------------+
-
-Module Table
-------------
-
-The module table contains a list of all the imported modules.
-
-Module table header:
-
-Each compiled module (library or program) contains a table of base addresses for the global data in each module imported by the current module.
-The header indicates the location (relative to the code for this module only) of the table. The table will contain one entry per imported module
-and one entry for the current module. The table is filled in at link time.
-
-+----------------+
-| Global segment | 16-bit word with the segment where the base addresses are to be set
-+----------------+
-| Global offset  | 16-bit word with the offset (in 16-bit words) where the base addresses are to be set
-+----------------+
-
-For each imported module:
-
-+----------------+
-| Name length    | 8-bit byte giving the length of the symbol's name
-+----------------+
-| Name           | Variable length containing the module name
-+----------------+
-
-Segment Table
--------------
-
-For each segment used by the module
-
-+--------------------+
-| Segment Number     | 16-bit MUTL segment number
-+--------------------+
-| Segment Address    | 16-bit Segment address
-+--------------------+
-| Segment Size       | 16-bit segment size in bytes
-+--------------------+
-| Segment Kind       | 16-bit segment kind
-+--------------------+
-| Segment Bytes Used | 16-bit number of bytes of the segment used by the module
-+--------------------+
-
-Relocation Table
-----------------
-
-Each entry is as follows:
-
-+-------------------------+
-| Segment number          | 16-bit MUTL segment number whose base address is to be set.
-+-------------------------+
-| Global location segment | 16-bit word, segment address where the segment's global data address to be relocated (ie XNB value) is located
-+--------------------------+
-| Global location address | 16-bit word, offset where segment's global data address to be relocated (ie XNB value) is located
-+-------------------------+
-
-Symbol Table
-------------
-
-For each symbol
-
-+----------------+
-| Name length    | 8-bit byte giving the length of the symbol's name
-+----------------+
-| Name           | Variable length containing the symbol name
-+----------------+
-| Symbol type    | 8-bit byte 0=variable, 1=literal ?????
-+----------------+
-
-Then according to symbol type:
-
-Variable
--------
-+----------------+
-| Data type      | 16-bit word
-+----------------+
-| Dimension      | 16-bit word
-+----------------+
-| Position       | 16-bit word, offset in 32-bit words from XNB, vstore it is the v-line number
-+----------------+
-| Is Vstore      | 8-bit word, 0 = normal variable, 1 = vstore
-+----------------+
-
-VSTORE STUFF MISSING
-
-Literal
--------
-+----------------+
-| Data type      | 16-bit word
-+----------------+
-| Value          | For literal 8-bit byte giving length in bytes, then the bytes
-+----------------+
-
-Proc
-----
-+----------------+
-| segment        | 16-bit word, segment part of address
-+----------------+
-| address        | 16-bit word, offset part of address
-+----------------+
-
-Segments
---------
-
-+----------------+
-| Segment        | 16-bit word giving segment number for this next segment
-+----------------+
-| Length         | 16-bit word giving number of 16-bit words that follow
-+----------------+
-| Code           | 16-bit words of code
-+----------------+
+This applies particularly to functions. Names are .....
 
 */
 
@@ -867,6 +717,11 @@ static int next_instruction_segment_address(void)
     return segment->next_word;
 }
 
+static int next_instruction_segment_byte_address(void)
+{
+    return next_instruction_segment_address() * 2;
+}
+
 static uint32 global_data_start_address(void)
 {
     uint32 result;
@@ -1457,10 +1312,9 @@ void register_forward_label_ref(int N)
     if (sym->symbol_type == SYM_PROC)
     {
         SEGMENT *segment = get_segment_for_area(current_code_area);
-        elf_add_relocation_entry(elf_module_context, segment->elf_section_index, next_instruction_segment_address(), sym->elf_symbol, 0, 0);
+        elf_add_relocation_entry(elf_module_context, segment->elf_section_index, next_instruction_segment_byte_address(), sym->elf_symbol, 0, 0);
     }
-
-    if (label->num_forward_refs >= MAX_FORWARD_LOCATIONS)
+    else if (label->num_forward_refs >= MAX_FORWARD_LOCATIONS)
     {
         fatal("Forward ref list for %s is full\n", mutl_var[N].name);
     }
@@ -1770,7 +1624,7 @@ void op_a_or_store(int N)
     op_a_store(N);
 }
 
-uint32 op_org_jump_generic_address(int F, int16 relative)
+uint32 op_org_jump_generic_rel_address(int F, int16 relative)
 {
     uint32 address_location;
     if (relative >= -32 && relative < 32)
@@ -1788,14 +1642,32 @@ uint32 op_org_jump_generic_address(int F, int16 relative)
     return address_location;
 }
 
+uint32 op_org_jump_generic_abs_address(int F, int16 address)
+{
+    uint32 address_location;
+    if (address >= -32 && address < 32)
+    {
+        plant_org_order(F, K_LITERAL, address & 0x3F);
+        address_location = UNKNOWN_ADDRESS;
+    }
+    else
+    {
+        plant_org_order_extended(F, KP_LITERAL, NP_32_BIT_SIGNED_LITERAL);
+        address_location = next_instruction_segment_address();
+        plant_32_bit_code_word(address);
+    }
+
+    return address_location;
+}
+
 /* this function relies on labels and procs having the same initial structure. */
-void op_org_jump_generic(int N, int F, char *type)
+void op_org_rel_jump_generic(int N, int F, char *type)
 {
     if (mutl_var[N].data.label.address_defined)
     {
         int16 relative = mutl_var[N].data.label.address - next_instruction_segment_address();
         log(LOG_PLANT, "%04X ORG JUMP %s %s relative %d\n", next_instruction_segment_address(), type, mutl_var[N].name, relative);
-        op_org_jump_generic_address(F, relative);
+        op_org_jump_generic_rel_address(F, relative);
     }
     else
     {
@@ -1803,6 +1675,24 @@ void op_org_jump_generic(int N, int F, char *type)
         plant_org_order_extended(F, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
         register_forward_label_ref(N);
         plant_16_bit_code_word(0); /* place holder */
+    }
+}
+
+/* this function relies on labels and procs having the same initial structure. */
+void op_org_abs_jump_generic(int N, int F, char *type)
+{
+    if (mutl_var[N].data.label.address_defined)
+    {
+        int16 address = mutl_var[N].data.label.address;
+        log(LOG_PLANT, "%04X ORG JUMP %s %s absolute %d\n", next_instruction_segment_address(), type, mutl_var[N].name, address);
+        op_org_jump_generic_abs_address(F, address);
+    }
+    else
+    {
+        log(LOG_PLANT, "%04X ORG JUMP %s to %s forward ref\n", next_instruction_segment_address(), type, mutl_var[N].name);
+        plant_org_order_extended(F, KP_LITERAL, NP_32_BIT_SIGNED_LITERAL);
+        register_forward_label_ref(N);
+        plant_32_bit_code_word(0); /* place holder */
     }
 }
 
@@ -1833,7 +1723,7 @@ void op_org_enter(int N)
         fatal("Can't enter 0x%04x\n", N);
     }
 
-    op_org_jump_generic(current_proc_call_n, F_RELJUMP, "REL JUMP"); // TODO: should make this absolute, needs generic function to support it.
+    op_org_abs_jump_generic(current_proc_call_n, F_ABSJUMP, "ABS JUMP");
     /* update the offset for the STACKLINK */
     plant_16_bit_code_word_update(current_proc_call_stack_link_offset_address, next_instruction_segment_address() - current_proc_call_stack_link_offset_address + 1, "return address");
 }
@@ -1902,32 +1792,32 @@ void op_org_stack(int N)
 
 void op_org_jump_equal(int N)
 {
-    op_org_jump_generic(N, F_BRANCH_EQ, "EQ");
+    op_org_rel_jump_generic(N, F_BRANCH_EQ, "EQ");
 }
 
 void op_org_jump_not_equal(int N)
 {
-    op_org_jump_generic(N, F_BRANCH_NE, "NE");
+    op_org_rel_jump_generic(N, F_BRANCH_NE, "NE");
 }
 
 void op_org_jump_greater_than_or_equal(int N)
 {
-    op_org_jump_generic(N, F_BRANCH_GE, "GE");
+    op_org_rel_jump_generic(N, F_BRANCH_GE, "GE");
 }
 
 void op_org_jump_less_than(int N)
 {
-    op_org_jump_generic(N, F_BRANCH_LT, "LT");
+    op_org_rel_jump_generic(N, F_BRANCH_LT, "LT");
 }
 
 void op_org_jump_less_than_or_equal(int N)
 {
-    op_org_jump_generic(N, F_BRANCH_LE, "LE");
+    op_org_rel_jump_generic(N, F_BRANCH_LE, "LE");
 }
 
 void op_org_jump_greater_than(int N)
 {
-    op_org_jump_generic(N, F_BRANCH_GT, "GT");
+    op_org_rel_jump_generic(N, F_BRANCH_GT, "GT");
 }
 
 void op_org_jump_seg(int N)
@@ -2527,10 +2417,10 @@ void TLPROC(int P)
     int i;
     current_proc_def = &mutl_var[P];
     PROCSYMBOL *proc_def_var = &current_proc_def->data.proc;
-    log(LOG_STRUCTURE, "Define proc %s at 0x%04X\n", current_proc_def->name, next_instruction_segment_address());
+    log(LOG_STRUCTURE, "Define proc %s at 0x%04X\n", current_proc_def->name, next_instruction_segment_byte_address());
     proc_def_var->address_defined = 1;
     proc_def_var->address = next_instruction_full_address();
-    elf_update_symbol(current_proc_def->elf_symbol, next_instruction_segment_address());
+    elf_update_symbol(current_proc_def->elf_symbol, next_instruction_segment_byte_address());
 
     fixup_forward_label_refs(P);
     start_block_level(param_stack_size(P));
@@ -2719,7 +2609,7 @@ void TLCYCLE(int limit)
     loop = start_loop(1, OPERAND_POP);
     TLCLIT32(TINT32, 0);
     op_a_compare(OPERAND_LITERAL);
-    loop->address_of_end_of_loop_jump = op_org_jump_generic_address(F_BRANCH_LE, UNKNOWN_ADDRESS);
+    loop->address_of_end_of_loop_jump = op_org_jump_generic_rel_address(F_BRANCH_LE, UNKNOWN_ADDRESS);
     amode = saved_amode;
 }
 
@@ -2751,11 +2641,11 @@ void TLCVLIMIT(int limit)
     op_a_compare(loop->control_variable);
     if ((loop->mode & 1) == 0)
     {
-        loop->address_of_end_of_loop_jump = op_org_jump_generic_address(F_BRANCH_LE, UNKNOWN_ADDRESS);
+        loop->address_of_end_of_loop_jump = op_org_jump_generic_rel_address(F_BRANCH_LE, UNKNOWN_ADDRESS);
     }
     else
     {
-        loop->address_of_end_of_loop_jump = op_org_jump_generic_address(F_BRANCH_GT, UNKNOWN_ADDRESS);
+        loop->address_of_end_of_loop_jump = op_org_jump_generic_rel_address(F_BRANCH_GT, UNKNOWN_ADDRESS);
     }
 
     amode = saved_amode;
@@ -2787,7 +2677,7 @@ void TLREPEAT(void)
         op_a_store(loop->control_variable);
     }
     relative = loop->address_of_condition - next_instruction_segment_address();
-    op_org_jump_generic_address(F_RELJUMP, relative);
+    op_org_jump_generic_rel_address(F_RELJUMP, relative);
 
     relative = next_instruction_segment_address() - loop->address_of_end_of_loop_jump + 1;
     plant_16_bit_code_word_update(loop->address_of_end_of_loop_jump, relative, "end of loop address");
