@@ -1122,7 +1122,7 @@ static void plant_stack_a(void)
 {
     log(LOG_PLANT, "%04X Stack A\n", next_instruction_segment_address());
     plant_org_order(F_SF_PLUS, K_LITERAL, 2);
-    plant_order_extended(cr(), F_STORE, K_V64, NP_SF);
+    plant_order_extended(cr_for_load(), F_STORE, K_V64, NP_SF);
     plant_16_bit_code_word(0);
 }
 
@@ -1755,11 +1755,13 @@ void op_org_aconv(int N)
         plant_32_bit_code_word(0x00FFFFFF);
         plant_pop();
     }
-    else if ((BT_MODE(from_amode) == BT_MODE(to_amode)) || (BT_MODE(from_amode) == BT_MODE_SIGNED_INTEGER && BT_MODE(to_amode) == BT_MODE_UNSIGNED_INTEGER))
+    else if ((BT_MODE(from_amode) == BT_MODE(to_amode)))
     {
         /* do nothing */
     }
-    else if ((BT_MODE(from_amode) == BT_MODE_UNSIGNED_INTEGER) && (BT_MODE(to_amode) == BT_MODE_SIGNED_INTEGER))
+    else if ((BT_MODE(from_amode) == BT_MODE_UNSIGNED_INTEGER) && (BT_MODE(to_amode) == BT_MODE_SIGNED_INTEGER)
+             ||
+             (BT_MODE(from_amode) == BT_MODE_SIGNED_INTEGER && BT_MODE(to_amode) == BT_MODE_UNSIGNED_INTEGER))
     {
         plant_stack_a();
         amode = to_amode;
@@ -2420,7 +2422,10 @@ void TLPROC(int P)
     log(LOG_STRUCTURE, "Define proc %s at 0x%04X\n", current_proc_def->name, next_instruction_segment_byte_address());
     proc_def_var->address_defined = 1;
     proc_def_var->address = next_instruction_full_address();
-    elf_update_symbol(current_proc_def->elf_symbol, next_instruction_segment_byte_address());
+    if (current_proc_def->elf_symbol != NULL) /* NULL for non-import and non-export, ie locals, could make them LOCAL in ELF potentially */
+    {
+        elf_update_symbol(current_proc_def->elf_symbol, next_instruction_segment_byte_address());
+    }
 
     fixup_forward_label_refs(P);
     start_block_level(param_stack_size(P));
