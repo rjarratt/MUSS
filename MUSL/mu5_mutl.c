@@ -2025,7 +2025,7 @@ void TLSEG(int32 N, int32 S, int32 RTA, int32 CTA, int32 NL)
     seg->run_time_address = RTA;
     if (seg->elf_section_index!= 0)
     {
-        elf_update_section(elf_module_context, seg->elf_section_index, seg->run_time_address);
+        elf_update_section_address(elf_module_context, seg->elf_section_index, seg->run_time_address);
     }
 
     log(LOG_MEMORY, "TL.SEG MUTL segment %d, segment address %d, size %d run-time address 0x%08X\n", N, seg->segment_address, seg->size, seg->run_time_address);
@@ -2046,7 +2046,7 @@ void TLLOAD(int SN, int AN)
         }
         else
         {
-            elf_update_section(elf_module_context, segment->elf_section_index, segment->run_time_address);
+            elf_update_section_address(elf_module_context, segment->elf_section_index, segment->run_time_address);
         }
     }
     else if (AN == current_data_area)
@@ -2058,7 +2058,7 @@ void TLLOAD(int SN, int AN)
         }
         else
         {
-            elf_update_section(elf_module_context, segment->elf_section_index, segment->run_time_address);
+            elf_update_section_address(elf_module_context, segment->elf_section_index, segment->run_time_address);
         }
     }
 }

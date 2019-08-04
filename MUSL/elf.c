@@ -42,7 +42,7 @@ static Elf32_Off calculate_section_offset(Elf32_Context *ctx, Elf32_Section *sec
 static int add_string(Elf32_Section *section, char *string);
 static char *get_string(Elf32_Section *section, int string_index);
 
-static Elf32_Sym *get_symbol(Elf32_Section *section, int string_index);
+static Elf32_Sym *get_linker_symbol(Elf32_Section *section, int string_index);
 static int get_symbol_index(Elf32_Section *section, Elf32_Sym *sym);
 static Elf32_Rela *get_rela(Elf32_Section *section, int rela_index);
 
@@ -152,12 +152,33 @@ int elf_add_bss_section(void *context, Elf32_Word word_size, Elf32_Addr address)
     return section->section_index;
 }
 
-void elf_update_section(void *context, Elf32_Half section_index, Elf32_Addr address)
+void elf_update_section_address(void *context, Elf32_Half section_index, Elf32_Addr address)
 {
     Elf32_Context *ctx = context;
     Elf32_Section *section = &ctx->section_table[section_index];
 
     section->section_header.sh_addr = address;
+}
+
+void elf_update_section_size(void *context, Elf32_Half section_index, Elf32_Word size)
+{
+    Elf32_Context *ctx = context;
+    Elf32_Section *section = &ctx->section_table[section_index];
+
+    section->section_header.sh_size = size;
+}
+
+int elf_get_relocation_section(void *context, Elf32_Half section_index)
+{
+    int result = -1;
+    Elf32_Context *ctx = context;
+    Elf32_Section *section = &ctx->section_table[section_index];
+    if (section->related_section != NULL)
+    {
+        result = section->related_section->section_index;
+    }
+
+    return result;
 }
 
 void elf_add_relocation_entry(void *context, Elf32_Half code_section_index, Elf32_Addr offset, void *symbol, int relocation_type, Elf32_Sword addend)
@@ -408,7 +429,7 @@ void *elf_read_file(FILE *f, int check_is_elf)
                         ctx->symbol_table_section = section;
                         for (sym_index = 0; sym_index < num_syms; sym_index++)
                         {
-                            decode_sym(get_symbol(section, sym_index));
+                            decode_sym(get_linker_symbol(section, sym_index));
                         }
                     }
                     else if (section->section_header.sh_type == SHT_STRTAB)
@@ -467,7 +488,32 @@ void elf_get_section_header(void *context, Elf32_Shdr *header, char **data, int 
 {
     Elf32_Context *ctx = context;
     memcpy(header, &ctx->section_table[section_index].section_header, sizeof(Elf32_Shdr));
-    *data = ctx->section_table[section_index].data;
+    if (data != NULL)
+    {
+        *data = ctx->section_table[section_index].data;
+    }
+}
+
+void elf_get_symbol(void *context, Elf32_Sym *symbol, int symbol_index)
+{
+    Elf32_Context *ctx = context;
+    memcpy(symbol, get_linker_symbol(ctx->symbol_table_section, symbol_index), sizeof(Elf32_Sym));
+}
+
+char *elf_get_string(void *context, int string_index)
+{
+    char *result;
+    Elf32_Context *ctx = context;
+    result = get_string(ctx->string_table_section, string_index);
+    return result;
+}
+
+char *elf_get_section_name(void *context, int string_index)
+{
+    char *result;
+    Elf32_Context *ctx = context;
+    result = get_string(ctx->section_header_string_table_section, string_index);
+    return result;
 }
 
 void elf_process_defined_symbols(void *context, void *(*process_symbol)(char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index))
@@ -478,7 +524,7 @@ void elf_process_defined_symbols(void *context, void *(*process_symbol)(char *na
     num_syms = ctx->symbol_table_section->section_header.sh_size / ctx->symbol_table_section->section_header.sh_entsize;
     for (sym_index = 1; sym_index  < num_syms; sym_index++)
     {
-        Elf32_Sym *sym = get_symbol(ctx->symbol_table_section, sym_index);
+        Elf32_Sym *sym = get_linker_symbol(ctx->symbol_table_section, sym_index);
         if (sym->st_shndx != SHN_UNDEF)
         {
             process_symbol(get_string(ctx->string_table_section, sym->st_name), sym->st_value, sym->st_size, ELF_ST_TYPE(sym->st_info), sym->st_other, sym->st_shndx);
@@ -635,7 +681,7 @@ static char *get_string(Elf32_Section *section, int string_index)
     return ptr;
 }
 
-static Elf32_Sym *get_symbol(Elf32_Section *section, int symbol_index)
+static Elf32_Sym *get_linker_symbol(Elf32_Section *section, int symbol_index)
 {
     Elf32_Sym *result = (Elf32_Sym *)((char *)section->data + symbol_index * section->section_header.sh_entsize);
     return result;
