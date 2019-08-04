@@ -855,7 +855,7 @@ static uint8 get_operand(uint16 n)
         {
             if (!var->data.var.is_vstore)
             {
-                if (var->data.var.dimension > 0)
+                if (var->data.var.dimension > 0 || BT_IS_BOUNDED(var->data.var.data_type))
                 {
                     kp = K_V64; /* we are loading a descriptor */
                 }
