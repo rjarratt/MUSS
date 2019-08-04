@@ -410,7 +410,7 @@ static int relocation_count;
 static GLOBALREF relocation_table[MAX_RELOCATION_ENTRIES];
 static int global_ref_count;
 static GLOBALREF global_refs[MAX_RELOCATION_ENTRIES];
-static uint32 stack_front_load_address;
+static uint32 stack_front_load_byte_address;
 static void *elf_module_context;
 
 uint8 k_v(void);
@@ -703,11 +703,11 @@ static uint16 next_code_segment_number(void)
     return result;
 }
 
-static uint32 next_instruction_full_address(void)
+static uint32 next_instruction_full_byte_address(void)
 {
     uint32 result;
     SEGMENT *segment = get_segment_for_area(current_code_area);
-    result = segment->segment_address << 16 | segment->next_word;
+    result = segment->segment_address << 16 | (segment->next_word * 2);
     return result;
 }
 
@@ -1387,7 +1387,7 @@ void check_global_ref(int N)
             plant_org_order_extended(F_XNB_LOAD, KP_LITERAL, NP_32_BIT_UNSIGNED_LITERAL);
             GLOBALREF *ref = &global_refs[global_ref_count++];
             ref->referenced_segment_number = next_code_segment_number();
-            ref->referencing_address = next_instruction_full_address();
+            ref->referencing_address = next_instruction_full_byte_address();
             plant_32_bit_code_word(0);
         }
     }
@@ -1642,20 +1642,12 @@ uint32 op_org_jump_generic_rel_address(int F, int16 relative)
     return address_location;
 }
 
-uint32 op_org_jump_generic_abs_address(int F, int16 address)
+uint32 op_org_jump_generic_abs_address(int F, uint32 address)
 {
     uint32 address_location;
-    if (address >= -32 && address < 32)
-    {
-        plant_org_order(F, K_LITERAL, address & 0x3F);
-        address_location = UNKNOWN_ADDRESS;
-    }
-    else
-    {
-        plant_org_order_extended(F, KP_LITERAL, NP_32_BIT_SIGNED_LITERAL);
-        address_location = next_instruction_segment_address();
-        plant_32_bit_code_word(address);
-    }
+    plant_org_order_extended(F, KP_LITERAL, NP_32_BIT_SIGNED_LITERAL);
+    address_location = next_instruction_segment_address();
+    plant_32_bit_code_word(address);
 
     return address_location;
 }
@@ -1683,9 +1675,9 @@ void op_org_abs_jump_generic(int N, int F, char *type)
 {
     if (mutl_var[N].data.label.address_defined)
     {
-        int16 address = mutl_var[N].data.label.address;
-        log(LOG_PLANT, "%04X ORG JUMP %s %s absolute %d\n", next_instruction_segment_address(), type, mutl_var[N].name, address);
-        op_org_jump_generic_abs_address(F, address);
+        uint32 word_address = mutl_var[N].data.label.address / 2; /* 16-bit word address */
+        log(LOG_PLANT, "%04X ORG JUMP %s %s absolute %d (16-bit word address)\n", next_instruction_segment_address(), type, mutl_var[N].name, word_address);
+        op_org_jump_generic_abs_address(F, word_address);
     }
     else
     {
@@ -1906,7 +1898,7 @@ void TLSEG(int32 N, int32 S, int32 RTA, int32 CTA, int32 NL)
     {
         /* update start address*/
         start_address = actual_rta << 16 | (start_address & 0xFFFF);
-        stack_front_load_address = actual_rta << 16 | (stack_front_load_address & 0xFFFF);
+        stack_front_load_byte_address = actual_rta << 16 | (stack_front_load_byte_address & 0xFFFF);
         elf_set_entry(elf_module_context, start_address);
     }
 
@@ -1986,7 +1978,7 @@ void TL(int M, char *FN, int DZ)
     else
     {
         elf_module_context = elf_new_file(ET_EXEC, 0, 0);
-        start_address = next_instruction_full_address();
+        start_address = next_instruction_full_byte_address();
         elf_set_entry(elf_module_context, start_address);
         printf("Compiling a program\n");
     }
@@ -2008,7 +2000,7 @@ void TLEND(void)
 
     if (!is_library)
     {
-        plant_16_bit_word_update_by_address(stack_front_load_address, (next_data_address() + 4)/4);
+        plant_16_bit_word_update_by_address(stack_front_load_byte_address / 2, (next_data_address() + 4)/4);
     }
 
     elf_write_file(elf_module_context, out_file_name);
@@ -2023,7 +2015,7 @@ void TLMODULE(void)
     if (!is_library)
     {
         plant_org_order_extended(F_SF_LOAD, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
-        stack_front_load_address = next_instruction_full_address();
+        stack_front_load_byte_address = next_instruction_full_byte_address();
         plant_16_bit_code_word(0);
     }
 
@@ -2421,7 +2413,7 @@ void TLPROC(int P)
     PROCSYMBOL *proc_def_var = &current_proc_def->data.proc;
     log(LOG_STRUCTURE, "Define proc %s at 0x%04X\n", current_proc_def->name, next_instruction_segment_byte_address());
     proc_def_var->address_defined = 1;
-    proc_def_var->address = next_instruction_full_address();
+    proc_def_var->address = next_instruction_full_byte_address();
     if (current_proc_def->elf_symbol != NULL) /* NULL for non-import and non-export, ie locals, could make them LOCAL in ELF potentially */
     {
         elf_update_symbol(current_proc_def->elf_symbol, next_instruction_segment_byte_address());
@@ -2748,42 +2740,6 @@ void read_vector(FILE *f, VECTOR *v)
 {
     v->length = fgetc(f) & 0xFF;
     fread(v->buffer, 1, v->length, f);
-}
-
-void link_module(FILE *f)
-{
-    uint16 header_length;
-    char buffer[16384];
-    uint16 segment_number;
-    uint16 length;
-    SEGMENT *segment;
-    int i;
-
-    fseek(f, 2, SEEK_SET); /* skip past marker */
-    header_length = read_16_bit_word(f);
-    fseek(f, header_length + 2, SEEK_SET); /* skip past header */
-
-    while (!feof(f))
-    {
-        segment_number = read_16_bit_word(f);
-        length = read_16_bit_word(f);
-        segment = get_segment_by_segment_number(segment_number);
-        for (i = 0; i < length; i++)
-        {
-            segment->words[segment->first_word + i] = read_16_bit_word(f);
-        }
-
-        /* relocate XNB loads. Currently assumes segment 0 is where all global data resides */
-        segment = get_segment_by_segment_number(0);
-        uint32 global_data_address = segment->first_word & 0xFFFF;
-        for (i = 0; i < relocation_count; i++)
-        {
-            SEGMENT *code_seg = get_segment_by_segment_number(relocation_table[i].referenced_segment_number);
-            uint16 offset = relocation_table[i].referencing_address & 0xFFFF;
-            code_seg->words[code_seg->first_word + offset] = get_segment_number_from_full_address(global_data_address);
-            code_seg->words[code_seg->first_word + offset + 1] = (global_data_address & 0xFFFF) >> 2; /* scale from 16-bit word to 64-bit as XNB is in 64-bit units */
-        }
-    }
 }
 
 void import_module_exports(FILE * f)
