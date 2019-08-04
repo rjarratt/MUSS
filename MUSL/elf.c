@@ -53,14 +53,14 @@ static Elf32_Sym *encode_sym(Elf32_Sym *sym);
 static Elf32_Rela *encode_rela(Elf32_Rela *rela);
 static Elf32_Half encode_half(Elf32_Half half);
 static Elf32_Word encode_word(Elf32_Word word);
-static Elf32_Sword encode_word(Elf32_Sword word);
+static Elf32_Sword encode_sword(Elf32_Sword word);
 static Elf32_Off encode_off(Elf32_Off off);
 static Elf32_Addr encode_addr(Elf32_Addr addr);
 
 static void decode_ehdr(Elf32_Ehdr *header);
 static void decode_shdr(Elf32_Shdr *header);
-static void decode_phdr(Elf32_Shdr *header);
-static void decode_sym(Elf32_Shdr *sym);
+static void decode_phdr(Elf32_Phdr *header);
+static void decode_sym(Elf32_Sym *sym);
 static void decode_rela(Elf32_Rela *rela);
 static Elf32_Half decode_half(Elf32_Half half);
 static Elf32_Word decode_word(Elf32_Word word);
