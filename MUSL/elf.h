@@ -210,7 +210,7 @@ void elf_update_section_address(void *context, Elf32_Half section_index, Elf32_A
 void elf_update_section_size(void *context, Elf32_Half section_index, Elf32_Word size);
 int elf_get_relocation_section(void *context, Elf32_Half section_index);
 void elf_add_relocation_entry(void *context, Elf32_Half code_section_index, Elf32_Addr offset, void *symbol, int relocation_type, Elf32_Sword addend);
-void *elf_add_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, Elf32_Half section_index);
+void *elf_add_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, Elf32_Half section_index);
 void elf_update_symbol(void *symbol, Elf32_Addr value);
 void elf_add_binary_data_to_section(void *context, Elf32_Half section_index, char *data, int length);
 void elf_write_file(void *context, char *file_name);
@@ -221,4 +221,4 @@ void elf_get_section_header(void *context, Elf32_Shdr *header, char **data, int 
 void elf_get_symbol(void *context, Elf32_Sym *symbol, int symbol_index);
 char *elf_get_string(void *context, int string_index);
 char *elf_get_section_name(void *context, int string_index);
-void elf_process_defined_symbols(void *context, void *(*process_symbol)(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index));
+void elf_process_defined_symbols(void *elf_context, void *context, void *(*process_symbol)(void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index));

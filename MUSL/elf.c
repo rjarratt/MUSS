@@ -206,7 +206,7 @@ void elf_add_relocation_entry(void *context, Elf32_Half code_section_index, Elf3
     rela_section->section_header.sh_size += sizeof(Elf32_Rela);
 }
 
-void *elf_add_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, Elf32_Half section_index)
+void *elf_add_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, Elf32_Half section_index)
 {
     Elf32_Context *ctx = context;
     int num_symbols = ctx->symbol_table_section->section_header.sh_size / sizeof(Elf32_Sym);
@@ -220,7 +220,7 @@ void *elf_add_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_W
     sym->st_name = add_string(ctx->string_table_section, name);
     sym->st_value = value;
     sym->st_size = size;
-    sym->st_info = ELF32_ST_INFO(STB_GLOBAL, type);
+    sym->st_info = ELF32_ST_INFO(binding, type);
     sym->st_other = 0;
     sym->st_shndx = section_index;
     ctx->symbol_table_section->section_header.sh_size += sizeof(Elf32_Sym);
@@ -516,18 +516,18 @@ char *elf_get_section_name(void *context, int string_index)
     return result;
 }
 
-void elf_process_defined_symbols(void *context, void *(*process_symbol)(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index))
+void elf_process_defined_symbols(void *elf_context, void *context, void *(*process_symbol)(void *elf_context, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index))
 {
     int sym_index;
     int num_syms;
-    Elf32_Context *ctx = context;
+    Elf32_Context *ctx = elf_context;
     num_syms = ctx->symbol_table_section->section_header.sh_size / ctx->symbol_table_section->section_header.sh_entsize;
     for (sym_index = 1; sym_index  < num_syms; sym_index++)
     {
         Elf32_Sym *sym = get_linker_symbol(ctx->symbol_table_section, sym_index);
         if (sym->st_shndx != SHN_UNDEF)
         {
-            process_symbol(context, get_string(ctx->string_table_section, sym->st_name), sym->st_value, sym->st_size, ELF_ST_TYPE(sym->st_info), sym->st_other, sym->st_shndx);
+            process_symbol(elf_context, get_string(ctx->string_table_section, sym->st_name), sym->st_value, sym->st_size, ELF_ST_BIND(sym->st_info), ELF_ST_TYPE(sym->st_info), sym->st_other, sym->st_shndx);
         }
     }
 }

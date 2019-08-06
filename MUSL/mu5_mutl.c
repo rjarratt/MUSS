@@ -1673,19 +1673,27 @@ void op_org_rel_jump_generic(int N, int F, char *type)
 /* this function relies on labels and procs having the same initial structure. */
 void op_org_abs_jump_generic(int N, int F, char *type)
 {
-    if (mutl_var[N].data.label.address_defined)
-    {
-        uint32 word_address = mutl_var[N].data.label.address / 2; /* 16-bit word address */
-        log(LOG_PLANT, "%04X ORG JUMP %s %s absolute %d (16-bit word address)\n", next_instruction_segment_address(), type, mutl_var[N].name, word_address);
-        op_org_jump_generic_abs_address(F, word_address);
-    }
-    else
-    {
-        log(LOG_PLANT, "%04X ORG JUMP %s to %s forward ref\n", next_instruction_segment_address(), type, mutl_var[N].name);
-        plant_org_order_extended(F, KP_LITERAL, NP_32_BIT_SIGNED_LITERAL);
-        register_forward_label_ref(N);
-        plant_32_bit_code_word(0); /* place holder */
-    }
+    MUTLSYMBOL *sym = &mutl_var[N];
+    SEGMENT *segment = get_segment_for_area(current_code_area);
+    log(LOG_PLANT, "%04X ORG JUMP %s to %s with relocation\n", next_instruction_segment_address(), type, mutl_var[N].name);
+    plant_org_order_extended(F, KP_LITERAL, NP_32_BIT_SIGNED_LITERAL);
+    elf_add_relocation_entry(elf_module_context, segment->elf_section_index, next_instruction_segment_byte_address(), sym->elf_symbol, 0, 0);
+    plant_32_bit_code_word(0); /* place holder */
+
+
+    //if (mutl_var[N].data.label.address_defined)
+    //{
+    //    uint32 word_address = mutl_var[N].data.label.address / 2; /* 16-bit word address */
+    //    log(LOG_PLANT, "%04X ORG JUMP %s %s absolute %d (16-bit word address)\n", next_instruction_segment_address(), type, mutl_var[N].name, word_address);
+    //    op_org_jump_generic_abs_address(F, word_address);
+    //}
+    //else
+    //{
+    //    log(LOG_PLANT, "%04X ORG JUMP %s to %s forward ref\n", next_instruction_segment_address(), type, mutl_var[N].name);
+    //    plant_org_order_extended(F, KP_LITERAL, NP_32_BIT_SIGNED_LITERAL);
+    //    register_forward_label_ref(N);
+    //    plant_32_bit_code_word(0); /* place holder */
+    //}
 }
 
 void op_org_stack_link(int N)
@@ -2171,11 +2179,15 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
 
     if (BT_IS_EXPORT(T))
     {
-        var->elf_symbol = elf_add_global_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STT_OBJECT, SHN_ABS);
+        var->elf_symbol = elf_add_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STB_GLOBAL, STT_OBJECT, SHN_ABS);
     }
     else if (BT_IS_IMPORT(T))
     {
-        var->elf_symbol = elf_add_global_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STT_OBJECT, SHN_UNDEF);
+        var->elf_symbol = elf_add_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STB_GLOBAL, STT_OBJECT, SHN_UNDEF);
+    }
+    else if (block_level == 0 && !is_vstore && !is_parameter)
+    {
+        var->elf_symbol = elf_add_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STB_LOCAL, STT_OBJECT, SHN_UNDEF);
     }
 }
 
@@ -2215,6 +2227,7 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
 
 void declare_proc(VECTOR *name, uint32 address, int NAT, int module)
 {
+    SEGMENT *segment = get_segment_for_area(current_code_area);
     MUTLSYMBOL *sym = get_next_mutl_var(add_other_block_item());
     current_proc_spec = &sym->data.proc;
     sym->symbol_type = SYM_PROC;
@@ -2245,12 +2258,15 @@ void declare_proc(VECTOR *name, uint32 address, int NAT, int module)
 
     if (BT_IS_EXPORT(NAT))
     {
-        SEGMENT *segment = get_segment_for_area(current_code_area);
-        sym->elf_symbol = elf_add_global_symbol(elf_module_context, sym->name, 0, 4, STT_FUNC, segment->elf_section_index);
+        sym->elf_symbol = elf_add_symbol(elf_module_context, sym->name, 0, 4, STB_GLOBAL, STT_FUNC, segment->elf_section_index);
     }
     else if (BT_IS_IMPORT(NAT))
     {
-        sym->elf_symbol = elf_add_global_symbol(elf_module_context, sym->name, 0, 4, STT_FUNC, SHN_UNDEF);
+        sym->elf_symbol = elf_add_symbol(elf_module_context, sym->name, 0, 4, STB_GLOBAL, STT_FUNC, SHN_UNDEF);
+    }
+    else
+    {
+        sym->elf_symbol = elf_add_symbol(elf_module_context, sym->name, 0, 4, STB_LOCAL, STT_FUNC, segment->elf_section_index);
     }
 }
 
@@ -2414,10 +2430,7 @@ void TLPROC(int P)
     log(LOG_STRUCTURE, "Define proc %s at 0x%04X\n", current_proc_def->name, next_instruction_segment_byte_address());
     proc_def_var->address_defined = 1;
     proc_def_var->address = next_instruction_full_byte_address();
-    if (current_proc_def->elf_symbol != NULL) /* NULL for non-import and non-export, ie locals, could make them LOCAL in ELF potentially */
-    {
-        elf_update_symbol(current_proc_def->elf_symbol, next_instruction_segment_byte_address());
-    }
+    elf_update_symbol(current_proc_def->elf_symbol, next_instruction_segment_byte_address());
 
     fixup_forward_label_refs(P);
     start_block_level(param_stack_size(P));

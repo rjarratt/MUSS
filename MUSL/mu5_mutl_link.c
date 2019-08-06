@@ -30,14 +30,14 @@ static void *elf_modules[MAX_IMPORT_MODULES];
 static int num_segments;
 static LINKER_SEGMENT *segment_table;
 static LINKER_SYMBOL *symbol_table;
-static int total_symbol_count;
-static int loaded_symbol_count;
+static int total_global_symbol_count;
+static int loaded_global_symbol_count;
 
 static LINKER_SEGMENT *get_linker_segment_for_section(void *context, int section_index);
 static void check_module_for_start_address(void *elf_module);
-static void count_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index);
-static void add_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index);
-static void compute_total_symbols(void);
+static void count_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index);
+static void add_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index);
+static void compute_total_global_symbols(void);
 static int compare_symbol_name(const void *sym1, const void *sym2);
 static int compare_segment_by_section_address(const void *seg1, const void *seg2);
 static void build_symbol_table(void);
@@ -112,26 +112,34 @@ static void check_module_for_start_address(void *elf_module)
     }
 }
 
-static void count_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index)
+static void count_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index)
 {
-    total_symbol_count++;
+    if (binding == STB_GLOBAL)
+    {
+        total_global_symbol_count++;
+    }
 }
 
-static void add_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int type, unsigned char st_other, Elf32_Half section_index)
+static void add_global_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index)
 {
-    LINKER_SYMBOL *link_sym = &symbol_table[loaded_symbol_count++];
-    LINKER_SEGMENT *link_seg = get_linker_segment_for_section(context, section_index);
-    link_sym->name = name;
-    link_sym->type = type;
-    link_sym->value = link_seg->segment_relocated_start_address + value;
+    LINKER_SYMBOL *link_sym;
+    LINKER_SEGMENT *link_seg;
+    if (binding == STB_GLOBAL)
+    {
+        link_sym = &symbol_table[loaded_global_symbol_count++];
+        link_seg = get_linker_segment_for_section(context, section_index);
+        link_sym->name = name;
+        link_sym->type = type;
+        link_sym->value = link_seg->segment_relocated_start_address + value;
+    }
 }
 
-static void  compute_total_symbols()
+static void  compute_total_global_symbols()
 {
     int i;
     for (i = 0; i < num_modules; i++)
     {
-        elf_process_defined_symbols(elf_modules[i], count_symbol);
+        elf_process_defined_symbols(elf_modules[i], count_global_symbol);
     }
 }
 
@@ -155,15 +163,15 @@ static void build_symbol_table(void)
 {
     int i;
     
-    compute_total_symbols();
+    compute_total_global_symbols();
 
-    symbol_table = (LINKER_SYMBOL *)(malloc(total_symbol_count * sizeof(LINKER_SYMBOL)));
+    symbol_table = (LINKER_SYMBOL *)(malloc(total_global_symbol_count * sizeof(LINKER_SYMBOL)));
     for (i = 0; i < num_modules; i++)
     {
-        elf_process_defined_symbols(elf_modules[i], add_symbol);
+        elf_process_defined_symbols(elf_modules[i], add_global_symbol);
     }
 
-    qsort(symbol_table, total_symbol_count, sizeof(LINKER_SYMBOL), compare_symbol_name);
+    qsort(symbol_table, total_global_symbol_count, sizeof(LINKER_SYMBOL), compare_symbol_name);
 
     check_for_symbols_with_multiple_definitions();
 }
@@ -177,7 +185,7 @@ static LINKER_SYMBOL *get_linker_symbol(void *elf_module_context, int symbol_ind
 
     elf_get_symbol(elf_module_context, &symbol, symbol_index);
     lookup.name = elf_get_string(elf_module_context, symbol.st_name);
-    result = bsearch(&lookup, symbol_table, total_symbol_count, sizeof(LINKER_SYMBOL), compare_symbol_name);
+    result = bsearch(&lookup, symbol_table, total_global_symbol_count, sizeof(LINKER_SYMBOL), compare_symbol_name);
     return result;
 }
 
@@ -186,7 +194,7 @@ static void check_for_symbols_with_multiple_definitions(void)
     int i;
     char *last_name = "";
     int error = 0;
-    for (i = 0; i < total_symbol_count; i++)
+    for (i = 0; i < total_global_symbol_count; i++)
     {
         LINKER_SYMBOL *sym = &symbol_table[i];
         if (strcmp(last_name, sym->name) == 0)
