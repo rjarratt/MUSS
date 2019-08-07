@@ -527,7 +527,7 @@ void elf_process_defined_symbols(void *elf_context, void *context, void *(*proce
         Elf32_Sym *sym = get_linker_symbol(ctx->symbol_table_section, sym_index);
         if (sym->st_shndx != SHN_UNDEF)
         {
-            process_symbol(elf_context, get_string(ctx->string_table_section, sym->st_name), sym->st_value, sym->st_size, ELF_ST_BIND(sym->st_info), ELF_ST_TYPE(sym->st_info), sym->st_other, sym->st_shndx);
+            process_symbol(elf_context, context, get_string(ctx->string_table_section, sym->st_name), sym->st_value, sym->st_size, ELF_ST_BIND(sym->st_info), ELF_ST_TYPE(sym->st_info), sym->st_other, sym->st_shndx);
         }
     }
 }
