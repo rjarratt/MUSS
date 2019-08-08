@@ -275,6 +275,7 @@ typedef struct
     int data_type;
     int dimension;
     int position; /* for regular variables this is offset in 32-bit words from NB, including LINK if appropriate, vstore it is the v-line number */
+    int is_parameter;
     int is_vstore;
     int v_read_proc;
     int v_write_proc;
@@ -855,9 +856,9 @@ static uint8 get_operand(uint16 n)
         {
             if (!var->data.var.is_vstore)
             {
-                if (var->data.var.dimension > 0 || BT_IS_BOUNDED(var->data.var.data_type))
+                if (var->data.var.is_parameter || var->data.var.dimension > 0 || BT_IS_BOUNDED(var->data.var.data_type))
                 {
-                    kp = K_V64; /* we are loading a descriptor */
+                    kp = K_V64;
                 }
                 else
                 {
@@ -1257,13 +1258,9 @@ uint16 get_block_name_offset_for_last_var(uint8 T, int is_parameter)
 {
     BLOCK *block = get_current_block();
     uint16 result;
-    if (BT_SIZE(T) > 4 || type_is_vector(T))
+    if (is_parameter || BT_SIZE(T) > 4 || type_is_vector(T))
     {
         result = block->local_names_space / 2;
-    }
-    else if (is_parameter)
-    {
-        result = block->local_names_space + 1;
     }
     else
     {
@@ -2144,6 +2141,7 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
     var->module_number = module;
     var->data.var.data_type = T;
     var->data.var.dimension = D;
+    var->data.var.is_parameter = is_parameter;
 
     if (!is_vstore)
     {
