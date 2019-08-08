@@ -37,6 +37,7 @@ static void *elf_modules[MAX_IMPORT_MODULES];
 static int num_segments;
 static LINKER_SEGMENT *segment_table;
 static LINKER_SYMBOL_TABLE global_symbol_table = { 0, STB_GLOBAL, NULL };
+static LINKER_SYMBOL_TABLE local_symbol_table = { 0, STB_LOCAL, NULL };
 
 static LINKER_SEGMENT *get_linker_segment_for_section(void *context, int section_index);
 static void check_module_for_start_address(void *elf_module);
@@ -45,7 +46,8 @@ static void add_symbol(void *elf_context, void *context, char *name, Elf32_Addr 
 static void compute_total_symbols(LINKER_SYMBOL_TABLE *symbol_table);
 static int compare_symbol_name(const void *sym1, const void *sym2);
 static int compare_segment_by_section_address(const void *seg1, const void *seg2);
-static void build_symbol_table(void);
+static void build_global_symbol_table(void);
+static void build_local_symbol_table(void *elf_context);
 static LINKER_SYMBOL *get_linker_symbol(void *elf_module_context, int symbol_index, LINKER_SYMBOL_TABLE *symbol_table);
 static void check_for_symbols_with_multiple_definitions(LINKER_SYMBOL_TABLE *symbol_table);
 static void process_segments(Elf32_Word flag, void *callback_context, void(*process_segment)(void *elf_module_context, int section_index, void *callback_context));
@@ -83,7 +85,7 @@ void link_modules(char *filename)
     void *out_elf_context = elf_new_file(ET_EXEC, 0, 0);
     elf_set_entry(out_elf_context, entry_point);
     define_segments();
-    build_symbol_table();
+    build_global_symbol_table();
     resolve_symbols();
     add_segments_to_output(out_elf_context);
     elf_write_file(out_elf_context, filename);
@@ -166,7 +168,7 @@ static int compare_segment_by_section_address(const void *seg1, const void *seg2
     return ls1->section_header.sh_addr - ls2->section_header.sh_addr;
 }
 
-static void build_symbol_table(void)
+static void build_global_symbol_table(void)
 {
     int i;
     
@@ -182,6 +184,25 @@ static void build_symbol_table(void)
     qsort(global_symbol_table.symbols, global_symbol_table.num_symbols, sizeof(LINKER_SYMBOL), compare_symbol_name);
 
     check_for_symbols_with_multiple_definitions(&global_symbol_table);
+}
+
+static void build_local_symbol_table(void *elf_context)
+{
+    int i;
+
+    if (local_symbol_table.symbols != NULL)
+    {
+        free(local_symbol_table.symbols);
+    }
+
+    local_symbol_table.num_symbols = 0;
+    compute_total_symbols(&local_symbol_table);
+
+    local_symbol_table.symbols = (LINKER_SYMBOL *)(malloc(local_symbol_table.num_symbols * sizeof(LINKER_SYMBOL)));
+    local_symbol_table.num_symbols = 0; /* reset count because add_symbol uses it to index into the table while adding the symbols */
+    elf_process_defined_symbols(elf_context, &local_symbol_table, add_symbol);
+
+    qsort(local_symbol_table.symbols, local_symbol_table.num_symbols, sizeof(LINKER_SYMBOL), compare_symbol_name);
 }
 
 static LINKER_SYMBOL *get_linker_symbol(void *elf_module_context, int symbol_index, LINKER_SYMBOL_TABLE *symbol_table)
@@ -295,12 +316,18 @@ static void resolve_symbol_in_segment(LINKER_SEGMENT *linker_segment)
     int num_relas;
     if (linker_segment->relocation_section_header.sh_size > 0)
     {
+        build_local_symbol_table(linker_segment->elf_module_context);
         num_relas = linker_segment->relocation_section_header.sh_size / linker_segment->relocation_section_header.sh_entsize;
         for (i = 0; i < num_relas; i++)
         {
             Elf32_Rela *rela_entry = &((Elf32_Rela *)linker_segment->rela_data)[i];
             LINKER_SYMBOL *linker_symbol;
-            linker_symbol = get_linker_symbol(linker_segment->elf_module_context, ELF32_R_SYM(rela_entry->r_info), &global_symbol_table);
+            linker_symbol = get_linker_symbol(linker_segment->elf_module_context, ELF32_R_SYM(rela_entry->r_info), &local_symbol_table);
+            if (linker_symbol == NULL)
+            {
+                linker_symbol = get_linker_symbol(linker_segment->elf_module_context, ELF32_R_SYM(rela_entry->r_info), &global_symbol_table);
+            }
+
             if (linker_symbol == NULL)
             {
                 perror("symbol not defined");
