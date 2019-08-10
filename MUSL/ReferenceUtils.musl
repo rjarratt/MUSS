@@ -34,14 +34,18 @@ PROC PRINT.STRING(STRING);
 END
 
 PROC PRINT.INT(N);
+    INTEGER REM;
     IF N < 0 THEN
         PRINT.CHAR("-");
         0-N => N;
+        PRINT.INT(N);
     ELSE
         IF N < 10 THEN
             PRINT.CHAR(48 + N);
         ELSE
+            N - ((N / 10) * 10) => REM;
             PRINT.INT(N / 10);
+            PRINT.CHAR(48 + REM);
         FI;
     FI;
 END
