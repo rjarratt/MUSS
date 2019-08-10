@@ -679,7 +679,15 @@ static void plant_vector(uint16 data_type, VECTOR *v)
     }
     words = (len + 1) / 2;
     memset(buffer, fill, sizeof(buffer));
-    memcpy(&buffer[(words * 2) - v->length], v->buffer, v->length);
+    if (BT_SIZE(data_type) > 1)
+    {
+        memcpy(&buffer[(words * 2) - v->length], v->buffer, v->length);
+    }
+    else
+    {
+        memcpy(buffer, v->buffer, v->length);
+    }
+
     for (i = 0; i < words; i++)
     {
         uint16 word = (buffer[i * 2] << 8) | buffer[i * 2 + 1];
