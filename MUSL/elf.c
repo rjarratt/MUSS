@@ -224,6 +224,14 @@ void *elf_add_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word siz
     sym->st_other = 0;
     sym->st_shndx = section_index;
     ctx->symbol_table_section->section_header.sh_size += sizeof(Elf32_Sym);
+
+    // Although not documented in my ELF document, it seems that the section header sh_info field is supposed to count the number of local symbols
+    // Also symbols are supposed to be stored Local first, but that is too hard here, so I won't do it.
+    if (binding == STB_LOCAL)
+    {
+        ctx->symbol_table_section->section_header.sh_info++;
+    }
+
     return sym;
 }
 
@@ -622,10 +630,13 @@ static void create_string_table(Elf32_Context *ctx)
 
 static void create_relocation_table(Elf32_Context *ctx, Elf32_Section *applied_section)
 {
+    char section_name[80];
     Elf32_Section *section;
     Elf32_Shdr header;
+    strcpy(section_name, ".rela");
+    strcat(section_name, get_string(ctx->section_header_string_table_section, applied_section->section_header.sh_name));
     memset(&header, 0, sizeof(Elf32_Shdr));
-    header.sh_name = add_string(ctx->section_header_string_table_section, ".rela.text");
+    header.sh_name = add_string(ctx->section_header_string_table_section, section_name);
     header.sh_type = SHT_RELA;
     header.sh_link = ctx->symbol_table_section->section_index;
     header.sh_info = applied_section->section_index;
