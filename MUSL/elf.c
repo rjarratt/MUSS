@@ -187,6 +187,7 @@ void elf_add_relocation_entry(void *context, Elf32_Half code_section_index, Elf3
     Elf32_Section *code_section;
     Elf32_Section *rela_section;
     Elf32_Sym *sym = symbol;
+    int sym_index;
     int num_relas;
 
     code_section = &ctx->section_table[code_section_index];
@@ -199,9 +200,11 @@ void elf_add_relocation_entry(void *context, Elf32_Half code_section_index, Elf3
         exit(1);
     }
 
+    sym_index = get_symbol_index(ctx->symbol_table_section, sym);
+
     Elf32_Rela *rela = (Elf32_Rela *)rela_section->data + num_relas;
     rela->r_offset = offset;
-    rela->r_info = ELF32_R_INFO(get_symbol_index(ctx->symbol_table_section, sym), relocation_type);
+    rela->r_info = ELF32_R_INFO(sym_index, relocation_type);
     rela->r_addend = addend;
     rela_section->section_header.sh_size += sizeof(Elf32_Rela);
 }

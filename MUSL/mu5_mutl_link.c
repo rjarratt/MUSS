@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "mu5_mutl_link.h"
 #include "elf.h"
 
 #define MAX_IMPORT_MODULES 64
@@ -341,14 +342,16 @@ static void resolve_symbol_in_segment(LINKER_SEGMENT *linker_segment)
         {
             Elf32_Rela *rela_entry = &((Elf32_Rela *)linker_segment->rela_data)[i];
             LINKER_SYMBOL *linker_symbol;
+            char *name;
             int symbol_index = ELF32_R_SYM(rela_entry->r_info);
+            int rel_type = ELF32_R_TYPE(rela_entry->r_info);
             linker_symbol = get_linker_symbol(linker_segment->module->elf_module_context, symbol_index, &local_symbol_table);
             if (linker_symbol == NULL)
             {
                 linker_symbol = get_linker_symbol(linker_segment->module->elf_module_context, symbol_index, &global_symbol_table);
             }
 
-            if (linker_symbol == NULL)
+            if (name = linker_symbol->name == NULL)
             {
                 Elf32_Sym symbol;
                 elf_get_symbol(linker_segment->module->elf_module_context, &symbol, symbol_index);
@@ -357,16 +360,27 @@ static void resolve_symbol_in_segment(LINKER_SEGMENT *linker_segment)
             }
 
             Elf32_Addr new_addr;
-            if (linker_symbol->type == STT_FUNC)
+            name = linker_symbol->name;
+            
+            if (linker_symbol->type == STT_FUNC && rel_type == MU5_REL_TYPE_FUNC)
             {
                 new_addr = linker_symbol->value / 2 + rela_entry->r_addend;
             }
-            else
+            else if (linker_symbol->type == STT_OBJECT && rel_type == MU5_REL_TYPE_VAR)
             {
                 new_addr = linker_symbol->segment->segment_relocated_start_address;
             }
+            else if (rel_type == MU5_REL_TYPE_DESC_LIT)
+            {
+                new_addr = linker_symbol->segment->segment_relocated_start_address + rela_entry->r_addend;
+            }
+            else
+            {
+                perror("Unrecognised link type");
+                exit(0);
+            }
 
-            printf("Resolved %s reference at offset %08X to %08X\n", linker_symbol->name, rela_entry->r_offset, new_addr);
+            printf("Resolved %s reference at offset %08X to %08X\n", name, rela_entry->r_offset, new_addr);
             char *ptr = &linker_segment->data[rela_entry->r_offset];
             *ptr++ = (new_addr >> 24) & 0xFF;
             *ptr++ = (new_addr >> 16) & 0xFF;

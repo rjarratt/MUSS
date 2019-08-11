@@ -411,6 +411,7 @@ static int imported_module_count;
 static int relocation_count;
 static uint32 stack_front_load_byte_address;
 static void *elf_module_context;
+static void *elf_literal_placeholder_symbol;
 
 uint8 k_v(void);
 void op_org_stack_link(int);
@@ -956,9 +957,18 @@ static void plant_operand(uint16 n)
         }
         else if (mutl_var[n].symbol_type == SYM_LITERAL)
         {
+            SEGMENT *data_seg = get_segment_for_area(current_data_area);
+            SEGMENT *code_seg = get_segment_for_area(current_code_area);
             LITSYMBOL *lit = &mutl_var[n].data.lit;
             t_uint64 descriptor = build_type_0_descriptor(1, lit->length, lit->address);
             plant_64_bit_code_word(descriptor);
+
+            if (elf_literal_placeholder_symbol == NULL)
+            {
+                elf_literal_placeholder_symbol = elf_add_symbol(elf_module_context, MU5_LIT_SYM_NAME, 0, 0, STB_LOCAL, STT_NOTYPE, data_seg->elf_section_index);
+            }
+
+            elf_add_relocation_entry(elf_module_context, code_seg->elf_section_index, (code_seg->next_word - 2)*2, elf_literal_placeholder_symbol, MU5_REL_TYPE_DESC_LIT, lit->address);
         }
         else
         {
