@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include "support.h"
+#include "mu5_mutl_link.h"
 #include "mu5_mutl.h"
 #include "elf.h"
 
@@ -11,7 +12,7 @@
 
 Global Variables
 ================
-A module can have a number of global variables. These have to accessed using the XNB register. It would be possible
+A module can have a number of global variables. These have to be accessed using the XNB register. It would be possible
 to record every global variable access and have the linker embed the XNB address of each global variable before
 each global variable access. However, XNB is 64-bit aligned, so every global variable would need to be 64-bit aligned.
 The alternative is to have XNB be loaded with the base of each global variable segment and then use a Name offset
@@ -408,9 +409,6 @@ static uint8 current_data_area = 0;
 static SEGMENT segments[MAX_SEGMENTS];
 static int imported_module_count;
 static int relocation_count;
-static GLOBALREF relocation_table[MAX_RELOCATION_ENTRIES];
-static int global_ref_count;
-static GLOBALREF global_refs[MAX_RELOCATION_ENTRIES];
 static uint32 stack_front_load_byte_address;
 static void *elf_module_context;
 
@@ -1317,7 +1315,7 @@ void register_forward_label_ref(int N)
     if (sym->symbol_type == SYM_PROC)
     {
         SEGMENT *segment = get_segment_for_area(current_code_area);
-        elf_add_relocation_entry(elf_module_context, segment->elf_section_index, next_instruction_segment_byte_address(), sym->elf_symbol, 0, 0);
+        elf_add_relocation_entry(elf_module_context, segment->elf_section_index, next_instruction_segment_byte_address(), sym->elf_symbol, MU5_REL_TYPE_FUNC, 0);
     }
     else if (label->num_forward_refs >= MAX_FORWARD_LOCATIONS)
     {
@@ -1384,15 +1382,10 @@ void check_global_ref(int N)
         mutl_sym = &mutl_var[N];
         if (mutl_sym->block_level == 0 && (mutl_sym->symbol_type == SYM_VARIABLE) && !mutl_sym->data.var.is_vstore)
         {
-            if (global_ref_count >= MAX_RELOCATION_ENTRIES)
-            {
-                fatal("Too many global references\n");
-            }
-
             plant_org_order_extended(F_XNB_LOAD, KP_LITERAL, NP_32_BIT_UNSIGNED_LITERAL);
-            GLOBALREF *ref = &global_refs[global_ref_count++];
-            ref->referenced_segment_number = next_code_segment_number();
-            ref->referencing_address = next_instruction_full_byte_address();
+
+            SEGMENT *segment = get_segment_for_area(current_code_area);
+            elf_add_relocation_entry(elf_module_context, segment->elf_section_index, next_instruction_segment_byte_address(), mutl_sym->elf_symbol, MU5_REL_TYPE_VAR, 0);
             plant_32_bit_code_word(0);
         }
     }
@@ -1682,7 +1675,7 @@ void op_org_abs_jump_generic(int N, int F, char *type)
     SEGMENT *segment = get_segment_for_area(current_code_area);
     log(LOG_PLANT, "%04X ORG JUMP %s to %s with relocation\n", next_instruction_segment_address(), type, mutl_var[N].name);
     plant_org_order_extended(F, KP_LITERAL, NP_32_BIT_SIGNED_LITERAL);
-    elf_add_relocation_entry(elf_module_context, segment->elf_section_index, next_instruction_segment_byte_address(), sym->elf_symbol, 0, 0);
+    elf_add_relocation_entry(elf_module_context, segment->elf_section_index, next_instruction_segment_byte_address(), sym->elf_symbol, MU5_REL_TYPE_FUNC, 0);
     plant_32_bit_code_word(0); /* place holder */
 
 
@@ -2127,6 +2120,7 @@ MUTLSYMBOL *get_next_mutl_var(int n)
 
 void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vstore, int v_position, int v_read_proc, int v_write_proc, int module)
 {
+    SEGMENT *segment = get_segment_for_area(current_data_area);
     MUTLSYMBOL *var;
     int var_n;
     int size_words;
@@ -2185,7 +2179,7 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
 
     if (BT_IS_EXPORT(T))
     {
-        var->elf_symbol = elf_add_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STB_GLOBAL, STT_OBJECT, SHN_ABS);
+        var->elf_symbol = elf_add_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STB_GLOBAL, STT_OBJECT, segment->elf_section_index);
     }
     else if (BT_IS_IMPORT(T))
     {
@@ -2193,7 +2187,7 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
     }
     else if (block_level == 0 && !is_vstore && !is_parameter)
     {
-        var->elf_symbol = elf_add_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STB_LOCAL, STT_OBJECT, SHN_UNDEF);
+        var->elf_symbol = elf_add_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STB_LOCAL, STT_OBJECT, segment->elf_section_index);
     }
 }
 
@@ -2759,125 +2753,6 @@ void read_vector(FILE *f, VECTOR *v)
 {
     v->length = fgetc(f) & 0xFF;
     fread(v->buffer, 1, v->length, f);
-}
-
-void import_module_exports(FILE * f)
-{
-    uint16 header_length;
-    uint16 module_type;
-    uint16 module_count;
-    uint16 segment_count;
-    uint16 symbol_count;
-    uint16 segment_number;
-    uint16 segment_address;
-    uint16 segment_size;
-    uint16 segment_kind;
-    uint16 segment_bytes_used;
-    uint16 global_bytes;
-    uint16 global_segment;
-    uint16 global_offset;
-    int i;
-
-    fseek(f, 2, SEEK_SET); /* skip past marker */
-    header_length = read_16_bit_word(f);
-
-    module_type = read_16_bit_word(f);
-    if (module_type != LIBRARY_MODULE)
-    {
-        fatal("Cannot import a program, must be a library");
-    };
-
-    module_count = read_16_bit_word(f);
-    segment_count = read_16_bit_word(f);
-    relocation_count = read_16_bit_word(f);
-    symbol_count = read_16_bit_word(f);
-    global_bytes = read_16_bit_word(f);
-
-    global_segment = read_16_bit_word(f);
-    global_offset = read_16_bit_word(f);
-
-    /* read module table */
-    for (i = 0; i < module_count; i++)
-    {
-        char mod_name[MAX_NAME_LEN];
-        read_name(f, mod_name, sizeof(mod_name));
-    }
-
-    /* read segment table */
-    for (i = 0; i < segment_count; i++)
-    {
-        segment_number = read_16_bit_word(f);
-        segment_address = read_16_bit_word(f);
-        segment_size = read_16_bit_word(f);
-        segment_kind = read_16_bit_word(f);
-        segment_bytes_used = read_16_bit_word(f);
-        TLSEG(segment_number, segment_size, segment_address << 16, -1, segment_kind);
-        segments[segment_number].first_word = segments[segment_number].next_word;
-        segments[segment_number].next_word += segment_bytes_used / 2;
-    }
-
-    /* read relocation table */
-    if (relocation_count > MAX_RELOCATION_ENTRIES)
-    {
-        fatal("Too many relocation entries in the import module");
-    }
-
-    for (i = 0; i < relocation_count; i++)
-    {
-        relocation_table[i].referenced_segment_number = read_16_bit_word(f);
-        relocation_table[i].referencing_address = read_32_bit_word(f);
-    }
-
-    /* read symbol table */
-    for (i = 0; i < symbol_count; i++)
-    {
-        SYMBOLTYPE sym_type;
-        char sym_name[MAX_NAME_LEN];
-        VECTOR name;
-        char sym_val[MAX_LITERAL_LEN];
-        VECTOR value;
-        uint16 data_type;
-
-        name.buffer = sym_name;
-        read_vector(f, &name);
-
-        sym_type = fgetc(f);
-
-        switch (sym_type)
-        {
-            case SYM_LITERAL:
-            {
-                data_type = read_16_bit_word(f);
-                value.buffer = sym_val;
-                read_vector(f, &value);
-                declare_literal(&name, &value, data_type, 0, imported_module_count - 1);
-                break;
-            }
-            case SYM_VARIABLE:
-            {
-                uint16 dimension;
-                uint16 position;
-                uint8 is_vstore;
-                data_type = read_16_bit_word(f);
-                dimension = read_16_bit_word(f);
-                position = read_16_bit_word(f);
-                is_vstore = (uint8)fgetc(f);
-                declare_variable(&name, data_type, dimension, 0, 0, position, 0, 0, imported_module_count - 1);
-                break;
-            }
-            case SYM_PROC:
-            {
-                uint32 sym_address;
-                uint32 relocated_address;
-                SEGMENT *seg;
-                sym_address = read_32_bit_word(f);
-                seg = get_segment_by_full_address(sym_address);
-                relocated_address = sym_address + seg->first_word;
-                declare_proc(&name, relocated_address, 0, imported_module_count - 1);
-                break;
-            }
-        }
-    }
 }
 
 void update_segment_starts(void)
