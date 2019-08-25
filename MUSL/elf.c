@@ -238,10 +238,16 @@ void *elf_add_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word siz
     return sym;
 }
 
-void elf_update_symbol(void *symbol, Elf32_Addr value)
+void elf_update_symbol_value(void *symbol, Elf32_Addr value)
 {
     Elf32_Sym *sym = symbol;
     sym->st_value = value;
+}
+
+void elf_update_symbol_size(void *symbol, Elf32_Word size)
+{
+    Elf32_Sym *sym = symbol;
+    sym->st_size = size;
 }
 
 void elf_add_binary_data_to_section(void *context, Elf32_Half section_index, char *data, int length)

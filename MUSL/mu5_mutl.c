@@ -394,6 +394,7 @@ static PROCSYMBOL *current_proc_spec;
 static MUTLSYMBOL *current_proc_def;
 static MUTLSYMBOL *current_type_def;
 static int current_assign_variable;
+static int current_assign_variable_size;
 static int current_assign_variable_area;
 static int current_proc_call_n;
 static int current_proc_call_stack_link_offset_address;
@@ -2093,26 +2094,6 @@ int compute_variable_space(int size_words, int is_parameter)
     return result;
 }
 
-MUTLSYMBOL *find_import(VECTOR *name, SYMBOLTYPE sym_type)
-{
-    int i;
-    MUTLSYMBOL *result = NULL;
-    for (i = 0; i <= import_block.last_mutl_var; i++)
-    {
-        MUTLSYMBOL *sym = &mutl_import_var[i];
-        if (name->length == strlen(sym->name) && sym->symbol_type == sym_type)
-        {
-            if (strncmp(name->buffer, sym->name, name->length) == 0)
-            {
-                result = sym;
-                break;
-            }
-        }
-    }
-
-    return result;
-}
-
 MUTLSYMBOL *get_next_mutl_var(int n)
 {
     MUTLSYMBOL *result;
@@ -2203,6 +2184,7 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
 
 void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
 {
+    SEGMENT *segment = get_segment_for_area(current_data_area);
     MUTLSYMBOL *var;
     int nb_offset;
     int var_n;
@@ -2218,17 +2200,21 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
     var->data.lit.dimension = D;
     var->data.lit.address = compute_descriptor_origin(next_data_address());
     var->data.lit.value.buffer = &var->data.lit.valuebuf;
-    if (BT_IS_IMPORT(T))
+
+    if (BT_IS_EXPORT(T))
     {
-        MUTLSYMBOL *import = find_import(name, SYM_LITERAL);
-        if (import == NULL)
-        {
-            fatal("Import %0.*s not found", name->length, name->buffer);
-        }
-        var->data.lit.data_type = import->data.lit.data_type;
-        vecmemcpy(&var->data.lit.value, &import->data.lit.value, sizeof(var->data.lit.valuebuf));
+        var->elf_symbol = elf_add_symbol(elf_module_context, var->name, var->data.lit.address, 0, STB_GLOBAL, STT_OBJECT, segment->elf_section_index);
     }
-    else
+    else if (BT_IS_IMPORT(T))
+    {
+        var->elf_symbol = elf_add_symbol(elf_module_context, var->name, 0, 0, STB_GLOBAL, STT_OBJECT, SHN_UNDEF);
+    }
+    else if (block_level == 0)
+    {
+        var->elf_symbol = elf_add_symbol(elf_module_context, var->name, var->data.lit.address, 0, STB_LOCAL, STT_OBJECT, segment->elf_section_index);
+    }
+
+    if (!BT_IS_IMPORT(T))
     {
         vecmemcpy(&var->data.lit.value, literal, sizeof(var->data.lit.valuebuf));
     }
@@ -2340,9 +2326,7 @@ void TLSDECL(VECTOR *SN, int T, int D)
 
     if (D == -1)
     {
-        char *tempname = "(literal)";
-        VECTOR temp = { tempname, 9 };
-        declare_literal(&temp, &current_literal, T, D, NO_MODULE);
+        declare_literal(&name, &current_literal, T, D, NO_MODULE);
     }
     else
     {
@@ -2359,6 +2343,7 @@ void TLASS(int VL, int AN)
 {
     LITSYMBOL *lit;
     current_assign_variable = VL;
+    current_assign_variable_size = 0;
     lit = &mutl_var[current_assign_variable].data.lit;
     lit->dimension = 0;
 
@@ -2393,13 +2378,19 @@ void TLASSVALUE(int N, int R)
     log(LOG_LITERALS, "TL.ASS.VALUE current literal to variable %d, repeat is %d\n", current_assign_variable, R);
     for (i = 0; i < R; i++)
     {
+        current_assign_variable_size += current_literal.length;
         plant_vector(lit->data_type, &current_literal);
     }
 }
 
 void TLASSEND(void)
 {
-    log(LOG_LITERALS, "TL.ASS.END\n");
+    log(LOG_LITERALS, "TL.ASS.END, size is %d bytes\n", current_assign_variable_size);
+    if (IS_MUTL_VAR(current_assign_variable))
+    {
+        MUTLSYMBOL *sym = &mutl_var[current_assign_variable];
+        elf_update_symbol_size(sym->elf_symbol, current_assign_variable_size);
+    }
     current_assign_variable = -1;
 }
 
@@ -2440,7 +2431,7 @@ void TLPROC(int P)
     log(LOG_STRUCTURE, "Define proc %s at 0x%04X\n", current_proc_def->name, next_instruction_segment_byte_address());
     proc_def_var->address_defined = 1;
     proc_def_var->address = next_instruction_full_byte_address();
-    elf_update_symbol(current_proc_def->elf_symbol, next_instruction_segment_byte_address());
+    elf_update_symbol_value(current_proc_def->elf_symbol, next_instruction_segment_byte_address());
 
     fixup_forward_label_refs(P);
     start_block_level(param_stack_size(P));

@@ -211,7 +211,8 @@ void elf_update_section_size(void *context, Elf32_Half section_index, Elf32_Word
 int elf_get_relocation_section(void *context, Elf32_Half section_index);
 void elf_add_relocation_entry(void *context, Elf32_Half code_section_index, Elf32_Addr offset, void *symbol, int relocation_type, Elf32_Sword addend);
 void *elf_add_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, Elf32_Half section_index);
-void elf_update_symbol(void *symbol, Elf32_Addr value);
+void elf_update_symbol_value(void *symbol, Elf32_Addr value);
+void elf_update_symbol_size(void *symbol, Elf32_Word size);
 void elf_add_binary_data_to_section(void *context, Elf32_Half section_index, char *data, int length);
 void elf_write_file(void *context, char *file_name);
 void *elf_read_file(FILE *f, int check_is_elf);
