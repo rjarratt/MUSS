@@ -81,7 +81,7 @@ void import_module(char * filename)
     if (f == NULL)
     {
         perror("Could not open import file");
-        exit(0);
+        exit(1);
     }
 
     LINKER_MODULE *module = &elf_modules[num_modules++];
@@ -257,7 +257,7 @@ static void check_for_symbols_with_multiple_definitions(LINKER_SYMBOL_TABLE *sym
 
     if (error)
     {
-        exit(0);
+        exit(1);
     }
 }
 
@@ -351,7 +351,7 @@ static void resolve_symbol_in_segment(LINKER_SEGMENT *linker_segment)
                 linker_symbol = get_linker_symbol(linker_segment->module->elf_module_context, symbol_index, &global_symbol_table);
             }
 
-            if (name = linker_symbol->name == NULL)
+            if (linker_symbol == NULL)
             {
                 Elf32_Sym symbol;
                 elf_get_symbol(linker_segment->module->elf_module_context, &symbol, symbol_index);
@@ -377,7 +377,7 @@ static void resolve_symbol_in_segment(LINKER_SEGMENT *linker_segment)
             else
             {
                 perror("Unrecognised link type");
-                exit(0);
+                exit(1);
             }
 
             printf("Resolved %s reference at offset %08X to %08X\n", name, rela_entry->r_offset, new_addr);

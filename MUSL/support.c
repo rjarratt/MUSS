@@ -26,7 +26,7 @@ FILE *DEFINEINPUT(int StreamNumber, char *FileName, int Mode)
     if (result == NULL)
     {
         perror("Input file could not be opened");
-        exit(0);
+        exit(1);
     }
 
     return result;
@@ -119,7 +119,7 @@ void OUTLINENO(int n)
 char *FINDN(VECTOR *name, int kind)
 {
     printf("FINDN not implemented\n");
-    exit(0);
+    exit(1);
     // see lib022
     return NULL;
 }
@@ -296,7 +296,7 @@ int main(int argc, char *argv[])
                 else
                 {
                     printf("Missing logging level");
-                    exit(0);
+                    exit(1);
                 }
             }
             else if (strcmp(argv[arg], "-lib") == 0)
@@ -327,7 +327,7 @@ int main(int argc, char *argv[])
                     else
                     {
                         printf("Missing module file name");
-                        exit(0);
+                        exit(1);
                     }
                 }
                 else if (strcmp(argv[arg], "-l") == 0)
