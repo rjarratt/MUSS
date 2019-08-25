@@ -4,7 +4,7 @@ if errorlevel 1 goto error
 if errorlevel 1 goto error
 ..\x64\debug\nmsl ..\..\muss\musl\ReferenceLibrary2.musl ReferenceLibrary2.bin -lib
 if errorlevel 1 goto error
-..\x64\debug\nmsl ..\..\muss\musl\ReferenceProgram1.musl ReferenceProgram1.bin -i ReferenceUtils.bin -i ReferenceLibrary1.bin
+..\x64\debug\nmsl ..\..\muss\musl\ReferenceProgram1.musl ReferenceProgram1.bin -i ReferenceUtils.bin -i ReferenceLibrary1.bin -i ReferenceLibrary2.bin
 
 echo Build succeeded
 goto done

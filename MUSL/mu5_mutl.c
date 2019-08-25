@@ -394,7 +394,6 @@ static PROCSYMBOL *current_proc_spec;
 static MUTLSYMBOL *current_proc_def;
 static MUTLSYMBOL *current_type_def;
 static int current_assign_variable;
-static int current_assign_variable_size;
 static int current_assign_variable_area;
 static int current_proc_call_n;
 static int current_proc_call_stack_link_offset_address;
@@ -944,32 +943,34 @@ static void plant_operand(uint16 n)
     }
     else if (n >= 2 && n < 0x1000)
     {
+        MUTLSYMBOL *mutlsym = &mutl_var[n];
         if (mutl_var[n].symbol_type == SYM_VARIABLE)
         {
-            MUTLSYMBOL *var = &mutl_var[n];
-            if (BT_SIZE(var->data.var.data_type) <= 4 || var->data.var.is_vstore)
+            if (BT_SIZE(mutlsym->data.var.data_type) <= 4 || mutlsym->data.var.is_vstore)
             {
-                plant_16_bit_code_word(var->data.var.position);
+                plant_16_bit_code_word(mutlsym->data.var.position);
             }
             else
             {
-                plant_16_bit_code_word(var->data.var.position);
+                plant_16_bit_code_word(mutlsym->data.var.position);
             }
         }
         else if (mutl_var[n].symbol_type == SYM_LITERAL)
         {
+            void *elf_sym;
             SEGMENT *data_seg = get_segment_for_area(current_data_area);
             SEGMENT *code_seg = get_segment_for_area(current_code_area);
             LITSYMBOL *lit = &mutl_var[n].data.lit;
-            t_uint64 descriptor = build_type_0_descriptor(1, lit->length, lit->address);
+            t_uint64 descriptor = build_type_0_descriptor(BT_SIZE(lit->data_type), lit->dimension, lit->address);
             plant_64_bit_code_word(descriptor);
 
-            if (elf_literal_placeholder_symbol == NULL)
+            if (elf_literal_placeholder_symbol == NULL && mutlsym->elf_symbol == NULL)
             {
                 elf_literal_placeholder_symbol = elf_add_symbol(elf_module_context, MU5_LIT_SYM_NAME, 0, 0, STB_LOCAL, STT_NOTYPE, data_seg->elf_section_index);
             }
 
-            elf_add_relocation_entry(elf_module_context, code_seg->elf_section_index, (code_seg->next_word - 2)*2, elf_literal_placeholder_symbol, MU5_REL_TYPE_DESC_LIT, lit->address);
+            elf_sym = (mutlsym->elf_symbol != NULL) ? mutlsym->elf_symbol : elf_literal_placeholder_symbol;
+            elf_add_relocation_entry(elf_module_context, code_seg->elf_section_index, (code_seg->next_word - 2)*2, elf_sym, MU5_REL_TYPE_DESC_LIT, lit->address);
         }
         else
         {
@@ -1422,53 +1423,7 @@ void op_d_load_ref(int N)
         fatal("Cannot load descriptor ref to operand\n");
     }
 
-    MUTLSYMBOL *mutl_sym = &mutl_var[N];
-    VARSYMBOL *var = &mutl_sym->data.var;
-    LITSYMBOL *lit = &mutl_sym->data.lit;
-    t_uint64 descriptor = build_type_0_descriptor(BT_SIZE(var->data_type), var->dimension, 0); /* var and lit share the same structure for data type and dimension */
-
-    log(LOG_PLANT, "%04X   LOAD D with fixed part %llX\n", next_instruction_segment_address(), descriptor);
-    plant_order_extended(CR_STS2, F_LOAD_D, KP_LITERAL, NP_64_BIT_LITERAL);
-    plant_64_bit_code_word(descriptor);
-
-    plant_stack_x();
-
-    if (mutl_sym->block_level == 0)
-    {
-        log(LOG_PLANT, "%04X   A LOAD XNB\n", next_instruction_segment_address());
-        plant_order(CR_XS, F_LOAD_32, K_IR, 1);
-    }
-    else if (mutl_sym->block_level == block_level)
-    {
-        log(LOG_PLANT, "%04X   A LOAD SN NB\n", next_instruction_segment_address());
-        plant_order(CR_XS, F_LOAD_32, K_IR, 2);
-    }
-    else
-    {
-        fatal("Cannot handle non-global and non-local D reference yet\n");
-    }
-
-    plant_order(CR_XS, F_MUL_A, K_LITERAL, 8); /* scale to byte address from 64-bit address */
-
-    if (mutl_sym->symbol_type == SYM_VARIABLE && var->position > 0)
-    {
-        log(LOG_PLANT, "%04X   A Add 0x%04X\n", next_instruction_segment_address(), var->position * 4);
-        plant_order_extended(CR_XS, F_ADD_X, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
-        plant_16_bit_code_word(var->position * 4);
-    }
-    else if (lit->address > 0)
-    {
-        log(LOG_PLANT, "%04X   A Add 0x%04X\n", next_instruction_segment_address(), lit->address);
-        plant_order_extended(CR_XS, F_ADD_X, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
-        plant_16_bit_code_word(lit->address);
-    }
-
-    plant_stack_x();
-
-    log(LOG_PLANT, "%04X   LOAD DO from stack\n", next_instruction_segment_address());
-    plant_order_extended(CR_STS2, F_LOAD_DO, K_V64, NP_STACK);
-
-    plant_pop_x();
+    plant_order_extended_operand(CR_STS2, F_LOAD_D, N);
 }
 
 void op_d_select_element(int N)
@@ -2197,7 +2152,7 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
     var->block_level = block_level;
     var->module_number = module;
     var->data.lit.data_type = T;
-    var->data.lit.dimension = D;
+    var->data.lit.dimension = (D == -1) ? literal->length : D;
     var->data.lit.address = compute_descriptor_origin(next_data_address());
     var->data.lit.value.buffer = &var->data.lit.valuebuf;
 
@@ -2209,7 +2164,7 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
     {
         var->elf_symbol = elf_add_symbol(elf_module_context, var->name, 0, 0, STB_GLOBAL, STT_OBJECT, SHN_UNDEF);
     }
-    else if (block_level == 0)
+    else if (block_level == 0 && (literal->length > 4 || (literal->length == 0 && D == -1)))
     {
         var->elf_symbol = elf_add_symbol(elf_module_context, var->name, var->data.lit.address, 0, STB_LOCAL, STT_OBJECT, segment->elf_section_index);
     }
@@ -2218,7 +2173,7 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
     {
         vecmemcpy(&var->data.lit.value, literal, sizeof(var->data.lit.valuebuf));
     }
-    log(LOG_SYMBOLS, "Declare literal %s %s level=%d, dim=%d, address=0x%08X in slot %d\n", var->name, format_basic_type(var->data.lit.data_type), block_level, D, var->data.lit.address, var_n);
+    log(LOG_SYMBOLS, "Declare literal %s %s level=%d, dim=%d, address=0x%08X in slot %d\n", var->name, format_basic_type(var->data.lit.data_type), block_level, var->data.lit.dimension, var->data.lit.address, var_n);
 }
 
 void declare_proc(VECTOR *name, uint32 address, int NAT, int module)
@@ -2245,11 +2200,11 @@ void declare_proc(VECTOR *name, uint32 address, int NAT, int module)
 
     if (sym->data.proc.address_defined)
     {
-        log(LOG_SYMBOLS, "Declare proc %s, nature=0x%04X address=0x%08X\n", sym->name, NAT, sym->data.proc.address);
+        log(LOG_SYMBOLS, "Declare proc %s, nature=0x%04X address=0x%08X in slot %d\n", sym->name, NAT, sym->data.proc.address, get_current_block()->last_mutl_var);
     }
     else
     {
-        log(LOG_SYMBOLS, "Declare proc %s, nature=0x%04X\n", sym->name, NAT);
+        log(LOG_SYMBOLS, "Declare proc %s, nature=0x%04X in slot %d\n", sym->name, NAT, get_current_block()->last_mutl_var);
     }
 
     if (BT_IS_EXPORT(NAT))
@@ -2318,18 +2273,23 @@ void TLSDECL(VECTOR *SN, int T, int D)
     {
         memcpy(&name, SN, sizeof(VECTOR));
     }
-    else
-    {
-        name.buffer = "(internal)";
-        name.length = strlen(name.buffer);
-    }
 
     if (D == -1)
     {
+        if (SN == NULL)
+        {
+            name.buffer = "(anonymous_literal)";
+            name.length = strlen(name.buffer);
+        }
         declare_literal(&name, &current_literal, T, D, NO_MODULE);
     }
     else
     {
+        if (SN == NULL)
+        {
+            name.buffer = "(anonymous_variable)";
+            name.length = strlen(name.buffer);
+        }
         declare_variable(&name, T, D, 0, 0, 0, 0, 0, NO_MODULE);
     }
 }
@@ -2343,9 +2303,9 @@ void TLASS(int VL, int AN)
 {
     LITSYMBOL *lit;
     current_assign_variable = VL;
-    current_assign_variable_size = 0;
     lit = &mutl_var[current_assign_variable].data.lit;
     lit->dimension = 0;
+    lit->length = 0;
 
     if (AN == -1)
     {
@@ -2365,6 +2325,7 @@ void TLASS(int VL, int AN)
 void TLASSVALUE(int N, int R)
 {
     int i;
+    int size;
     LITSYMBOL *lit;
     if (N != 0)
     {
@@ -2372,26 +2333,32 @@ void TLASSVALUE(int N, int R)
     }
 
     lit = &mutl_var[current_assign_variable].data.lit;
-    lit->length = current_literal.length;
-    lit->dimension++;
+    size = BT_SIZE(lit->data_type);
 
     log(LOG_LITERALS, "TL.ASS.VALUE current literal to variable %d, repeat is %d\n", current_assign_variable, R);
     for (i = 0; i < R; i++)
     {
-        current_assign_variable_size += current_literal.length;
+        lit->length += current_literal.length;
+        lit->dimension += (current_literal.length + size - 1) / size; /* round up to integral number of size units */
         plant_vector(lit->data_type, &current_literal);
     }
 }
 
 void TLASSEND(void)
 {
-    log(LOG_LITERALS, "TL.ASS.END, size is %d bytes\n", current_assign_variable_size);
+    log(LOG_LITERALS, "TL.ASS.END\n");
     if (IS_MUTL_VAR(current_assign_variable))
     {
         MUTLSYMBOL *sym = &mutl_var[current_assign_variable];
-        elf_update_symbol_size(sym->elf_symbol, current_assign_variable_size);
+        LITSYMBOL *lit = &sym->data.lit;
+        if (sym->elf_symbol != NULL)
+        {
+            elf_update_symbol_size(sym->elf_symbol, lit->dimension);
+        }
     }
     current_assign_variable = -1;
+    memset(current_literal_buf, 0, sizeof(current_literal_buf));
+    current_literal.length = 0;
 }
 
 void TLPROCSPEC(VECTOR *NAM, int NAT)
