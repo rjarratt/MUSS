@@ -370,7 +370,7 @@ static void resolve_symbol_in_segment(LINKER_SEGMENT *linker_segment)
             }
             else if (linker_symbol->type == STT_OBJECT && rel_type == MU5_REL_TYPE_VAR)
             {
-                new_addr = linker_symbol->segment->segment_relocated_start_address;
+                new_addr = linker_symbol->segment->segment_relocated_start_address / 4;
             }
             else if (rel_type == MU5_REL_TYPE_DESC_LIT)
             {
