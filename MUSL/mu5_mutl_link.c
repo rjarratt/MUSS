@@ -48,7 +48,7 @@ static LINKER_SYMBOL_TABLE global_symbol_table = { 0, STB_GLOBAL, NULL };
 static LINKER_SYMBOL_TABLE local_symbol_table = { 0, STB_LOCAL, NULL };
 
 static LINKER_SEGMENT *get_linker_segment_for_section(void *context, int section_index);
-static void check_module_for_start_address(void *elf_module);
+static void check_segment_for_start_address(LINKER_SEGMENT *segment);
 static void count_symbol(void *elf_context, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index);
 static void add_symbol(void *elf_context, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index);
 static void compute_total_symbols(LINKER_SYMBOL_TABLE *symbol_table);
@@ -87,15 +87,14 @@ void import_module(char * filename)
     LINKER_MODULE *module = &elf_modules[num_modules++];
     strncpy(module->module_name, filename, sizeof(module->module_name));
     module->elf_module_context = elf_read_file(f, 0);
-    check_module_for_start_address(elf_modules[num_modules - 1].elf_module_context);
     fclose(f);
 }
 
 void link_modules(char *filename)
 {
     void *out_elf_context = elf_new_file(ET_EXEC, 0, 0);
-    elf_set_entry(out_elf_context, entry_point);
     define_segments();
+    elf_set_entry(out_elf_context, entry_point);
     build_global_symbol_table();
     resolve_symbols();
     add_segments_to_output(out_elf_context);
@@ -120,13 +119,16 @@ static LINKER_SEGMENT *get_linker_segment_for_section(void *context, int section
     return result;
 }
 
-static void check_module_for_start_address(void *elf_module)
+static void check_segment_for_start_address(LINKER_SEGMENT *segment)
 {
     Elf32_Ehdr elf_header;
-    elf_get_elf_header(elf_module, &elf_header);
+    elf_get_elf_header(segment->module->elf_module_context, &elf_header);
     if (elf_header.e_type == ET_EXEC)
     {
-        entry_point = elf_header.e_entry;
+        if (elf_header.e_entry >= segment->section_header.sh_addr && elf_header.e_entry < (segment->section_header.sh_addr + segment->section_header.sh_size))
+        {
+            entry_point = segment->segment_relocated_start_address + (elf_header.e_entry - segment->section_header.sh_addr);
+        }
     }
 }
 
@@ -408,6 +410,8 @@ static void compute_segment_start_addresses(void)
         {
             current_seg->segment_relocated_start_address = previous_seg->segment_relocated_start_address + previous_seg->section_header.sh_size;
         }
+
+        check_segment_for_start_address(current_seg);
 
         printf("Module %s, section %s, segment start address = %08X\n", current_seg->module->module_name, elf_get_section_name(current_seg->module->elf_module_context, current_seg->section_header.sh_name), current_seg->segment_relocated_start_address);
 
