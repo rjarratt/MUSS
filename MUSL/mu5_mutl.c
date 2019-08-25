@@ -444,7 +444,7 @@ void fatal(char *format, ...)
 
     vprintf(format, va);
 
-    exit(0);
+    exit(1);
 
     va_end(va);
 }
