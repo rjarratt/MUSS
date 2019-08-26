@@ -65,6 +65,8 @@ static void define_segments(void);
 static void define_segment(LINKER_MODULE *module, int section_index, void *callback_context);
 static void resolve_symbols(void);
 static void resolve_symbol_in_segment(LINKER_SEGMENT *linker_segment);
+static void write_32_bit_resolution(LINKER_SEGMENT *linker_segment, char *name, Elf32_Rela *rela_entry, Elf32_Addr new_addr);
+static void write_16_bit_resolution(LINKER_SEGMENT *linker_segment, char *name, Elf32_Rela *rela_entry, Elf32_Half new_addr);
 static void compute_segment_start_addresses(void);
 static void add_segments_to_output(void *out_elf_context);
 
@@ -367,29 +369,47 @@ static void resolve_symbol_in_segment(LINKER_SEGMENT *linker_segment)
             if (linker_symbol->type == STT_FUNC && rel_type == MU5_REL_TYPE_FUNC)
             {
                 new_addr = linker_symbol->value / 2 + rela_entry->r_addend;
+                write_32_bit_resolution(linker_segment, name, rela_entry, new_addr);
             }
-            else if (linker_symbol->type == STT_OBJECT && rel_type == MU5_REL_TYPE_VAR)
+            else if (linker_symbol->type == STT_OBJECT && rel_type == MU5_REL_TYPE_VAR_BASE)
             {
                 new_addr = linker_symbol->segment->segment_relocated_start_address / 4;
+                write_32_bit_resolution(linker_segment, name, rela_entry, new_addr);
+            }
+            else if (linker_symbol->type == STT_OBJECT && rel_type == MU5_REL_TYPE_VAR_OFFSET)
+            {
+                write_16_bit_resolution(linker_segment, name, rela_entry, linker_symbol->value & 0xFFFF);
             }
             else if (rel_type == MU5_REL_TYPE_DESC_LIT)
             {
                 new_addr = linker_symbol->segment->segment_relocated_start_address + rela_entry->r_addend;
+                write_32_bit_resolution(linker_segment, name, rela_entry, new_addr);
             }
             else
             {
                 perror("Unrecognised link type");
                 exit(1);
             }
-
-            printf("Resolved %s reference at offset %08X to %08X\n", name, rela_entry->r_offset, new_addr);
-            char *ptr = &linker_segment->data[rela_entry->r_offset];
-            *ptr++ = (new_addr >> 24) & 0xFF;
-            *ptr++ = (new_addr >> 16) & 0xFF;
-            *ptr++ = (new_addr >> 8) & 0xFF;
-            *ptr++ = (new_addr & 0xFF);
         }
     }
+}
+
+static void write_32_bit_resolution(LINKER_SEGMENT *linker_segment, char *name, Elf32_Rela *rela_entry, Elf32_Addr new_addr)
+{
+    printf("Resolved %s reference at offset %08X to %08X\n", name, rela_entry->r_offset, new_addr);
+    char *ptr = &linker_segment->data[rela_entry->r_offset];
+    *ptr++ = (new_addr >> 24) & 0xFF;
+    *ptr++ = (new_addr >> 16) & 0xFF;
+    *ptr++ = (new_addr >> 8) & 0xFF;
+    *ptr++ = (new_addr & 0xFF);
+}
+
+static void write_16_bit_resolution(LINKER_SEGMENT *linker_segment, char *name, Elf32_Rela *rela_entry, Elf32_Half new_addr)
+{
+    printf("Resolved %s reference at offset %08X to %04X\n", name, rela_entry->r_offset, new_addr);
+    char *ptr = &linker_segment->data[rela_entry->r_offset];
+    *ptr++ = (new_addr >> 8) & 0xFF;
+    *ptr++ = (new_addr & 0xFF);
 }
 
 static void compute_segment_start_addresses(void)

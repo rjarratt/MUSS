@@ -953,14 +953,12 @@ static void plant_operand(uint16 n)
         MUTLSYMBOL *mutlsym = &mutl_var[n];
         if (mutl_var[n].symbol_type == SYM_VARIABLE)
         {
-            if (BT_SIZE(mutlsym->data.var.data_type) <= 4 || mutlsym->data.var.is_vstore)
+            if (mutlsym->data.var.position == -1)
             {
-                plant_16_bit_code_word(mutlsym->data.var.position);
+                SEGMENT *code_seg = get_segment_for_area(current_code_area);
+                elf_add_relocation_entry(elf_module_context, code_seg->elf_section_index, next_instruction_segment_byte_address(), mutlsym->elf_symbol, MU5_REL_TYPE_VAR_OFFSET, 0);
             }
-            else
-            {
-                plant_16_bit_code_word(mutlsym->data.var.position);
-            }
+            plant_16_bit_code_word(mutlsym->data.var.position);
         }
         else if (mutl_var[n].symbol_type == SYM_LITERAL)
         {
@@ -1393,20 +1391,29 @@ void check_v_store_write_proc(int N)
     }
 }
 
-void check_global_ref(int N)
+int is_global_ref(int N)
 {
+    int result = 0;
     MUTLSYMBOL *mutl_sym;
     if (IS_MUTL_VAR(N))
     {
         mutl_sym = &mutl_var[N];
-        if (mutl_sym->block_level == 0 && (mutl_sym->symbol_type == SYM_VARIABLE) && !mutl_sym->data.var.is_vstore)
-        {
-            plant_org_order_extended(F_XNB_LOAD, KP_LITERAL, NP_32_BIT_UNSIGNED_LITERAL);
+        result = mutl_sym->block_level == 0 && (mutl_sym->symbol_type == SYM_VARIABLE) && !mutl_sym->data.var.is_vstore;
+    }
+    return result;
+}
 
-            SEGMENT *segment = get_segment_for_area(current_code_area);
-            elf_add_relocation_entry(elf_module_context, segment->elf_section_index, next_instruction_segment_byte_address(), mutl_sym->elf_symbol, MU5_REL_TYPE_VAR, 0);
-            plant_32_bit_code_word(0);
-        }
+void check_global_ref(int N)
+{
+    MUTLSYMBOL *mutl_sym;
+    if (is_global_ref(N))
+    {
+        mutl_sym = &mutl_var[N];
+        plant_org_order_extended(F_XNB_LOAD, KP_LITERAL, NP_32_BIT_UNSIGNED_LITERAL);
+
+        SEGMENT *segment = get_segment_for_area(current_code_area);
+        elf_add_relocation_entry(elf_module_context, segment->elf_section_index, next_instruction_segment_byte_address(), mutl_sym->elf_symbol, MU5_REL_TYPE_VAR_BASE, 0);
+        plant_32_bit_code_word(0);
     }
 }
 
@@ -2110,7 +2117,14 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
     var->data.var.dimension = D;
     var->data.var.is_parameter = is_parameter;
 
-    if (!is_vstore)
+    if (BT_IS_IMPORT(T))
+    {
+        BLOCK *block = get_current_block();
+        var->data.var.is_vstore = 0;
+        var->data.var.position = -1;
+        log(LOG_SYMBOLS, "Declare var %s %s level=%d, dim=%d, words=%d, offset=%d in slot %d\n", var->name, format_basic_type(T), block_level, D, size_words, var->data.var.position, var_n);
+    }
+    else if (!is_vstore)
     {
         BLOCK *block = get_current_block();
         var->data.var.is_vstore = 0;
