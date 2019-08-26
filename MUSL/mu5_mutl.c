@@ -41,6 +41,7 @@ This applies particularly to functions. Names are .....
 #define MAX_LITERAL_LEN 256
 #define MAX_FORWARD_LOCATIONS 64
 #define MAX_BLOCK_DEPTH 16
+#define MAX_NESTED_CALLS 16
 #define MAX_PROC_PARAMS 16
 #define MAX_TYPE_FIELDS 64
 #define MAX_LOOP_DEPTH 16
@@ -379,6 +380,12 @@ typedef struct
     uint32 referencing_address; /* the address where the address of the referenced segment must be placed */
 } GLOBALREF;
 
+typedef struct
+{
+    int proc_n;
+    int proc_call_stack_link_offset_address;
+} NESTEDPROCCALL;
+
 static int logging;
 static char out_file_name[_MAX_PATH + 1];
 static int is_library;
@@ -395,8 +402,8 @@ static MUTLSYMBOL *current_proc_def;
 static MUTLSYMBOL *current_type_def;
 static int current_assign_variable;
 static int current_assign_variable_area;
-static int current_proc_call_n;
-static int current_proc_call_stack_link_offset_address;
+static int current_nested_call_depth = 0;
+static NESTEDPROCCALL nested_call[MAX_NESTED_CALLS];
 static BLOCK block_stack[MAX_BLOCK_DEPTH];
 static BLOCK import_block;
 static int block_level = -1;
@@ -1662,11 +1669,18 @@ void op_org_abs_jump_generic(int N, int F, char *type)
 
 void op_org_stack_link(int N)
 {
-    current_proc_call_n = N;
+    if (current_nested_call_depth >= MAX_NESTED_CALLS)
+    {
+        fatal("Calls nested too deeply");
+    }
+
+    nested_call[current_nested_call_depth].proc_n = N;
     log(LOG_PLANT, "%04X ORG STACK LINK to %s\n", next_instruction_segment_address(), mutl_var[N].name);
     plant_org_order_extended(F_STACKLINK, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
-    current_proc_call_stack_link_offset_address = next_instruction_segment_address();
+
+    nested_call[current_nested_call_depth].proc_call_stack_link_offset_address = next_instruction_segment_address();
     plant_16_bit_code_word(0); /* placeholder fixed up when we plant the ENTER */
+    current_nested_call_depth++;
 }
 
 void op_org_stack_parameter(int N)
@@ -1682,14 +1696,19 @@ void op_org_stack_parameter(int N)
 
 void op_org_enter(int N)
 {
+    int proc_call_stack_link_offset_address;
+
     if (N != 0)
     {
         fatal("Can't enter 0x%04x\n", N);
     }
 
-    op_org_abs_jump_generic(current_proc_call_n, F_ABSJUMP, "ABS JUMP");
+    current_nested_call_depth--;
+    op_org_abs_jump_generic(nested_call[current_nested_call_depth].proc_n, F_ABSJUMP, "ABS JUMP");
     /* update the offset for the STACKLINK */
-    plant_16_bit_code_word_update(current_proc_call_stack_link_offset_address, next_instruction_segment_address() - current_proc_call_stack_link_offset_address + 1, "return address");
+
+    proc_call_stack_link_offset_address = nested_call[current_nested_call_depth].proc_call_stack_link_offset_address;
+    plant_16_bit_code_word_update(proc_call_stack_link_offset_address, next_instruction_segment_address() - proc_call_stack_link_offset_address + 1, "return address");
 }
 
 void op_org_return(int N)
