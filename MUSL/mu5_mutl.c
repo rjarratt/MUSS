@@ -975,7 +975,7 @@ static void plant_operand(uint16 n)
             }
 
             elf_sym = (mutlsym->elf_symbol != NULL) ? mutlsym->elf_symbol : elf_literal_placeholder_symbol;
-            elf_add_relocation_entry(elf_module_context, code_seg->elf_section_index, (code_seg->next_word - 2)*2, elf_sym, MU5_REL_TYPE_DESC_LIT, lit->address);
+            elf_add_relocation_entry(elf_module_context, code_seg->elf_section_index, (code_seg->next_word - 2)*2, elf_sym, MU5_REL_TYPE_DESC_LIT, lit->address & 0xFFFF);
         }
         else
         {
@@ -1886,11 +1886,8 @@ void set_literal_value(t_uint64 val, int size)
 
 void TLSEG(int32 N, int32 S, int32 RTA, int32 CTA, int32 NL)
 {
-    /* actual RTA is taken from current address so that module import segment definitions will resolve the address when linking.
-       This is NOT a proper solution, I am still not sure how to deal with TLSEG being called after TLMODULE.
-    */
     SEGMENT *seg = &segments[N];
-    uint32 actual_rta = (RTA == -1) ? seg->segment_address : get_segment_number_from_full_address(RTA);
+    uint32 actual_rta = (RTA == -1) ? 0 : get_segment_number_from_full_address(RTA);
 
     if (seg == get_segment_by_full_address(start_address))
     {
@@ -1918,47 +1915,40 @@ void TLLOAD(int SN, int AN)
     SEGMENT *segment;
     log(LOG_MEMORY, "TL.LOAD segment %d area %d\n", SN, AN);
     areas[AN].segment_index = SN;/* TODO: the code here is naive, it should not have a 1:1 mapping from area to segment, we should scan segment table for a free entry */
-
-    if (AN == current_code_area)
-    {
-        segment = get_segment_for_area(current_code_area);
-        if (segment->elf_section_index == 0)
-        {
-            segment->elf_section_index = elf_add_code_section(elf_module_context, 2, segment->run_time_address, (char *)segment->words);
-        }
-        else
-        {
-            elf_update_section_address(elf_module_context, segment->elf_section_index, segment->run_time_address);
-        }
-    }
-    else if (AN == current_data_area)
-    {
-        segment = get_segment_for_area(current_data_area);
-        if (segment->elf_section_index == 0)
-        {
-            segment->elf_section_index = elf_add_data_section(elf_module_context, 4, segment->run_time_address, (char *)segment->words);
-        }
-        else
-        {
-            elf_update_section_address(elf_module_context, segment->elf_section_index, segment->run_time_address);
-        }
-    }
 }
 
 void TLCODEAREA(int AN)
 {
+    SEGMENT *segment;
+
     log(LOG_MEMORY, "TL.CODE.AREA area %d\n", AN);
     current_code_area = AN;
+    segment = get_segment_for_area(current_code_area);
+    if (segment->elf_section_index == 0)
+    {
+        segment->elf_section_index = elf_add_code_section(elf_module_context, 2, segment->run_time_address, (char *)segment->words);
+    }
+    else
+    {
+        elf_update_section_address(elf_module_context, segment->elf_section_index, segment->run_time_address);
+    }
 }
 
 void TLDATAAREA(int AN)
 {
+    SEGMENT *segment;
+
     log(LOG_MEMORY, "TL.DATA.AREA area %d\n", AN);
     current_data_area = AN;
-    SEGMENT *segment = get_segment_for_area(current_data_area);
-    log(LOG_PLANT, "%04X Load SN=0x%04x\n", next_instruction_segment_address(), segment->segment_address);
-    plant_org_order_extended(F_SN_LOAD, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
-    plant_16_bit_code_word(segment->segment_address);
+    segment = get_segment_for_area(current_data_area);
+    if (segment->elf_section_index == 0)
+    {
+        segment->elf_section_index = elf_add_data_section(elf_module_context, 4, segment->run_time_address, (char *)segment->words);
+    }
+    else
+    {
+        elf_update_section_address(elf_module_context, segment->elf_section_index, segment->run_time_address);
+    }
 }
 
 void TL(int M, char *FN, int DZ)
@@ -1998,7 +1988,8 @@ void TLEND(void)
 
     if (!is_library)
     {
-        plant_16_bit_word_update_by_address(stack_front_load_byte_address / 2, (next_data_address() + 4)/4);
+        //SEGMENT *stack_segment = get_segment_for_area(0);
+        //plant_16_bit_word_update_by_address(stack_front_load_byte_address / 2, stack_segment->segment_address/4);
     }
 
     elf_write_file(elf_module_context, out_file_name);
@@ -2012,6 +2003,10 @@ void TLMODULE(void)
     
     if (!is_library)
     {
+        SEGMENT *stack_segment = get_segment_for_area(0);
+        log(LOG_PLANT, "%04X Load SN=0x%04x\n", next_instruction_segment_address(), stack_segment->segment_address);
+        plant_org_order_extended(F_SN_LOAD, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
+        plant_16_bit_code_word(stack_segment->segment_address);
         plant_org_order_extended(F_SF_LOAD, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
         stack_front_load_byte_address = next_instruction_full_byte_address();
         plant_16_bit_code_word(0);
