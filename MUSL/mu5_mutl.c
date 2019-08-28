@@ -956,7 +956,14 @@ static void plant_operand(uint16 n)
             if (mutlsym->data.var.position == -1)
             {
                 SEGMENT *code_seg = get_segment_for_area(current_code_area);
-                elf_add_relocation_entry(elf_module_context, code_seg->elf_section_index, next_instruction_segment_byte_address(), mutlsym->elf_symbol, MU5_REL_TYPE_VAR_OFFSET, 0);
+                if (mutlsym->data.var.is_vstore)
+                {
+                    elf_add_relocation_entry(elf_module_context, code_seg->elf_section_index, next_instruction_segment_byte_address(), mutlsym->elf_symbol, MU5_REL_TYPE_16_BIT_VALUE, 0);
+                }
+                else
+                {
+                    elf_add_relocation_entry(elf_module_context, code_seg->elf_section_index, next_instruction_segment_byte_address(), mutlsym->elf_symbol, MU5_REL_TYPE_VAR_OFFSET, 0);
+                }
             }
             plant_16_bit_code_word(mutlsym->data.var.position);
         }
@@ -1231,13 +1238,15 @@ void start_block_level(int param_stack_size)
         nb_adjust = -param_stack_size; /* NB must be positioned at the LINK */
     }
 
-    /* don't make the jump variable length because then we can't calculate the offset to pass to STACKLINK without more complication */
-    plant_org_order_extended(F_NB_LOAD_SF_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
-    plant_16_bit_code_word(nb_adjust);
-    log(LOG_PLANT, "%04X Plant NB=SF+%d\n", next_instruction_segment_address(), nb_adjust);
-    plant_org_order_extended(F_SF_LOAD_NB_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
-    block->stack_offset_address = next_instruction_segment_address();
-    plant_16_bit_code_word(0); /* plant a placeholder to be filled with the size of the local variables */
+    if (block_level > 0)
+    {
+        plant_org_order_extended(F_NB_LOAD_SF_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+        plant_16_bit_code_word(nb_adjust);
+        log(LOG_PLANT, "%04X Plant NB=SF+%d\n", next_instruction_segment_address(), nb_adjust);
+        plant_org_order_extended(F_SF_LOAD_NB_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+        block->stack_offset_address = next_instruction_segment_address();
+        plant_16_bit_code_word(0); /* plant a placeholder to be filled with the size of the local variables */
+    }
 
 
     log(LOG_STRUCTURE, "Start block, level=%d, last mutl name=%d\n", block_level, block->last_mutl_var);
@@ -1298,7 +1307,10 @@ void end_block_level(void)
     {
         BLOCK *block = get_current_block();
 
-        plant_16_bit_code_word_update(block->stack_offset_address, block->local_names_space, "SF adjustment to make room for local variables");
+        if (block_level > 0)
+        {
+            plant_16_bit_code_word_update(block->stack_offset_address, block->local_names_space, "SF adjustment to make room for local variables");
+        }
 
         current_proc_def = block->proc_def_var;
     }
@@ -2115,7 +2127,7 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
     if (BT_IS_IMPORT(T))
     {
         BLOCK *block = get_current_block();
-        var->data.var.is_vstore = 0;
+        var->data.var.is_vstore = is_vstore;
         var->data.var.position = -1;
         log(LOG_SYMBOLS, "Declare var %s %s level=%d, dim=%d, words=%d, offset=%d in slot %d\n", var->name, format_basic_type(T), block_level, D, size_words, var->data.var.position, var_n);
     }
