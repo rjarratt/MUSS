@@ -973,8 +973,7 @@ static void plant_operand(uint16 n)
             SEGMENT *data_seg = get_segment_for_area(current_data_area);
             SEGMENT *code_seg = get_segment_for_area(current_code_area);
             LITSYMBOL *lit = &mutl_var[n].data.lit;
-            t_uint64 descriptor = build_type_0_descriptor(BT_SIZE(lit->data_type), lit->dimension, lit->address);
-            plant_64_bit_code_word(descriptor);
+            t_uint64 descriptor;
 
             if (elf_literal_placeholder_symbol == NULL && mutlsym->elf_symbol == NULL)
             {
@@ -982,7 +981,20 @@ static void plant_operand(uint16 n)
             }
 
             elf_sym = (mutlsym->elf_symbol != NULL) ? mutlsym->elf_symbol : elf_literal_placeholder_symbol;
-            elf_add_relocation_entry(elf_module_context, code_seg->elf_section_index, (code_seg->next_word - 2)*2, elf_sym, MU5_REL_TYPE_DESC_LIT, lit->address & 0xFFFF);
+
+            if (BT_IS_IMPORT(lit->data_type))
+            {
+                int temp = BT_SIZE(lit->data_type);
+                plant_64_bit_code_word(0);
+                elf_add_relocation_entry(elf_module_context, code_seg->elf_section_index, (code_seg->next_word - 2) * 2, elf_sym, MU5_REL_TYPE_32_BIT_VALUE, 0);
+            }
+            else
+            {
+                descriptor = build_type_0_descriptor(BT_SIZE(lit->data_type), lit->dimension, lit->address);
+                plant_64_bit_code_word(descriptor);
+
+                elf_add_relocation_entry(elf_module_context, code_seg->elf_section_index, (code_seg->next_word - 2) * 2, elf_sym, MU5_REL_TYPE_DESC_LIT, lit->address & 0xFFFF);
+            }
         }
         else
         {
@@ -2165,7 +2177,8 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
 
     if (BT_IS_EXPORT(T))
     {
-        var->elf_symbol = elf_add_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STB_GLOBAL, STT_OBJECT, segment->elf_section_index);
+        Elf32_Half section = (var->data.var.is_vstore) ? SHN_ABS : segment->elf_section_index;
+        var->elf_symbol = elf_add_symbol(elf_module_context, var->name, var->data.var.position, BT_SIZE(var->data.var.data_type), STB_GLOBAL, STT_OBJECT, section);
     }
     else if (BT_IS_IMPORT(T))
     {
@@ -2181,24 +2194,41 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
 {
     SEGMENT *segment = get_segment_for_area(current_data_area);
     MUTLSYMBOL *var;
+    LITSYMBOL *lit;
     int nb_offset;
     int var_n;
 
     var_n = add_other_block_item();
     var = get_next_mutl_var(var_n);
+    lit = &var->data.lit;
 
     vecstrcpy(var->name, name, sizeof(var->name));
     var->symbol_type = SYM_LITERAL;
     var->block_level = block_level;
     var->module_number = module;
-    var->data.lit.data_type = T;
-    var->data.lit.dimension = (D == -1) ? literal->length : D;
-    var->data.lit.address = compute_descriptor_origin(next_data_address());
-    var->data.lit.value.buffer = &var->data.lit.valuebuf;
+    lit->data_type = T;
+    lit->dimension = (D == -1) ? literal->length : D;
+    lit->address = compute_descriptor_origin(next_data_address());
+    lit->value.buffer = &lit->valuebuf;
+
+    if (!BT_IS_IMPORT(T))
+    {
+        vecmemcpy(&lit->value, literal, sizeof(lit->valuebuf));
+    }
 
     if (BT_IS_EXPORT(T))
     {
-        var->elf_symbol = elf_add_symbol(elf_module_context, var->name, var->data.lit.address, 0, STB_GLOBAL, STT_OBJECT, segment->elf_section_index);
+        if (lit->value.length > 4)
+        {
+            fatal("can't export literal greater than 4 bytes");
+        }
+
+        Elf32_Addr value = 0;
+        for (int i = 0; i < lit->value.length; i++)
+        {
+            value = (value << 8) | lit->value.buffer[i];
+        }
+        var->elf_symbol = elf_add_symbol(elf_module_context, var->name, value, 0, STB_GLOBAL, STT_OBJECT, SHN_ABS);
     }
     else if (BT_IS_IMPORT(T))
     {
@@ -2207,11 +2237,6 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
     else if (block_level == 0 && (literal->length > 4 || (literal->length == 0 && D == -1)))
     {
         var->elf_symbol = elf_add_symbol(elf_module_context, var->name, var->data.lit.address, 0, STB_LOCAL, STT_OBJECT, segment->elf_section_index);
-    }
-
-    if (!BT_IS_IMPORT(T))
-    {
-        vecmemcpy(&var->data.lit.value, literal, sizeof(var->data.lit.valuebuf));
     }
     log(LOG_SYMBOLS, "Declare literal %s %s level=%d, dim=%d, address=0x%08X in slot %d\n", var->name, format_basic_type(var->data.lit.data_type), block_level, var->data.lit.dimension, var->data.lit.address, var_n);
 }

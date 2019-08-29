@@ -384,6 +384,10 @@ static void resolve_symbol_in_segment(LINKER_SEGMENT *linker_segment)
             {
                 write_16_bit_resolution(linker_segment, name, rela_entry, linker_symbol->value & 0xFFFF);
             }
+            else if (linker_symbol->type == STT_OBJECT && rel_type == MU5_REL_TYPE_32_BIT_VALUE)
+            {
+                write_32_bit_resolution(linker_segment, name, rela_entry, linker_symbol->value & 0xFFFFFFFF);
+            }
             else if (rel_type == MU5_REL_TYPE_DESC_LIT)
             {
                 new_addr = linker_symbol->segment->segment_relocated_start_address + rela_entry->r_addend;
