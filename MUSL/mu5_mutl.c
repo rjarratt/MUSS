@@ -29,6 +29,9 @@ space efficient.
 To make things simple all addresses are stored in the ELF as byte addresses. They can then be adjusted when loading.
 This applies particularly to functions. Names are .....
 
+V-Store pre and post procedures are handled as follows. The symbol entries for the functions are with a symbol name
+that is the name of the V-Store variable with a suffix.
+
 */
 
 #define PROGRAM_MODULE 1
@@ -2138,7 +2141,9 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
 
     if (BT_IS_IMPORT(T))
     {
-        BLOCK *block = get_current_block();
+        BLOCK *block;
+        
+        block = get_current_block();
         var->data.var.is_vstore = is_vstore;
         var->data.var.position = -1;
         log(LOG_SYMBOLS, "Declare var %s %s level=%d, dim=%d, words=%d, offset=%d in slot %d\n", var->name, format_basic_type(T), block_level, D, size_words, var->data.var.position, var_n);
@@ -2172,6 +2177,20 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
         var->data.var.v_read_proc = v_read_proc;
         var->data.var.v_write_proc = v_write_proc;
         var->data.var.position = mutl_var[v_position].data.var.position;
+
+        if (v_read_proc != 0 && v_position != 0)
+        {
+            MUTLSYMBOL *mutl_sym = &mutl_var[v_read_proc];
+            sprintf(mutl_sym->name, "%s(READ)", var->name);
+            elf_update_symbol_name(elf_module_context, mutl_sym->elf_symbol, mutl_sym->name);
+        }
+
+        if (v_write_proc != 0)
+        {
+            MUTLSYMBOL *mutl_sym = &mutl_var[v_write_proc];
+            sprintf(mutl_sym->name, "%s(WRITE)", var->name);
+            elf_update_symbol_name(elf_module_context, mutl_sym->elf_symbol, mutl_sym->name);
+        }
         log(LOG_SYMBOLS, "Declare vstore (backed by var) %s %s level=%d, dim=%d, position=0x%X in slot %d\n", var->name, format_basic_type(T), block_level, D, var->data.var.position, var_n);
     }
 
@@ -2243,6 +2262,7 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
 
 void declare_proc(VECTOR *name, uint32 address, int NAT, int module)
 {
+    static int generated_name = 0;
     SEGMENT *segment = get_segment_for_area(current_code_area);
     MUTLSYMBOL *sym = get_next_mutl_var(add_other_block_item());
     current_proc_spec = &sym->data.proc;
@@ -2256,7 +2276,7 @@ void declare_proc(VECTOR *name, uint32 address, int NAT, int module)
 
     if (name == NULL)
     {
-        strcpy(sym->name, "(generated)");
+        sprintf(sym->name, "(GEN%04X)", generated_name++);
     }
     else
     {

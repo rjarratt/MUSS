@@ -161,6 +161,8 @@ typedef struct elf32_phdr {
 #define STT_FILE    4
 #define STT_COMMON  5
 #define STT_TLS     6
+#define STT_LOPROC  13
+#define STT_HIPROC  15
 
 #define ELF_ST_BIND(x)		((x) >> 4)
 #define ELF_ST_TYPE(x)		(((unsigned int) x) & 0xf)
@@ -213,6 +215,7 @@ void elf_add_relocation_entry(void *context, Elf32_Half code_section_index, Elf3
 void *elf_add_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, Elf32_Half section_index);
 void elf_update_symbol_value(void *symbol, Elf32_Addr value);
 void elf_update_symbol_size(void *symbol, Elf32_Word size);
+void elf_update_symbol_name(void *context, void *symbol, char *name);
 void elf_add_binary_data_to_section(void *context, Elf32_Half section_index, char *data, int length);
 void elf_write_file(void *context, char *file_name);
 void *elf_read_file(FILE *f, int check_is_elf);

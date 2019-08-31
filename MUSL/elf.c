@@ -250,6 +250,14 @@ void elf_update_symbol_size(void *symbol, Elf32_Word size)
     sym->st_size = size;
 }
 
+void elf_update_symbol_name(void *context, void *symbol, char *name)
+{
+    /* this "wastes" string table space, it would be possible to compact it but that is difficult and not worth the effort */
+    Elf32_Context *ctx = context;
+    Elf32_Sym *sym = symbol;
+    sym->st_name = add_string(ctx->string_table_section, name);
+}
+
 void elf_add_binary_data_to_section(void *context, Elf32_Half section_index, char *data, int length)
 {
     Elf32_Context *ctx = context;
