@@ -267,6 +267,7 @@ that is the name of the V-Store variable with a suffix.
 #define NO_OPERAND_FOLLOWS_FLAG 0x80
 #define OPERAND_FOLLOWS(kn) ((kn & NO_OPERAND_FOLLOWS_FLAG) == 0)
 #define IS_MUTL_VAR(n) (n>= 2 && n < 0x1000)
+#define IS_SUBROUTINE(NAT) ((NAT & 0x2) == 0x2)
 
 #define UNKNOWN_ADDRESS 0x7FFF
 
@@ -349,6 +350,7 @@ typedef struct
     int last_mutl_var; /* The number of the last MUTL variable for the previous block in the hierarchy */
     int local_names_space; /* The number of 32-bit words required for local names in the current block, including LINK (if any) and parameters */
     uint32 stack_offset_address; /* the location to update the SF offset when the size of the block's variables is known */
+    int has_stack_frame;
     MUTLSYMBOL *proc_def_var;
 } BLOCK;
 
@@ -1228,7 +1230,7 @@ BLOCK *get_current_block(void)
     return result;
 }
 
-void start_block_level(int param_stack_size)
+void start_block_level(int param_stack_size, int has_stack_frame)
 {
     BLOCK *block;
     int nb_adjust;
@@ -1253,6 +1255,7 @@ void start_block_level(int param_stack_size)
         block->last_mutl_var = prev_block->last_mutl_var;
         block->local_names_space = 2; /* for the LINK */
         block->proc_def_var = current_proc_def;
+        block->has_stack_frame = has_stack_frame;
         nb_adjust = -param_stack_size; /* NB must be positioned at the LINK */
     }
 
@@ -1260,10 +1263,13 @@ void start_block_level(int param_stack_size)
     {
         plant_org_order_extended(F_NB_LOAD_SF_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
         plant_16_bit_code_word(nb_adjust);
-        log(LOG_PLANT, "%04X Plant NB=SF+%d\n", next_instruction_segment_address(), nb_adjust);
-        plant_org_order_extended(F_SF_LOAD_NB_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
-        block->stack_offset_address = next_instruction_segment_address();
-        plant_16_bit_code_word(0); /* plant a placeholder to be filled with the size of the local variables */
+        if (has_stack_frame)
+        {
+            log(LOG_PLANT, "%04X Plant NB=SF+%d\n", next_instruction_segment_address(), nb_adjust);
+            plant_org_order_extended(F_SF_LOAD_NB_PLUS, KP_LITERAL, NP_16_BIT_SIGNED_LITERAL);
+            block->stack_offset_address = next_instruction_segment_address();
+            plant_16_bit_code_word(0); /* plant a placeholder to be filled with the size of the local variables */
+        }
     }
 
 
@@ -1325,7 +1331,7 @@ void end_block_level(void)
     {
         BLOCK *block = get_current_block();
 
-        if (block_level > 0)
+        if (block_level > 0 && block->has_stack_frame)
         {
             plant_16_bit_code_word_update(block->stack_offset_address, block->local_names_space, "SF adjustment to make room for local variables");
         }
@@ -2057,7 +2063,7 @@ void TLMODULE(void)
         plant_16_bit_code_word(0);
     }
 
-    start_block_level(0);
+    start_block_level(0, 0);
 }
 
 void TLENDMODULE(int ST)
@@ -2553,7 +2559,7 @@ void TLPROC(int P)
     elf_update_symbol_value(current_proc_def->elf_symbol, next_instruction_segment_byte_address());
 
     fixup_forward_label_refs(P);
-    start_block_level(param_stack_size(P));
+    start_block_level(param_stack_size(P), !IS_SUBROUTINE(proc_def_var->nature));
     for (i = 0; i < proc_def_var->param_count; i++)
     {
         VECTOR temp;
