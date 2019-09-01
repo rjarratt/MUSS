@@ -1,6 +1,6 @@
 ..\x64\debug\nmsl ..\..\muss\musl\ReferencePlatform.musl ReferencePlatform.bin -lib
 if errorlevel 1 goto error
-..\x64\debug\nmsl ..\..\muss\musl\ReferenceUtils.musl ReferenceUtils.bin -lib
+..\x64\debug\nmsl ..\..\muss\musl\ReferenceUtils.musl ReferenceUtils.bin -lib -i ReferencePlatform.bin
 if errorlevel 1 goto error
 ..\x64\debug\nmsl ..\..\muss\musl\ReferenceLibrary1.musl ReferenceLibrary1.bin -lib
 if errorlevel 1 goto error

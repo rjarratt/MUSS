@@ -304,9 +304,24 @@ int main(int argc, char *argv[])
                 arg++;
                 CMPMODE |= 0x4;
             }
+            else if (strcmp(argv[arg], "-i") == 0)
+            {
+                /* we import modules because we need additional data from modules for imported V-Store variables */
+                arg++;
+                if (arg < argc)
+                {
+                    import_module(argv[arg++]);
+                }
+                else
+                {
+                    printf("Missing module file name");
+                    exit(1);
+                }
+            }
             else
             {
-                arg++;
+                printf("Unknown argument %s", argv[arg]);
+                exit(1);
             }
         }
 
@@ -315,33 +330,6 @@ int main(int argc, char *argv[])
         if ((CMPMODE & 0x4) == 0)
         {
             arg = 3;
-            while (arg < argc)
-            {
-                if (strcmp(argv[arg], "-i") == 0)
-                {
-                    arg++;
-                    if (arg < argc)
-                    {
-                        import_module(argv[arg++]);
-                    }
-                    else
-                    {
-                        printf("Missing module file name");
-                        exit(1);
-                    }
-                }
-                else if (strcmp(argv[arg], "-l") == 0)
-                {
-                    /* skip logging level, this has already been processed */
-                    arg += 2;
-                }
-                else if (strcmp(argv[arg], "-lib") == 0)
-                {
-                    /* skip logging level, this has already been processed */
-                    arg++;
-                }
-            }
-
             import_module(argv[2]);
             link_modules("test.bin");
         }

@@ -541,7 +541,7 @@ char *elf_get_section_name(void *context, int string_index)
     return result;
 }
 
-void elf_process_defined_symbols(void *elf_context, void *context, void *(*process_symbol)(void *elf_context, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index))
+void elf_process_defined_symbols(void *elf_context, void *context, void *(*process_symbol)(void *elf_context, void *symbol, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index))
 {
     int sym_index;
     int num_syms;
@@ -552,7 +552,7 @@ void elf_process_defined_symbols(void *elf_context, void *context, void *(*proce
         Elf32_Sym *sym = get_linker_symbol(ctx->symbol_table_section, sym_index);
         if (sym->st_shndx != SHN_UNDEF)
         {
-            process_symbol(elf_context, context, get_string(ctx->string_table_section, sym->st_name), sym->st_value, sym->st_size, ELF_ST_BIND(sym->st_info), ELF_ST_TYPE(sym->st_info), sym->st_other, sym->st_shndx);
+            process_symbol(elf_context, sym, context, get_string(ctx->string_table_section, sym->st_name), sym->st_value, sym->st_size, ELF_ST_BIND(sym->st_info), ELF_ST_TYPE(sym->st_info), sym->st_other, sym->st_shndx);
         }
     }
 }

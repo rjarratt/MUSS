@@ -283,7 +283,9 @@ typedef struct
     int is_parameter;
     int is_vstore;
     int v_read_proc;
+    void *v_read_proc_sym; /* for imports only */
     int v_write_proc;
+    void *v_write_proc_sym; /* for imports only */
 } VARSYMBOL;
 
 typedef struct
@@ -424,6 +426,7 @@ static void *elf_module_context;
 static void *elf_literal_placeholder_symbol;
 
 uint8 k_v(void);
+void op_org_abs_jump_generic_symbol(void *sym, int F);
 void op_org_stack_link(int);
 void op_org_enter(int);
 
@@ -954,7 +957,7 @@ static void plant_operand(uint16 n)
     else if (n >= 2 && n < 0x1000)
     {
         MUTLSYMBOL *mutlsym = &mutl_var[n];
-        if (mutl_var[n].symbol_type == SYM_VARIABLE)
+        if (mutlsym->symbol_type == SYM_VARIABLE)
         {
             if (mutlsym->data.var.position == -1)
             {
@@ -1396,6 +1399,19 @@ void check_v_store_read_proc(int N)
                 op_org_stack_link(var->v_read_proc);
                 op_org_enter(0);
             }
+            else if (var->v_read_proc_sym != 0)
+            {
+                int proc_call_stack_link_offset_address;
+                log(LOG_PLANT, "%04X V STORE external read proc call required\n", next_instruction_segment_address());
+                log(LOG_PLANT, "%04X ORG STACK LINK to read proc\n", next_instruction_segment_address());
+                plant_org_order_extended(F_STACKLINK, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
+
+                proc_call_stack_link_offset_address = next_instruction_segment_address();
+                plant_16_bit_code_word(0); /* placeholder fixed up when we plant the ENTER */
+                log(LOG_PLANT, "%04X ORG JUMP ABS JUMP with relocation\n", next_instruction_segment_address());
+                op_org_abs_jump_generic_symbol(var->v_read_proc_sym, F_ABSJUMP);
+                plant_16_bit_code_word_update(proc_call_stack_link_offset_address, next_instruction_segment_address() - proc_call_stack_link_offset_address + 1, "return address");
+            }
         }
     }
 }
@@ -1413,6 +1429,19 @@ void check_v_store_write_proc(int N)
                 log(LOG_PLANT, "%04X V STORE write proc call required\n", next_instruction_segment_address());
                 op_org_stack_link(var->v_write_proc);
                 op_org_enter(0);
+            }
+            else if (var->v_write_proc_sym != 0)
+            {
+                int proc_call_stack_link_offset_address;
+                log(LOG_PLANT, "%04X V STORE external write proc call required\n", next_instruction_segment_address());
+                log(LOG_PLANT, "%04X ORG STACK LINK to write proc\n", next_instruction_segment_address());
+                plant_org_order_extended(F_STACKLINK, KP_LITERAL, NP_16_BIT_UNSIGNED_LITERAL);
+
+                proc_call_stack_link_offset_address = next_instruction_segment_address();
+                plant_16_bit_code_word(0); /* placeholder fixed up when we plant the ENTER */
+                log(LOG_PLANT, "%04X ORG JUMP ABS JUMP with relocation\n", next_instruction_segment_address());
+                op_org_abs_jump_generic_symbol(var->v_write_proc_sym, F_ABSJUMP);
+                plant_16_bit_code_word_update(proc_call_stack_link_offset_address, next_instruction_segment_address() - proc_call_stack_link_offset_address + 1, "return address");
             }
         }
     }
@@ -1432,10 +1461,9 @@ int is_global_ref(int N)
 
 void check_global_ref(int N)
 {
-    MUTLSYMBOL *mutl_sym;
     if (is_global_ref(N))
     {
-        mutl_sym = &mutl_var[N];
+        MUTLSYMBOL *mutl_sym = &mutl_var[N];
         plant_org_order_extended(F_XNB_LOAD, KP_LITERAL, NP_32_BIT_UNSIGNED_LITERAL);
 
         SEGMENT *segment = get_segment_for_area(current_code_area);
@@ -1675,30 +1703,20 @@ void op_org_rel_jump_generic(int N, int F, char *type)
     }
 }
 
+void op_org_abs_jump_generic_symbol(void *sym, int F)
+{
+    SEGMENT *segment = get_segment_for_area(current_code_area);
+    plant_org_order_extended(F, KP_LITERAL, NP_32_BIT_SIGNED_LITERAL);
+    elf_add_relocation_entry(elf_module_context, segment->elf_section_index, next_instruction_segment_byte_address(), sym, MU5_REL_TYPE_FUNC, 0);
+    plant_32_bit_code_word(0); /* place holder */
+}
+
 /* this function relies on labels and procs having the same initial structure. */
 void op_org_abs_jump_generic(int N, int F, char *type)
 {
     MUTLSYMBOL *sym = &mutl_var[N];
-    SEGMENT *segment = get_segment_for_area(current_code_area);
     log(LOG_PLANT, "%04X ORG JUMP %s to %s with relocation\n", next_instruction_segment_address(), type, mutl_var[N].name);
-    plant_org_order_extended(F, KP_LITERAL, NP_32_BIT_SIGNED_LITERAL);
-    elf_add_relocation_entry(elf_module_context, segment->elf_section_index, next_instruction_segment_byte_address(), sym->elf_symbol, MU5_REL_TYPE_FUNC, 0);
-    plant_32_bit_code_word(0); /* place holder */
-
-
-    //if (mutl_var[N].data.label.address_defined)
-    //{
-    //    uint32 word_address = mutl_var[N].data.label.address / 2; /* 16-bit word address */
-    //    log(LOG_PLANT, "%04X ORG JUMP %s %s absolute %d (16-bit word address)\n", next_instruction_segment_address(), type, mutl_var[N].name, word_address);
-    //    op_org_jump_generic_abs_address(F, word_address);
-    //}
-    //else
-    //{
-    //    log(LOG_PLANT, "%04X ORG JUMP %s to %s forward ref\n", next_instruction_segment_address(), type, mutl_var[N].name);
-    //    plant_org_order_extended(F, KP_LITERAL, NP_32_BIT_SIGNED_LITERAL);
-    //    register_forward_label_ref(N);
-    //    plant_32_bit_code_word(0); /* place holder */
-    //}
+    op_org_abs_jump_generic_symbol(sym->elf_symbol, F);
 }
 
 void op_org_stack_link(int N)
@@ -2112,6 +2130,52 @@ MUTLSYMBOL *get_next_mutl_var(int n)
     return result;
 }
 
+void make_read_proc_name(char *name, MUTLSYMBOL *var)
+{
+    sprintf(name, "%s(READ)", var->name);
+}
+
+void make_write_proc_name(char *name, MUTLSYMBOL *var)
+{
+    sprintf(name, "%s(WRITE)", var->name);
+}
+
+void import_vstore(MUTLSYMBOL *var)
+{
+    /* search all import modules for read or write procs */
+    char proc_name[MAX_NAME_LEN];
+    Elf32_Sym *external_v_sym;
+    Elf32_Sym *external_v_read_sym;
+    Elf32_Sym *external_v_write_sym;
+
+    external_v_sym = get_symbol(var->name);
+    if (external_v_sym == NULL)
+    {
+        fatal("Please import the module that exports the imported VSTORE");
+    }
+    else if (external_v_sym->st_shndx != SHN_ABS)
+    {
+        var->data.var.position = external_v_sym->st_value;
+        var->data.var.is_vstore = 0;
+    }
+
+    make_read_proc_name(proc_name, var);
+    external_v_read_sym = get_symbol(proc_name);
+    if (external_v_read_sym != NULL)
+    {
+        var->data.var.v_read_proc_sym = elf_add_symbol(elf_module_context, proc_name, 0, 4, STB_GLOBAL, STT_FUNC, SHN_UNDEF);
+    }
+
+    make_write_proc_name(proc_name, var);
+    external_v_write_sym = get_symbol(proc_name);
+    if (external_v_write_sym != NULL)
+    {
+        var->data.var.v_write_proc_sym = elf_add_symbol(elf_module_context, proc_name, 0, 4, STB_GLOBAL, STT_FUNC, SHN_UNDEF);
+    }
+
+    /* get variable position to decide if it is a variable or a direct VSTORE address */
+}
+
 void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vstore, int v_position, int v_read_proc, int v_write_proc, int module)
 {
     SEGMENT *segment = get_segment_for_area(current_data_area);
@@ -2142,10 +2206,13 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
     if (BT_IS_IMPORT(T))
     {
         BLOCK *block;
-        
         block = get_current_block();
         var->data.var.is_vstore = is_vstore;
         var->data.var.position = -1;
+        if (is_vstore)
+        {
+            import_vstore(var);
+        }
         log(LOG_SYMBOLS, "Declare var %s %s level=%d, dim=%d, words=%d, offset=%d in slot %d\n", var->name, format_basic_type(T), block_level, D, size_words, var->data.var.position, var_n);
     }
     else if (!is_vstore)
@@ -2181,14 +2248,14 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
         if (v_read_proc != 0 && v_position != 0)
         {
             MUTLSYMBOL *mutl_sym = &mutl_var[v_read_proc];
-            sprintf(mutl_sym->name, "%s(READ)", var->name);
+            make_read_proc_name(mutl_sym->name, var);
             elf_update_symbol_name(elf_module_context, mutl_sym->elf_symbol, mutl_sym->name);
         }
 
         if (v_write_proc != 0)
         {
             MUTLSYMBOL *mutl_sym = &mutl_var[v_write_proc];
-            sprintf(mutl_sym->name, "%s(WRITE)", var->name);
+            make_write_proc_name(mutl_sym->name, var);
             elf_update_symbol_name(elf_module_context, mutl_sym->elf_symbol, mutl_sym->name);
         }
         log(LOG_SYMBOLS, "Declare vstore (backed by var) %s %s level=%d, dim=%d, position=0x%X in slot %d\n", var->name, format_basic_type(T), block_level, D, var->data.var.position, var_n);

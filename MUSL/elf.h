@@ -225,4 +225,4 @@ void elf_get_section_header(void *context, Elf32_Shdr *header, char **data, int 
 void elf_get_symbol(void *context, Elf32_Sym *symbol, int symbol_index);
 char *elf_get_string(void *context, int string_index);
 char *elf_get_section_name(void *context, int string_index);
-void elf_process_defined_symbols(void *elf_context, void *context, void *(*process_symbol)(void *elf_context, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index));
+void elf_process_defined_symbols(void *elf_context, void *context, void *(*process_symbol)(void *elf_context, void *symbol, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index));

@@ -39,6 +39,12 @@ typedef struct
     LINKER_SYMBOL *symbols;
 } LINKER_SYMBOL_TABLE;
 
+typedef struct
+{
+    char *lookup_name;
+    Elf32_Sym *found_symbol;
+} SYMBOL_SCAN;
+
 static Elf32_Addr entry_point;
 static int num_modules;
 static LINKER_MODULE elf_modules[MAX_IMPORT_MODULES];
@@ -49,8 +55,9 @@ static LINKER_SYMBOL_TABLE local_symbol_table = { 0, STB_LOCAL, NULL };
 
 static LINKER_SEGMENT *get_linker_segment_for_section(void *context, int section_index);
 static void check_segment_for_start_address(LINKER_SEGMENT *segment);
-static void count_symbol(void *elf_context, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index);
-static void add_symbol(void *elf_context, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index);
+static void count_symbol(void *elf_context, void *symbol, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index);
+static void add_symbol(void *elf_context, void *symbol, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index);
+static void scan_for_symbol(void *elf_context, void *symbol, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index);
 static void compute_total_symbols(LINKER_SYMBOL_TABLE *symbol_table);
 static int compare_symbol_name(const void *sym1, const void *sym2);
 static int compare_segment_by_section_address(const void *seg1, const void *seg2);
@@ -103,6 +110,21 @@ void link_modules(char *filename)
     elf_write_file(out_elf_context, filename);
 }
 
+Elf32_Sym *get_symbol(char *name)
+{
+    int i;
+    SYMBOL_SCAN scan;
+    scan.lookup_name = name;
+    scan.found_symbol = NULL;
+    for (i = 0; i < num_modules; i++)
+    {
+        elf_process_defined_symbols(elf_modules[i].elf_module_context, &scan, scan_for_symbol);
+    }
+
+    return scan.found_symbol;
+}
+
+
 static LINKER_SEGMENT *get_linker_segment_for_section(void *context, int section_index)
 {
     int i;
@@ -134,7 +156,7 @@ static void check_segment_for_start_address(LINKER_SEGMENT *segment)
     }
 }
 
-static void count_symbol(void *elf_context, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index)
+static void count_symbol(void *elf_context, void *symbol, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index)
 {
     LINKER_SYMBOL_TABLE *symbol_table = context;
     if (binding == symbol_table->binding_filter)
@@ -143,7 +165,7 @@ static void count_symbol(void *elf_context, void *context, char *name, Elf32_Add
     }
 }
 
-static void add_symbol(void *elf_context, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index)
+static void add_symbol(void *elf_context, void *symbol, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index)
 {
     LINKER_SYMBOL_TABLE *symbol_table = context;
     LINKER_SYMBOL *link_sym;
@@ -163,6 +185,15 @@ static void add_symbol(void *elf_context, void *context, char *name, Elf32_Addr 
             link_sym->value = value;
         }
         link_sym->segment = link_seg;
+    }
+}
+
+static void scan_for_symbol(void *elf_context, void *symbol, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index)
+{
+    SYMBOL_SCAN *scan = context;
+    if (strcmp(name, scan->lookup_name) == 0)
+    {
+        scan->found_symbol = symbol;
     }
 }
 

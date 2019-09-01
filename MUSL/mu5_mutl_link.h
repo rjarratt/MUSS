@@ -1,4 +1,5 @@
 #pragma once
+#include "elf.h"
 
 #define MU5_LIT_SYM_NAME "(literal)" /* name of a made-up symbol used during relocation to identify the data section where the literals are placed. */
 
@@ -11,3 +12,4 @@
 
 void import_module(char *filename);
 void link_modules(char *filename);
+Elf32_Sym *get_symbol(char * name);
