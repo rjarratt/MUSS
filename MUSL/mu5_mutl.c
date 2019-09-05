@@ -682,7 +682,7 @@ static void plant_vector(uint16 data_type, VECTOR *v)
     int len = v->length;
     uint8 fill = 0;
 
-    if (BT_MODE(data_type) == BT_MODE_SIGNED_INTEGER && (current_literal.buffer[0] & 0x80 == 0x80))
+    if (BT_MODE(data_type) == BT_MODE_SIGNED_INTEGER && ((current_literal.buffer[0] & 0x80) == 0x80))
     {
         fill = 0xFF;
     }
@@ -2012,7 +2012,7 @@ void TL(int M, char *FN, int DZ)
     if (is_library)
     {
         printf("Compiling a library\n");
-        elf_module_context = elf_new_file(ET_REL, 0, 0, 0);
+        elf_module_context = elf_new_file(ET_REL, 0, 0);
     }
     else
     {
