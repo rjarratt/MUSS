@@ -641,7 +641,7 @@ if ((CWORD & 0x4) == 0)
 @BOX 18.1
 $IF LBUFF[IPTR] /= HASH
 @BOX 18.2
-if (memcmp(&LBUFF[IPTR], &HASH, sizeof(ITYPE))== 0)
+if (memcmp(&LBUFF[IPTR], &HASH, sizeof(ITYPE))!= 0)
 @BOX 19.1
 $WH LBUFF[IPTR+1] /= EOS DO
 TL.INSERT(EVAL.CONST()) OD
