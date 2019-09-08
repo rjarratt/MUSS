@@ -3412,11 +3412,10 @@ VTYPE = TBYADDR;
 @BOX 23.1
 IF LBUFF[IPTR] = DADDR
 @BOX 23.2
-if (memcmp(&LBUFF[IPTR], &DADDR, sizeof(ITYPE)) != 0)
+if (memcmp(&LBUFF[IPTR], &DADDR, sizeof(ITYPE)) == 0)
 @BOX 24.1
 TBYADDR !> VTYPE;
 @BOX 24.2
-IPTR--; /**/ /* Possible bug in the sources. If the parameter is just "ADDR" with nothing else IPTR is not left on the last part of the parameter */
 VTYPE |= TBYADDR;
 @END
 @TITLE MSL05.18(1,11)
@@ -3673,7 +3672,20 @@ IF I /= TNAME
 OR MUTLN(IND OF LBUFF[IPTR]) => I =< 1
 OR K OF PLIST[I] /= KLIT
 @BOX11.2
-if (I != TNAME || (I = MUTLN(LBUFF[IPTR].IND)) <= 1 || PLIST[I].K != KLIT)
+/* side effects in condition require explicit implementation of short circuit evaluation */
+/**/ /* also condition appears inverted */
+;
+int is_name_of_literal = I != TNAME;
+if (!is_name_of_literal)
+{
+    I = MUTLN(LBUFF[IPTR].IND);
+    is_name_of_literal = I <= 1;
+}
+if (!is_name_of_literal)
+{
+    is_name_of_literal = PLIST[I].K != KLIT;
+}
+if (!is_name_of_literal)
 @BOX12.1
 IF CHECK.LIT(T OF PLIST[I],LIT.TYPE) = 0
 @BOX12.2
