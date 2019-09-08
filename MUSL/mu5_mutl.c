@@ -616,10 +616,16 @@ static void plant_16_bit_word(uint16 area_number, uint16 word)
     {
         fatal("Segment %d is full\n", segment->segment_address);
     }
-    
+
     uint16 encoded_word = encode_16_bit_word(word);
     elf_add_binary_data_to_section(elf_module_context, segment->elf_section_index, &encoded_word, 2);
     segment->next_word++;
+}
+
+static void plant_32_bit_word(uint16 area_number, uint32 word)
+{
+    plant_16_bit_word(area_number, (word >> 16) & 0xFFFF);
+    plant_16_bit_word(area_number, word & 0xFFFF);
 }
 
 static void plant_16_bit_word_update(uint16 area_number, uint16 address, uint16 word)
@@ -2487,18 +2493,35 @@ void TLASSVALUE(int N, int R)
     LITSYMBOL *lit;
     if (N != 0)
     {
-        fatal("TL.ASS.VALUE for non-zero NAME not supported\n");
+        MUTLSYMBOL *mutl_sym = &mutl_var[N];
+        if (mutl_sym->symbol_type == SYM_PROC)
+        {
+            log(LOG_LITERALS, "TL.ASS.VALUE to proc %s, repeat is %d\n", mutl_sym->name, R);
+            SEGMENT *segment = get_segment_for_area(current_assign_variable_area);
+            for (i = 0; i < R; i++)
+            {
+                elf_add_relocation_entry(elf_module_context, segment->elf_section_index, next_instruction_segment_byte_address(), mutl_sym->elf_symbol, MU5_REL_TYPE_FUNC, 0);
+                plant_32_bit_word(current_assign_variable_area, 0); /* place holder */
+                
+            }
+        }
+        else
+        {
+            fatal("TL.ASS.VALUE for non-zero NAME not supported (except for procedures)\n");
+        }
     }
-
-    lit = &mutl_var[current_assign_variable].data.lit;
-    size = BT_SIZE(lit->data_type);
-
-    log(LOG_LITERALS, "TL.ASS.VALUE current literal to variable %d, repeat is %d\n", current_assign_variable, R);
-    for (i = 0; i < R; i++)
+    else
     {
-        lit->length += current_literal.length;
-        lit->dimension += (current_literal.length + size - 1) / size; /* round up to integral number of size units */
-        plant_vector(lit->data_type, &current_literal);
+        lit = &mutl_var[current_assign_variable].data.lit;
+        size = BT_SIZE(lit->data_type);
+
+        log(LOG_LITERALS, "TL.ASS.VALUE current literal to variable %d, repeat is %d\n", current_assign_variable, R);
+        for (i = 0; i < R; i++)
+        {
+            lit->length += current_literal.length;
+            lit->dimension += (current_literal.length + size - 1) / size; /* round up to integral number of size units */
+            plant_vector(lit->data_type, &current_literal);
+        }
     }
 }
 
