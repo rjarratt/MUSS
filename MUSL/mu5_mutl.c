@@ -2473,7 +2473,7 @@ void TLASS(int VL, int AN)
 
     if (AN == -1)
     {
-        current_assign_variable_area = current_data_area; /* should be code area, but don't want this */
+        current_assign_variable_area = current_code_area;
     }
     else if (AN == -2)
     {
@@ -2729,10 +2729,25 @@ void TLPL(int F, int N)
     }
 }
 
+void TLINSERT(int BIN)
+{
+    if ((BIN & 0xFFFF0000) != 0)
+    {
+        fatal("Cannot insert numbers larger than 16 bits");
+    }
+
+    plant_16_bit_code_word(BIN & 0xFFFF);
+}
+
 void TLLINE(LN)
 {
     /* TODO: Line numbers are not accurate. Blank lines don't get counted, nor do line breaks in the middle of a statement */
     current_line = LN;
+}
+
+void TLPRINT(int M)
+{
+    // TODO: Implement as per manual
 }
 
 LOOP *start_loop(int mode, int control_variable)
