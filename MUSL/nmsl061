@@ -858,8 +858,7 @@ $IF MUTLN(ID) => DEST.LAB < CURLEV
 @BOX 23.2
 ID = LBUFF[IPTR].IND;
 DESTLAB = MUTLN(ID);
-/* another condition inversion */
-if (DESTLAB >= CURLEV) /**/
+if (DESTLAB < CURLEV)
 @BOX 24.1
 $IF K $OF PLIST[DEST.LAB] >= KLAB
 @BOX 24.2

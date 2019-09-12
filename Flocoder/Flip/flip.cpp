@@ -286,6 +286,7 @@ void process_column_box_ref(int box_number, char *box_type_name)
         {
             current_chart_table_entry->boxes[last_box_number].next_col_box_number = box_number;
         }
+        last_box_number = box_number;
 
         current_chart_table_entry->boxes[box_number].type = box_type;
     }

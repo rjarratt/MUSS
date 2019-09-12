@@ -3673,7 +3673,6 @@ OR MUTLN(IND OF LBUFF[IPTR]) => I =< 1
 OR K OF PLIST[I] /= KLIT
 @BOX11.2
 /* side effects in condition require explicit implementation of short circuit evaluation */
-/**/ /* also condition appears inverted */
 ;
 int is_name_of_literal = I != TNAME;
 if (!is_name_of_literal)
@@ -3685,7 +3684,7 @@ if (!is_name_of_literal)
 {
     is_name_of_literal = PLIST[I].K != KLIT;
 }
-if (!is_name_of_literal)
+if (is_name_of_literal)
 @BOX12.1
 IF CHECK.LIT(T OF PLIST[I],LIT.TYPE) = 0
 @BOX12.2

@@ -1914,8 +1914,7 @@ B3:
 $IF PTR =< MAX.KEYWORD $AN
 CHLIST[NPTR] = 0 $AN REST[RPTR] = 0
 @BOX4.2
-/**/ /* The condition in the following line is inverted with respect to how it should be translated, not sure why */
-if (PTR > MAXKEYWORD || CHLIST[NPTR] != 0 || REST[RPTR] != 0)
+if (PTR <= MAXKEYWORD && CHLIST[NPTR] == 0 && REST[RPTR] == 0)
 @BOX14.1
 1 => TAG OF LBUFF[1+>IPTR];
 0 => ST OF LBUFF[IPTR] => TY;
@@ -1995,8 +1994,7 @@ B17:
 @BOX18.1
 $IF PTR =< MAX.KEYWORD
 @BOX18.2
-/* another case where the condition appears to need to be inverted */
-/**/if (PTR > MAXKEYWORD)
+if (PTR <= MAXKEYWORD)
 @BOX 19.1
 MONITOR(0);
 @BOX 19.2
@@ -2474,8 +2472,7 @@ $IF NEXTCH() => ISYM = '@ OR
 [ISYM = '. $AN XSYM() = ISYM]
 @BOX 11.2
 ISYM = NEXTCH();
-/* another condition inversion? */
-/**/if (!(ISYM == '@' || (ISYM == '.' && XSYM() == ISYM)))
+if (ISYM == '@' || (ISYM == '.' && XSYM() == ISYM))
 @BOX12.1
 DOT:
 @BOX12.2
