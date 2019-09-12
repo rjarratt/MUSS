@@ -623,7 +623,7 @@ void INITS3(void)
   TLO = TINT + 0x40;
 
   TRE = ((CMODE & 0x30) == 0) ? 0x0C : (((CMODE & 0x10) != 0) ? 0x0C : 0x1C);
-  for ( ; IPTR < LBUFFZ; IPTR++)
+  for ( IPTR = 0; IPTR < LBUFFZ; IPTR++)
   {
     memcpy(&LBUFF[IPTR], &EOS, sizeof(ITYPE));
   }
@@ -1658,15 +1658,19 @@ int XBTYPE(int TSIZE, int PTR)
       }
 	  case 1: // LOGICAL
 	  {
-          if (TSIZE==0)
+        if (TSIZE==0)
 	  	{
 	  	  T = TLO;
 	  	}
 	  	else if ((TSIZE & 0x7) == 0 && TSIZE <= 32 || TSIZE == 64)
-          {
+        {
 	  	  T = (TSIZE >> 1) + 124;
 	  	}
-          else
+        else if (TSIZE == 1)
+        {
+          T = TLO1;
+        }
+        else
 	  	{
 	  	  MONITOR(3);
 	  	}
@@ -1684,7 +1688,7 @@ int XBTYPE(int TSIZE, int PTR)
 	  	}
           else
 	  	{
-	  	  MONITOR(3);
+	  	  MONITOR(13);
 	  	}
 	  	break;
 	  }
@@ -1731,11 +1735,7 @@ int YSYM(void)
 	{
 	  result = '\0';
 	}
-	else if (result == '$')
-	{
-	  result = '$';
-	}
-	else
+	else if (result != '$' && result !='"')
 	{
 	  MONITOR(142);
 	}
@@ -2425,7 +2425,7 @@ if (CSIZE == 0)
   CSIZE = 1;
 }
 LBUFF[++IPTR].TAG = 3;
-LBUFF[IPTR].ST = ((CTYPE << 4) + (CSIZE - 1))<<2;
+LBUFF[IPTR].ST = (((CTYPE << 4) + CSIZE) - 1) << 2;
 LBUFF[IPTR].IND = CBWDPTR;
 @BOX8.1
 @BOX8.2
@@ -2536,7 +2536,7 @@ if (ISYM == '.')
   while(VALCODE[(ISYM = NEXTCH())] == 126)
   {
     FP = FP * (TEN) + (XSYM() - '0');
-    PPOS = 1;
+    --PPOS;
   }
 }
 @BOX 3.1
