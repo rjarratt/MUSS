@@ -340,6 +340,9 @@ void process_flow_box_ref(int box_number)
                     get_box(current_chart_table_entry, box_number)->inflow++;
                 }
             }
+
+            yacc_trace("Flow for box %d->%d primary %d, secondary %d next col %d\n", prev_box->box_no, box_number, prev_box->next_pflow_box_number, prev_box->next_sflow_box_number, prev_box->next_col_box_number);
+
         }
 
     Box12:
@@ -521,7 +524,7 @@ Box17:
     current_box = get_box(chart_table_entry, k);
 
     /* Box 6 */
-    if (current_box->type != Unknown && current_box->inflow == 0) goto Box4;
+    if (current_box->type != Unknown && current_box->inflow <= 0) goto Box4;
 
 Box7:
     /* Box 7 */
