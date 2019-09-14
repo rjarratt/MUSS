@@ -221,7 +221,6 @@ extern void OUTLINENO(int);
 extern void PPCCMD(void);
 extern char *FINDN(VECTOR *,int);
 extern int FINDP(char *,int,int);
-extern void SELECTOUTPUT(int);
 extern void SPACES(int);
 extern void OUTHEX(unsigned int,int);
 extern void TLASS(int,int);

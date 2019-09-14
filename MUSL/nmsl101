@@ -78,8 +78,7 @@ typedef unsigned int       uint32;
 typedef unsigned long long t_uint64;
 
 extern void OUTBINB(int);
-extern void SELECTOUTPUT(int);
-int MUTLSTR;
+extern FILE *MUTLSTR;
 extern int32 IPOS(void);
 @BOX 2.1
 ::PDP *CODE 1;
@@ -320,7 +319,7 @@ END;
 @BOX 3.2
 void MUBLU64(t_uint64 HEX)
 {
-   int T;
+   uint16 T;
    MUBLU16(0xFF80);
    T = (HEX >>48) & 0xFFFF;
    MUBLU16(T);
@@ -363,7 +362,7 @@ switch (I)
   }
   case 1:
   {
-      MUBLU16(N | 0x8000);
+      MUBLU16((uint16)N | 0x8000);
 	  break;
   }
   case 2:
@@ -831,7 +830,7 @@ void TLSELECTFIELD(int N, int F, int A)
 
 void TLMAKE(int S, int T, int D)
 {
-   MUBLCODE(0x0A); MUBLU16(S); MUBLU16(T); MUBLIV(D);
+   MUBLCODE((uint16)0x0A); MUBLU16((uint16)S); MUBLU16((uint16)T); MUBLIV((uint16)D);
 }
 //void TLASS(int VL, int AN)
 //{
@@ -997,7 +996,7 @@ END;
 
 void TLDTYPE(int T, int D)
 {
-     MUBLCODE(0x8); MUBLU16(T); MUBLIV(D);
+     MUBLCODE((uint16)0x8); MUBLU16((uint16)T); MUBLIV((uint16)D);
 }
 //void TLINSERT(int BIN)
 //{
@@ -1006,7 +1005,7 @@ void TLDTYPE(int T, int D)
 
 void TLCHECK(int S)
 {
-   MUBLCODE(0x34); MUBLU16(S); ;
+   MUBLCODE((uint16)0x34); MUBLU16((uint16)S); ;
 }
 
 void TLREG(int RU)
@@ -1089,6 +1088,6 @@ END;
 //}
 void TLMODE(int I, int J)
 {
-      MUBLCODE(0x30); MUBLU16(I);MUBLUV(J);;
+      MUBLCODE((uint16)0x30); MUBLU16((uint16)I);MUBLUV((uint16)J);;
 }
 @END
