@@ -2595,15 +2595,14 @@ $EL
 ITEMISE(1)
 $FI
 @BOX15.2
-/**/ /* There seems to be a bug here because ITEMISE parses all the way to the END, so the literals are already in LBUFF */
-/*if (DVT == TLO8)
+if (DVT == TLO8)
 {
   ITEMISE(2);
 }
 else
 {
   ITEMISE(1);
-}*/
+}
 @BOX3.1
 $IF LBUFF[1+>IPTR] = EOS
 @BOX3.2
@@ -3674,17 +3673,17 @@ OR K OF PLIST[I] /= KLIT
 @BOX11.2
 /* side effects in condition require explicit implementation of short circuit evaluation */
 ;
-int is_name_of_literal = I != TNAME;
-if (!is_name_of_literal)
+int is_not_name_of_literal = I != TNAME;
+if (!is_not_name_of_literal)
 {
     I = MUTLN(LBUFF[IPTR].IND);
-    is_name_of_literal = I <= 1;
+    is_not_name_of_literal = I <= 1;
 }
-if (!is_name_of_literal)
+if (!is_not_name_of_literal)
 {
-    is_name_of_literal = PLIST[I].K != KLIT;
+    is_not_name_of_literal = PLIST[I].K != KLIT;
 }
-if (is_name_of_literal)
+if (!is_not_name_of_literal)
 @BOX12.1
 IF CHECK.LIT(T OF PLIST[I],LIT.TYPE) = 0
 @BOX12.2
