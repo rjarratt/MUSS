@@ -106,7 +106,8 @@ MAXCH,MAXN,MAXMUTLN);
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
-#include "..\..\MUSS\musl\support.h"
+#include "support.h"
+#include "nmsl011.h"
 
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 typedef unsigned char      uint8;
@@ -291,7 +292,6 @@ $LS OUTCH($IN);
 $LO8[2000] SBUFF;
 $IN MSTR,MUTLSTR;
 @BOX 1.2
-extern void RESTART(void);
 extern int IPTR,SPTR,CWORD;
 //$LS SELECTOUTPUT($IN);
 //$LS SPACES($IN);
@@ -301,7 +301,6 @@ extern int IPTR,SPTR,CWORD;
 //$LS CAPTION($AD[$LO8]);
 //$LS OUTCH($IN);
 uint8 SBUFF[2000];
-extern FILE *MSTR, *MUTLSTR;
 @END
 @TITLE MSL09.1(1,6)
 @COL 1S-2R-14R-15T-3R-6T-7R-8R-9R-12T-16R-10F

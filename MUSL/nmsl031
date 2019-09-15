@@ -666,6 +666,7 @@ $IN MSTR,MUTLSTR
 #include <stdio.h>
 #include <memory.h>
 #include <string.h>
+#include "nmsl011.h"
 
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 typedef unsigned char      uint8;
@@ -789,7 +790,6 @@ extern unsigned char XNAME[64];
 
 int CWORD,LASTCH,CMODE;
 int LINENO;
-FILE *MSTR,*MUTLSTR;
 @END
 @TITLE MSL03.1(1,11)
 @COL 8C-9R-10C-11R-12C

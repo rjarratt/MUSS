@@ -457,6 +457,7 @@ $LI BREQD = -1, DIND = %1004, AOPD = %3000;
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
+#include "nmsl011.h"
 
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 typedef unsigned char      uint8;
@@ -603,9 +604,6 @@ int COMPILECOMP(int,int);
 //ITYPE EOS,DTHEN,COMMA,GOTO,DDO,LTHAN,BSLASH,DFROM,DEND;
 //$IM $LI LBUFFZ;
 extern ITYPE LBUFF[LBUFFZ];
-//$IM $LI CONSTKZ;
-int CONSTK[CONSTKZ];
-int CONPTR;
 //$TY PLISTENT IS $LO16 INTID,PREVN,K,T int32 DETAIL;
 //$IM $LI PLISTZ;
 //PLISTENT[PLISTZ] PLIST;

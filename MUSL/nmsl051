@@ -321,7 +321,8 @@ LASTMN,CURLEV,CURRES,CURPROC,CURBLK,GLEV,EVAL.CONST,END.CHECKS,PROCLEV,EVAL.LIT)
 @BOX 1.2
 #include <stdio.h>
 #include <memory.h>
-#include "..\..\MUSS\musl\support.h"
+#include "support.h"
+#include "nmsl011.h"
 
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 typedef unsigned char      uint8;
@@ -708,11 +709,8 @@ $LI AOPD = %3000;
 //$TY ITYPE IS $LO8 TAG,ST $LO16 IND;
 //ITYPE LB,COMMA,RB,SLASH,EQUALS,DOR,EOS,REF,LSB,RSB,DLA,DWITHIN,
 //BSLASH,COLON,DEND,DTY,DVSTORE,LTHAN,GTHAN,DADDR,DIS,EOL;
-extern int XNPTR,CONPTR,IX,IPTR,CURGLB;
-extern FILE *MSTR,*MUTLSTR;
+extern int XNPTR,IPTR,CURGLB;
 int TINT;
-//$IM $LI CONSTKZ,PARAMSZ,TLISTZ;
-extern int CONSTK[CONSTKZ];
 //$IM $LI CHLISTZ;
 uint8 CHLIST[CHLISTZ];
 //$IM $LI LBUFFZ;

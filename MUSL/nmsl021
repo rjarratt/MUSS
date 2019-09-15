@@ -84,7 +84,8 @@ PLIST.ENT[PLISTZ] PLIST;
 $LO8[CHLISTZ] CHLIST;
 $LO8[64] XNAME;
 @BOX 1.2
-#include "..\..\MUSS\musl\support.h"
+#include "support.h"
+#include "nmsl011.h"
 
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 typedef unsigned char      uint8;
@@ -210,7 +211,6 @@ unsigned char XNAME[64];
 *END
 @BOX 2.2
 // LIBSPECS FROM OTHER MODULES
-extern void RESTART(void);
 extern void CAPTION(char *);
 extern int INCH(void);
 extern void OUTCH(int);
@@ -263,15 +263,13 @@ int TRANSCOMP(int);
 void TRANSENDALT(void);
 void TRANSOD(void);
 void TRANSFI(void);
-uint16 DECLAREN(uint16,int,int);
+uint16 DECLAREN(uint16,uint16,uint16);
 uint16 DUMMY(void);
 uint16 MUTLN(uint16);
 void EXPN(uint16);
 
 // END OF PSPECS FROM OTHER MODULES
 
-extern int CONSTK[CONSTKZ];
-extern int CONPTR;
 extern ITYPE LBUFF[LBUFFZ];
 @END
 

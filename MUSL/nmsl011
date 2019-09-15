@@ -925,7 +925,7 @@ $IN PW0,PW1;
 #include <stdio.h>
 #include <memory.h>
 #include <setjmp.h>
-#include "..\..\MUSS\musl\support.h"
+#include "support.h"
 
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 typedef unsigned char      uint8;
@@ -996,7 +996,6 @@ extern ITYPE DIMPORT;
 #define KTYPE 6
 #define NIL NULL
 #define TADPROC 0x24
-#define CONSTKZ 500
 typedef struct { unsigned short MUTLN,MUSLN,HASH;} NLISTENT;
 typedef struct { unsigned short INTID,PREVN,K,T; int32 DETAIL; } PLISTENT;
 extern NLISTENT NLIST[NLISTZ];

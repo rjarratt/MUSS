@@ -66,7 +66,8 @@ TL.MODULE,TL.END.MODULE,TL.MODE);
 #include <stdio.h>
 #include <memory.h>
 #include <string.h>
-#include "..\..\MUSS\musl\support.h"
+#include "support.h"
+#include "nmsl011.h"
 
 typedef unsigned char      uint8;
 typedef short              int16;

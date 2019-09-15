@@ -386,7 +386,8 @@ MODULE(PREPROCESS.COMP,PREPROCESS.COND,COMPILE.COMP,COMPILE.COND,COMPILE.AND,
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
-#include "..\..\MUSS\musl\support.h"
+#include "support.h"
+#include "nmsl011.h"
 
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 typedef unsigned char      uint8;
@@ -707,7 +708,6 @@ ITYPE MINUS,DIF,DTHEN,DELSE,LB,RB,COMMA,LSB,DOF,RSB,EOS,DEREF,REF;
 //$IM $LI ILOAD,LBUFFZ,SDLIST,PLISTZ,PARAMSZ;
 //$TY ITYPE IS $LO8 TAG,ST $LO16 IND;
 extern ITYPE LBUFF[LBUFFZ];
-extern FILE *MSTR,*MUTLSTR;
 extern int IPTR,CURLEV,GLEV,TINT,TRE,TBYADDR,CURPROC,CURRES;
 uint16 DLIST[SDLIST];
 //typedef struct {uint16 INTID,PREVN,K,T; uint32 DETAIL; } PLISTENT;

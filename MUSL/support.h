@@ -38,7 +38,7 @@ void TLLINE(int);
 void OUTLINENO(int);
 
 char *FINDN(VECTOR *, int);
-VECTOR *PART(char *, int, int);
+VECTOR *PART(unsigned char *, int, int);
 void TLPRINT(int);
 void CAPTION(char *);
 int FINDP(char *, int, int);
@@ -46,12 +46,6 @@ void TLCYCLE(int);
 void TLCVCYCLE(int, int, int);
 void TLCVLIMIT(int);
 void TLREPEAT(void);
-
-/* Variables defined in NMSL011 */
-extern FILE *OLDIN;
-extern FILE *MSTR;
-extern FILE *ISTR;
-extern FILE *MUTLSTR;
 
 extern int BOPD;
 extern int AOPD;

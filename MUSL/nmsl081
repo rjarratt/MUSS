@@ -155,7 +155,8 @@ XNPTR,LASTN,LASTCH,INIT.S8);
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
-#include "..\..\MUSS\musl\support.h"
+#include "support.h"
+#include "nmsl011.h"
 
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 typedef unsigned char      uint8;
@@ -316,7 +317,7 @@ $PS EXPN($LO16);
 @BOX 4.2
 uint16 ADDN(void);
 VECTOR *GENN(uint16);
-uint16 DECLAREN(uint16, int, int);
+uint16 DECLAREN(uint16, uint16, uint16);
 uint16 DUMMY(void);
 uint16 MUTLN(uint16);
 void EXPN(uint16);
@@ -388,9 +389,8 @@ uint8 XNAME[64]; //TEMP MOD
 //$LS SELECTOUTPUT($IN);
 //$LS NEWLINES($IN);
 //$LS CAPTION(ADDR[$LO8]);
-//$LS TL.LABEL.SPEC(ADDR[$LO8],$IN);
+extern void TLLABELSPEC(char *,int);
 extern void MONITOR(int);
-extern FILE *MSTR, *MUTLSTR;
 int IX;
 //$IM $LI NLISTZ,PLISTZ,CHLISTZ;
 //$TY NLIST.ENT IS $LO16 MUTLN,MUSLN,HASH; ::TEMP
@@ -472,7 +472,7 @@ while ((J = CHLIST[++I]) != 0)
   if (J >= 'a')
   {
     J += LIT;
-    CHLIST[I] = J;
+    CHLIST[I] = (char)J;
   }
   HASH1 = (((J & 0x1F) + HASH1) & 0x3FF) << 1;
 }
@@ -504,7 +504,7 @@ if (++L != N)
 @BOX9.1
 I => ADDN;
 @BOX9.2
-result = I;
+result = (uint16)I;
 @BOX10.1
 END
 @BOX10.2
@@ -520,8 +520,8 @@ SELECTOUTPUT(MSTR);
 NEWLINES(0);CAPTION(%"NLIST");MONITOR(9);FI
 @BOX11.2
 NLIST[++LASTN].MUTLN = 0;
-NLIST[LASTN].MUSLN = LASTCH + 1;
-NLIST[LASTN].HASH = HASH1;
+NLIST[LASTN].MUSLN = (unsigned short)(LASTCH + 1);
+NLIST[LASTN].HASH = (unsigned short)HASH1;
 /*printf("ADDN added at %d, name=%s, hash=0x%x\n", LASTN, &CHLIST[LASTCH+1], HASH1);*/
 LASTCH += N;
 if (LASTN >= NLISTZ || LASTCH >= CHLISTZ)
@@ -532,7 +532,7 @@ if (LASTN >= NLISTZ || LASTCH >= CHLISTZ)
 @BOX12.1
 LASTN => ADDN;
 @BOX12.2
-result = LASTN;
+result = (uint16)LASTN;
 @END
 @TITLE MSL08.2(1,7)
 @COL 8R-9R
@@ -669,14 +669,14 @@ SET MUTLN AND
 @BOX 1.1
 $PR DECLARE.N(ID,KIND,TY);
 @BOX 1.2
-uint16 DECLAREN(uint16 ID, int KIND, int TY)
+uint16 DECLAREN(uint16 ID, uint16 KIND, uint16 TY)
 {
 uint16 result;
 @BOX 2.1
 $IN OLDN;
 %8000 &> IX;
 @BOX 2.2
-int OLDN;
+uint16 OLDN;
 IX &= 0x8000;
 @BOX 3.1
 $IF MUTLN OF NLIST[ID]=>OLDN & %3FFF => DECLARE.N/=1
@@ -689,7 +689,7 @@ if (result != 1 || PROCLEV != 0)
 IF 1+>LASTMN=>DECLARE.N >= PLISTZ THEN
 NEWLINES(0);CAPTION(%"PLIST");MONITOR(9);FI
 @BOX 4.2
-result = ++LASTMN;
+result = (uint16)++LASTMN;
 if (result >= PLISTZ)
 {
   NEWLINES(0);CAPTION("PLIST");MONITOR(9);
@@ -798,7 +798,7 @@ PLIST[++LASTMN].K = KDUMMY;
 @BOX4.1
 LASTMN => DUMMY;
 @BOX4.2
-result = LASTMN;
+result = (uint16)LASTMN;
 @BOX5.1
 END
 @BOX5.2
