@@ -172,7 +172,7 @@ $PS PRINT.STATS();
 #MSL09.1
 #MSL09.2
 @BOX 4.2
-extern void MONITOR(int);
+void MONITOR(int);
 void PRINTSTATS(void);
 //PDP  *CODE 1;
 #MSL09.1

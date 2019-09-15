@@ -463,6 +463,7 @@ $LI BREQD = -1, DIND = %1004, AOPD = %3000;
 #include "nmsl041.h"
 #include "nmsl051.h"
 #include "nmsl071.h"
+#include "nmsl091.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -519,7 +520,6 @@ extern void TLCYCLE(int);
 extern void TLCVCYCLE(int,int,int);
 extern void TLCVLIMIT(int);
 extern void TLREPEAT();
-extern void MONITOR(int);
 int REGSIU;
 int TBYADDR;
 @END

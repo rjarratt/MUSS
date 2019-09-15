@@ -91,6 +91,7 @@ $LO8[64] XNAME;
 #include "nmsl051.h"
 #include "nmsl061.h"
 #include "nmsl081.h"
+#include "nmsl091.h"
 
 #define CHLISTZ 4100
 #define SDLIST 87
@@ -184,10 +185,5 @@ extern void TLTYPE(VECTOR *,int);
 extern void TLTYPECOMP(int,int,VECTOR *);
 extern void TLVDECL(char *,uint32,int,int,int,int);
 // END OF LIBSPECS FROM OTHER MODULES
-
-// COMMON PSPECS FROM OTHER MODULES
-extern void MONITOR(int);
-
-// END OF PSPECS FROM OTHER MODULES
 @END
 
