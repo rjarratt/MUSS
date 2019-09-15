@@ -92,6 +92,7 @@ $LO8[64] XNAME;
 #include "nmsl061.h"
 #include "nmsl081.h"
 #include "nmsl091.h"
+#include "nmsl101.h"
 
 #define CHLISTZ 4100
 #define SDLIST 87
@@ -155,35 +156,6 @@ extern char *FINDN(VECTOR *,int);
 extern int FINDP(char *,int,int);
 extern void SPACES(int);
 extern void OUTHEX(unsigned int,int);
-extern void TLASS(int,int);
-extern void TLASSEND();
-extern void TLASSVALUE(int,int);
-extern void TLBLOCK();
-extern void TLCLIT32(int,int32);
-extern void TLCLIT16(int,int16);
-extern void TLCLITS(int,VECTOR *);
-extern void TLCNULL(int);
-extern void TLDATAAREA(int);
-extern void TLENDBLOCK();
-extern void TLENDPROC();
-extern void TLENDTYPE(int);
-extern void TLLABEL(int);
-extern void TLLABELSPEC(char *,int);
-extern void TLLINE(int);
-extern void TLLIT(char *,int);
-extern void TLPL(int,int);
-extern void TLPROC(int);
-extern void TLPROCKIND(int);
-extern void TLPROCPARAM(int,int);
-extern void TLPROCRESULT(int);
-extern void TLPROCSPEC(char *,int);
-extern void TLSDECL(char *,int,int);
-extern void TLSELECTVAR();
-extern void TLSELECTFIELD(int,int,int);
-extern void TLSPACE(int);
-extern void TLTYPE(VECTOR *,int);
-extern void TLTYPECOMP(int,int,VECTOR *);
-extern void TLVDECL(char *,uint32,int,int,int,int);
 // END OF LIBSPECS FROM OTHER MODULES
 @END
 

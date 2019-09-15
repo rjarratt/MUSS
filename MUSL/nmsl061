@@ -464,6 +464,7 @@ $LI BREQD = -1, DIND = %1004, AOPD = %3000;
 #include "nmsl051.h"
 #include "nmsl071.h"
 #include "nmsl091.h"
+#include "nmsl101.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -506,20 +507,6 @@ extern ITYPE COLON;
 
 #define KEYWORD 44
 
-extern void TLLABELSPEC(char *,int);
-extern void TLLABEL(int);
-extern void TLSDECL(char *,int,int);
-extern void TLPL(int,int);
-extern void TLCLIT32(int,int32);
-extern void TLCLIT16(int,int16);
-extern void TLREG(int);
-extern void TLASS(int,int);
-extern void TLASSVALUE(int,int);
-extern void TLASSEND();
-extern void TLCYCLE(int);
-extern void TLCVCYCLE(int,int,int);
-extern void TLCVLIMIT(int);
-extern void TLREPEAT();
 int REGSIU;
 int TBYADDR;
 @END

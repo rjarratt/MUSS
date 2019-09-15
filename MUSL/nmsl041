@@ -232,6 +232,7 @@ $LI/ADDR[$LO8] NIL=;
 #include "nmsl051.h"
 #include "nmsl081.h"
 #include "nmsl091.h"
+#include "nmsl101.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -275,17 +276,6 @@ extern ITYPE COLON;
 #define KEYWORD 44
 
 void LIB(FILE *,int);
-void TL(int,FILE *,int);
-void TLMODULE();
-void TLSEG(int32,int32,int32,int32,int32);
-void TLLOAD(int,int);
-void TLMODE(int,int);
-void TLPRINT(int);
-void TLCODEAREA(int);
-void TLDATAAREA(int);
-void TLENDMODULE(int);
-void TLEND(void);
-void TLINSERT(int);
 int TBYADDR,TRE;
 @END
 @TITLE MSL04.1(1,11)
