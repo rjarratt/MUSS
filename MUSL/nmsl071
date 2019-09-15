@@ -2306,7 +2306,16 @@ IF I /= KVAR /= KFIELD
 OR T OF PLIST[MTLN] => I
 & %C000 /= %8000
 @B21.2
-if ((I != KVAR && I != KFIELD) || ((I = PLIST[MTLN].T) && 0xC000) != 0x8000)
+/* assignment side effects in the MUSL require a careful expansion of this condition */
+;
+int cond = 0;
+cond = I != KVAR && I != KFIELD;
+if (!cond)
+{
+    I = PLIST[MTLN].T;
+	cond = (I & 0xC000) != 0x8000;
+}
+if (cond)
 @B22.1
 MTLN => AR[AP];
 I & %3FFF => MTLN;
