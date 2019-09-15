@@ -86,6 +86,7 @@ $LO8[64] XNAME;
 @BOX 1.2
 #include "support.h"
 #include "nmsl011.h"
+#include "nmsl021.h"
 
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 typedef unsigned char      uint8;
@@ -97,12 +98,6 @@ typedef long long          t_int64;
 typedef unsigned int       uint32;
 typedef unsigned long long t_uint64;
 
-#define LBUFFZ 125
-#define CLISTZ 1250
-#define PLISTZ 320
-#define PARAMSZ 270
-#define TLISTZ 250
-#define NLISTZ 340
 #define CHLISTZ 4100
 #define SDLIST 87
 const ITYPE DIF = { 0, 0, 0x5 };
@@ -146,19 +141,7 @@ const ITYPE LSHIFT = { 0, 0, 0x47 };
 const ITYPE ASTERISK = { 0, 0, 0x36 };
 const ITYPE EOL = { 0, 0, 0x57 };
 const ITYPE DIMPORT = { 0, 0, 0x1B };
-#define KLAB 14
-#define KLABREF 15
-#define KVAR 4
-#define KDUMMY 0
-#define KGLAB 13
-#define KIMPLAB 16
-#define KTREF 9
-#define KTYPE 6
-#define NIL NULL
 #define TADPROC 0x24
-#define CONSTKZ 500
-typedef struct { unsigned short MUTLN,MUSLN,HASH;} NLISTENT;
-typedef struct { unsigned short INTID,PREVN,K,T; int32 DETAIL; } PLISTENT;
 NLISTENT NLIST[NLISTZ];
 PLISTENT PLIST[PLISTZ];
 unsigned char CHLIST[CHLISTZ];
@@ -193,19 +176,12 @@ unsigned char XNAME[64];
 // FROM NMSL051
 #define KPSPEC 1
 #define KPROC 3
-#define KVAR 4
 #define KFIELD 5
 #define KTYPE 6
 #define KLIT 7
 #define KSPACE 8
-#define KTREF 9
 #define KEX 10
 #define KDVEC 11
-#define KDUMMY 0
-#define KLAB 14
-#define KLABREF 15
-#define KGLAB 13
-#define KIMPLAB 16
 
 @BOX 2.1
 *END
