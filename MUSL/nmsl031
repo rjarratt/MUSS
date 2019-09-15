@@ -1546,7 +1546,7 @@ $EN
 @BOX 6.2
 int XBTYPE(int TSIZE, int PTR)
 {
-  int T;
+  int T = 0;
   if (PTR > 22 && PTR < 26)
   {
     switch (PTR-23)

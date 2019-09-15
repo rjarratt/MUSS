@@ -1171,7 +1171,8 @@ void PROCHEAD(void)
 @BOX 2.1
 $IN PROCN,N,I,J;
 @BOX 2.2
-int PROCN,N,I,J;
+int PROCN = 0;
+int N,I,J;
 @BOX 3.1
 $IF TAG OF LBUFF[1+>IPTR]/=1
 @BOX 3.2
@@ -1413,7 +1414,8 @@ void DECLTYPE(int MODE)
 $IN N,TT,MTT,FIRST.T,ID;
 ADDR D;
 @BOX 2.2
-int N,TT,MTT,FIRSTT,ID;
+int FIRSTT = 0;
+int N,TT,MTT,ID;
 int D;
 @BOX 3.1
 $IF TAG OF LBUFF[1+>IPTR]/=1
@@ -2352,7 +2354,8 @@ void DECLDVEC(void)
 $IN DVT,N,ID,MN,NPTR;
 0 => CONSTK[1+>CONPTR];
 @BOX 2.2
-int DVT,N,ID,MN,NPTR;
+int N = 0;
+int DVT,ID,MN,NPTR;
 CONSTK[++CONPTR] = 0;
 @BOX 3.1
 $IF TAG OF LBUFF[1+>IPTR=>NPTR]/=1
@@ -3049,8 +3052,9 @@ $IN VNAME,PREP,POSTP,NAME,VT;
 ADDR DIM;
 0 => PREP => POSTP => VT;
 @BOX2.2
-int VNAME,PREP,POSTP,NAME,VT;
-int DIM;
+int NAME = 0;
+int VNAME,PREP,POSTP,VT;
+int DIM = 0;
 PREP = 0;
 POSTP = 0;
 VT = 0;
@@ -3340,7 +3344,7 @@ $PR COMP.DIM;
 @BOX 1.2
 int COMPDIM(void)
 {
-int result;
+int result = 0;
 @BOX 2.1
 ADDR CONST;
 @BOX 2.2

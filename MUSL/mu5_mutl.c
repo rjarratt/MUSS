@@ -459,9 +459,9 @@ void fatal(char *format, ...)
 
     vprintf(format, va);
 
-    exit(1);
-
     va_end(va);
+
+    exit(1);
 }
 
 static void vecstrcpy(char *dst, VECTOR *src, int dst_size)
@@ -618,7 +618,7 @@ static void plant_16_bit_word(uint16 area_number, uint16 word)
     }
 
     uint16 encoded_word = encode_16_bit_word(word);
-    elf_add_binary_data_to_section(elf_module_context, segment->elf_section_index, &encoded_word, 2);
+    elf_add_binary_data_to_section(elf_module_context, segment->elf_section_index, (char *)&encoded_word, 2);
     segment->next_word++;
 }
 
@@ -998,7 +998,6 @@ static void plant_operand(uint16 n)
 
             if (BT_IS_IMPORT(lit->data_type))
             {
-                int temp = BT_SIZE(lit->data_type);
                 plant_64_bit_code_word(0);
                 elf_add_relocation_entry(elf_module_context, code_seg->elf_section_index, (code_seg->next_word - 2) * 2, elf_sym, MU5_REL_TYPE_32_BIT_VALUE, 0);
             }
@@ -1218,7 +1217,7 @@ static void plant_pop_x(void)
 
 static void plant_pop(void)
 {
-    plant_org_order(F_SF_PLUS, K_LITERAL, -2);
+    plant_org_order(F_SF_PLUS, K_LITERAL, (uint8)-2);
 }
 
 BLOCK *get_current_block(void)
@@ -1282,7 +1281,7 @@ void start_block_level(int param_stack_size, int has_stack_frame)
     log(LOG_STRUCTURE, "Start block, level=%d, last mutl name=%d\n", block_level, block->last_mutl_var);
 }
 
-int block_var_is_not_aligned(T)
+int block_var_is_not_aligned(uint16 T)
 {
     BLOCK *block = get_current_block();
     int result = 0;
@@ -1932,7 +1931,6 @@ static MUTLOP mutl_ops[32][4] =
 
 void set_literal_value(t_uint64 val, int size)
 {
-    t_uint64 temp = val;
     int i;
     for (i = 0; i < size; i++)
     {
@@ -1969,7 +1967,6 @@ void TLSEG(int32 N, int32 S, int32 RTA, int32 CTA, int32 NL)
 
 void TLLOAD(int SN, int AN)
 {
-    SEGMENT *segment;
     log(LOG_MEMORY, "TL.LOAD segment %d area %d\n", SN, AN);
     areas[AN].segment_index = SN;/* TODO: the code here is naive, it should not have a 1:1 mapping from area to segment, we should scan segment table for a free entry */
 }
@@ -2035,14 +2032,11 @@ void TL(int M, char *FN, int DZ)
 
     TLSEG(0, MAX_SEGMENT_SIZE, -1, -1, 6);
 
-    current_literal.buffer = current_literal_buf;
+    current_literal.buffer = (char *)current_literal_buf;
 }
 
 void TLEND(void)
 {
-    int i;
-    int s;
-
     if (!is_library)
     {
         //SEGMENT *stack_segment = get_segment_for_area(0);
@@ -2108,6 +2102,7 @@ int compute_variable_size(uint8 T, int D)
     else
     {
         fatal("Don't yet support computing variable size when dimension is negative\n");
+        result = 0;
     }
 
     return result;
@@ -2293,7 +2288,6 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
     SEGMENT *segment = get_segment_for_area(current_data_area);
     MUTLSYMBOL *var;
     LITSYMBOL *lit;
-    int nb_offset;
     int var_n;
 
     var_n = add_other_block_item();
@@ -2307,7 +2301,7 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
     lit->data_type = T;
     lit->dimension = (D == -1) ? literal->length : D;
     lit->address = compute_descriptor_origin(next_data_address());
-    lit->value.buffer = &lit->valuebuf;
+    lit->value.buffer = (char *)&lit->valuebuf;
 
     if (!BT_IS_IMPORT(T))
     {
@@ -2443,7 +2437,7 @@ void TLSDECL(VECTOR *SN, int T, int D)
         if (SN == NULL)
         {
             name.buffer = "(anonymous_literal)";
-            name.length = strlen(name.buffer);
+            name.length = (uint16)strlen(name.buffer);
         }
         declare_literal(&name, &current_literal, T, D, NO_MODULE);
     }
@@ -2452,7 +2446,7 @@ void TLSDECL(VECTOR *SN, int T, int D)
         if (SN == NULL)
         {
             name.buffer = "(anonymous_variable)";
-            name.length = strlen(name.buffer);
+            name.length = (uint16)strlen(name.buffer);
         }
         declare_variable(&name, T, D, 0, 0, 0, 0, 0, NO_MODULE);
     }
@@ -2587,7 +2581,7 @@ void TLPROC(int P)
     {
         VECTOR temp;
         temp.buffer = "(param)";
-        temp.length = strlen(temp.buffer);
+        temp.length = (uint16)strlen(temp.buffer);
         declare_variable(&temp, proc_def_var->parameters[i].data_type, proc_def_var->parameters[i].dimension, 1, 0, 0, 0, 0, NO_MODULE);
     }
 }
@@ -2679,7 +2673,6 @@ void TLCNULL(int PT)
 
 void TLCLITS(int BT, VECTOR *VAL)
 {
-    int size = BT_SIZE(BT);
     int i;
 
     vecmemcpy(&current_literal, VAL, MAX_LITERAL_LEN);
@@ -2739,7 +2732,7 @@ void TLINSERT(int BIN)
     plant_16_bit_code_word(BIN & 0xFFFF);
 }
 
-void TLLINE(LN)
+void TLLINE(int LN)
 {
     /* TODO: Line numbers are not accurate. Blank lines don't get counted, nor do line breaks in the middle of a statement */
     current_line = LN;
@@ -2935,7 +2928,7 @@ void import_symbol(char *name, Elf32_Addr value, Elf32_Word size, int type, unsi
 {
     VECTOR vname;
     vname.buffer = name;
-    vname.length = strlen(name);
+    vname.length = (uint16)strlen(name);
     if (type == STT_FUNC)
     {
         declare_proc(&vname, value, 0, imported_module_count - 1);
