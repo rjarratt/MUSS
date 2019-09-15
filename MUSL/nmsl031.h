@@ -1,5 +1,7 @@
 #pragma once
 
+#define SDLIST 87
+
 #define TADPROC 0x24
 
 #define TINT0 0x40
@@ -30,9 +32,14 @@ typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 extern int TINT;
 extern int TVST;
 extern int TLO;
+extern int TRE;
+extern int TBYADDR;
 extern ITYPE LBUFF[LBUFFZ];
 extern int IPTR;
+extern int SPTR;
 extern unsigned char CLIST[CLISTZ];
+extern unsigned short DLIST[];
+extern unsigned char SBUFF[2000];
 
 extern const ITYPE UMINUS;
 extern const ITYPE EOS;

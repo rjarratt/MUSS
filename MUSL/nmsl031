@@ -656,7 +656,6 @@ typedef long long          t_int64;
 typedef unsigned int       uint32;
 typedef unsigned long long t_uint64;
 
-#define SDLIST 87
 extern ITYPE DIF;
 extern ITYPE DTHEN;
 extern ITYPE DELSE;
@@ -1423,7 +1422,7 @@ $EN
 int XSYM(void)
 {
   const int EOT = 4;
-  int result = INCH();
+  unsigned char result = (unsigned char)INCH();
   if ((CWORD & 2) == 2)
   {
     if (result != EOT)
