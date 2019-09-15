@@ -124,10 +124,10 @@ unsigned int FINDN(VECTOR *name, int kind)
     return 0;
 }
 
-VECTOR *PART(char *vec, int buffer, int last)
+VECTOR *PART(unsigned char *vec, int buffer, int last)
 {
     static VECTOR result;
-    result.buffer = &vec[buffer];
+    result.buffer = (char *)&vec[buffer];
     result.length = last - buffer + 1;
     return &result;
 }
