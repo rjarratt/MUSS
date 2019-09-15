@@ -230,6 +230,7 @@ $LI/ADDR[$LO8] NIL=;
 #include "nmsl021.h"
 #include "nmsl031.h"
 #include "nmsl051.h"
+#include "nmsl081.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -284,8 +285,6 @@ void TLDATAAREA(int);
 void TLENDMODULE(int);
 void TLEND(void);
 void TLINSERT(int);
-uint16 ADDN();
-extern VECTOR *GENN(uint16);
 void PRINTSTATS(void);
 extern void MONITOR(int);
 int FAULTS;

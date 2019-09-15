@@ -932,6 +932,7 @@ $IN PW0,PW1;
 #include "nmsl041.h"
 #include "nmsl051.h"
 #include "nmsl061.h"
+#include "nmsl081.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -1227,7 +1228,6 @@ $PS END.ST();
 $PS MUTLN($LO16)/$LO16;
 
 @BOX3.2
-void INITS8(void);
 void INITS9(void);
 extern void MONITOR(int);
 
