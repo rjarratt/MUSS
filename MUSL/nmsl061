@@ -459,16 +459,7 @@ $LI BREQD = -1, DIND = %1004, AOPD = %3000;
 #include <memory.h>
 #include "nmsl011.h"
 #include "nmsl021.h"
-
-typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
-typedef unsigned char      uint8;
-typedef short              int16;
-typedef unsigned short     uint16;
-typedef int                int32;
-typedef unsigned int       uint32;
-typedef long long          t_int64;
-typedef unsigned int       uint32;
-typedef unsigned long long t_uint64;
+#include "nmsl031.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -506,39 +497,10 @@ extern ITYPE RB;
 extern ITYPE BSLASH;
 extern ITYPE XCOLON;
 extern ITYPE COLON;
-extern ITYPE UMINUS;
-extern ITYPE EOS;
-extern ITYPE LSHIFT;
-extern ITYPE ASTERISK;
-extern ITYPE EOL;
-extern ITYPE DIMPORT;
-#define TADPROC 0x24
 
 #define MAXKEYWORD 45
-#define TINT0 0x40
-#define TLO8 0x80
-#define TLO0 0x80
-#define TLO1 0x20
-#define STRINGTYPE 0x83
-#define TINT16 0x44
-#define TINT32 0x4C
-#define TINT64 0x5C
-#define TLO32 0x8C
-#define TRE0 0x00
-#define TLAB 0x30
 
 #define KEYWORD 44
-#define TDELIM 0
-#define TNAME 1
-#define TSTRING 2
-#define TCONST 3
-
-#define IEOS 0
-#define IBYTE 29
-#define IMINCOMP 46
-#define ILOAD 51
-#define ISTORE 61
-#define ICOMP 71
 
 // FROM NMSL051
 #define KPSPEC 1
@@ -569,38 +531,20 @@ int AP;
 int PREPROCESSCOMP(int);
 int CWORD;
 void PRINTAR(void);
-extern int IPTR;
 int COMPILECOMP(int,int);
 //$TY ITYPE IS $LO8 TAG,ST $LO16 IND;
 //ITYPE EOS,DTHEN,COMMA,GOTO,DDO,LTHAN,BSLASH,DFROM,DEND;
 //$IM $LI LBUFFZ;
-extern ITYPE LBUFF[LBUFFZ];
-//$TY PLISTENT IS $LO16 INTID,PREVN,K,T int32 DETAIL;
-//$IM $LI PLISTZ;
-//PLISTENT[PLISTZ] PLIST;
 extern void MONITOR(int);
 int CURLEV;
 //int GLEV;
 int FPTR;
 int REGSIU;
-//$LI/char * NIL=;
-//$IM $LI KLAB;
-//$IM $LI KLABREF;
-//$IM $LI KVAR;
-int TINT,TBYADDR;
-//$IM $LI TLAB,TADPROC,TINT32;
+int TBYADDR;
 int CURBLK;
-//$PS BEGINST();
-//$PS PREPROCESSCOND();
-//$IM $LI KGLAB;
 int STPTR;
 int CURPROC;
 int CURRES;
-//$PS COMPILECOND(int,int,int);
-//$PS DECLAREN($LO16,int,int)/$LO16;
-//$PS DUMMY()/$LO16;
-//$PS MUTLN($LO16)/$LO16;
-//$PS EXPN($LO16);
 extern int32 EVALLIT(int, int);
 const int BREQD = -1;
 const int DIND = 0x1004;

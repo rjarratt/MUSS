@@ -389,16 +389,7 @@ MODULE(PREPROCESS.COMP,PREPROCESS.COND,COMPILE.COMP,COMPILE.COND,COMPILE.AND,
 #include "support.h"
 #include "nmsl011.h"
 #include "nmsl021.h"
-
-typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
-typedef unsigned char      uint8;
-typedef short              int16;
-typedef unsigned short     uint16;
-typedef int                int32;
-typedef unsigned int       uint32;
-typedef long long          t_int64;
-typedef unsigned int       uint32;
-typedef unsigned long long t_uint64;
+#include "nmsl031.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -436,39 +427,10 @@ extern ITYPE RB;
 extern ITYPE BSLASH;
 extern ITYPE XCOLON;
 extern ITYPE COLON;
-extern ITYPE UMINUS;
-extern ITYPE EOS;
-extern ITYPE LSHIFT;
-extern ITYPE ASTERISK;
-extern ITYPE EOL;
-extern ITYPE DIMPORT;
-#define TADPROC 0x24
 
 #define MAXKEYWORD 45
-#define TINT0 0x40
-#define TLO8 0x80
-#define TLO0 0x80
-#define TLO1 0x20
-#define STRINGTYPE 0x83
-#define TINT16 0x44
-#define TINT32 0x4C
-#define TINT64 0x5C
-#define TLO32 0x8C
-#define TRE0 0x00
-#define TLAB 0x30
 
 #define KEYWORD 44
-#define TDELIM 0
-#define TNAME 1
-#define TSTRING 2
-#define TCONST 3
-
-#define IEOS 0
-#define IBYTE 29
-#define IMINCOMP 46
-#define ILOAD 51
-#define ISTORE 61
-#define ICOMP 71
 
 // FROM NMSL051
 #define KPSPEC 1
@@ -678,26 +640,15 @@ ITYPE MINUS,DIF,DTHEN,DELSE,LB,RB,COMMA,LSB,DOF,RSB,EOS,DEREF,REF;
 //$LS TL.S.DECL(ADDR[$LO8],$IN,ADDR);
 //$IM $LI ILOAD,LBUFFZ,SDLIST,PLISTZ,PARAMSZ;
 //$TY ITYPE IS $LO8 TAG,ST $LO16 IND;
-extern ITYPE LBUFF[LBUFFZ];
-extern int IPTR,CURLEV,GLEV,TINT,TRE,TBYADDR,CURPROC,CURRES;
+extern int CURLEV,GLEV,TRE,TBYADDR,CURPROC,CURRES;
 uint16 DLIST[SDLIST];
-//typedef struct {uint16 INTID,PREVN,K,T; uint32 DETAIL; } PLISTENT;
-PLISTENT PLIST[PLISTZ];
 int PARAMS[PARAMSZ];
-//$IM $LI TADPROC,KVAR,TLO0,TRE0,CLISTZ,TINT0,TINT64;
-uint8 CLIST[CLISTZ];
-//$IM $LI KSPACE,ICOMP,TNAME,TCONST,KPROC,KFIELD,TLISTZ;
 int TLIST[TLISTZ];
-//$IM $LI TSTRING,STRING.TYPE,TDELIM,TLAB,TLO32,IBYTE,KPSPEC,TLO8;
-//$LI/ADDR[$LO8] NIL =;
 int CMODE;
 extern void MONITOR(int);
 //$PS DUMMY()/$LO16;
 //$PS MUTLN($LO16)/$LO16;
 extern uint16 ADDLSPEC(uint16);
-//$PS COMP.TYPE()/$IN;
-//$IM $LI IMIN.COMP,ISTORE,IEOS;
-//ITYPE MINUS,DIF,DTHEN,DELSE,LB,RB,COMMA,LSB,DOF,RSB,EOS,DEREF,REF;
 @END
 @TITLE MSL07.1(1,6)
 @COL 30R-32N-18T-19R

@@ -327,7 +327,6 @@ TDELIM,TNAME,TSTRING,TCONST,IEOS,IBYTE,IMIN.COMP,ILOAD,ISTORE,ICOMP,INIT.S3);
 @BOX 2.1
 $TY ITYPE $IS $LO8 TAG, ST $LO16 IND;
 @BOX 2.2
-// ITYPE declaration comes from nmsl011.h
 @BOX 3.1
 *GLOBAL 5;
 $LI MAX.KEYWORD = 45;
@@ -377,19 +376,6 @@ $LI NL=10, NEWP=12;
 $LO CFWDPTR, CBWDPTR;
 ITYPE SAVEDELIM;
 @BOX 3.2
-// MOVED MOST OF THIS BLOCK TO NMSL021
-//#define MAXKEYWORD 45
-//#define TINT0 0x40
-//#define TLO8 0x80
-//#define TLO0 0x80
-//#define TLO1 0x20
-//#define STRINGTYPE 0x83
-//#define TINT16 0x44
-//#define TINT32 0x4C
-//#define TINT64 0x5C
-//#define TLO32 0x8C
-//#define TRE0 0x00
-//#define TLAB 0x30
 ITYPE LBUFF[LBUFFZ];
 unsigned char CLIST[CLISTZ];
 int TINT,TLO,TRE,TBYADDR,TVST;
@@ -527,25 +513,12 @@ unsigned short DLIST[] = {
 0x0, 0x1010, 0x1010, 0x2, 0x40, 0x801, 0x0, 0x801,
 0x2, 0x800, 0x800, 0x40, 0x40, 0x0, 0x10, 0x80
 };
-// BELOW BLOCK MOVED TO NMSL021
-//ITYPE UMINUS = { 0, 0, 0x55 };
-//ITYPE EOS = { 0, 0, 0x0 };
-//ITYPE LSHIFT = { 0, 0, 0x47 };
-//ITYPE ASTERISK = { 0, 0, 0x36 };
-//ITYPE EOL = { 0, 0, 0x57 };
-//ITYPE DIMPORT = { 0, 0, 0x1B };
-//#define KEYWORD 44
-//#define TDELIM 0
-//#define TNAME 1
-//#define TSTRING 2
-//#define TCONST 3
-//
-//#define IEOS 0
-//#define IBYTE 29
-//#define IMINCOMP 46
-//#define ILOAD 51
-//#define ISTORE 61
-//#define ICOMP 71
+const ITYPE UMINUS = { 0, 0, 0x55 };
+const ITYPE EOS = { 0, 0, 0x0 };
+const ITYPE LSHIFT = { 0, 0, 0x47 };
+const ITYPE ASTERISK = { 0, 0, 0x36 };
+const ITYPE EOL = { 0, 0, 0x57 };
+const ITYPE DIMPORT = { 0, 0, 0x1B };
 
 unsigned char SBUFF[2000];
 #define NL 10
@@ -559,7 +532,7 @@ $PS ITEMISE($IN);
 #MSL03.1
 @BOX 4.2
 #MSL03.1.2
-extern void ITEMISE(int);
+void ITEMISE(int);
 #MSL03.1
 @BOX 5.1
 $PS INITS3();
@@ -668,8 +641,8 @@ $IN MSTR,MUTLSTR
 #include <string.h>
 #include "nmsl011.h"
 #include "nmsl021.h"
+#include "nmsl031.h"
 
-typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 typedef unsigned char      uint8;
 typedef short              int16;
 typedef unsigned short     uint16;
@@ -715,39 +688,11 @@ extern ITYPE RB;
 extern ITYPE BSLASH;
 extern ITYPE XCOLON;
 extern ITYPE COLON;
-extern ITYPE UMINUS;
-extern ITYPE EOS;
-extern ITYPE LSHIFT;
-extern ITYPE ASTERISK;
-extern ITYPE EOL;
-extern ITYPE DIMPORT;
-#define TADPROC 0x24
 
 #define MAXKEYWORD 45
-#define TINT0 0x40
-#define TLO8 0x80
-#define TLO0 0x80
-#define TLO1 0x20
-#define STRINGTYPE 0x83
-#define TINT16 0x44
-#define TINT32 0x4C
-#define TINT64 0x5C
-#define TLO32 0x8C
-#define TRE0 0x00
-#define TLAB 0x30
 
 #define KEYWORD 44
 #define TDELIM 0
-#define TNAME 1
-#define TSTRING 2
-#define TCONST 3
-
-#define IEOS 0
-#define IBYTE 29
-#define IMINCOMP 46
-#define ILOAD 51
-#define ISTORE 61
-#define ICOMP 71
 
 // FROM NMSL051
 #define KPSPEC 1

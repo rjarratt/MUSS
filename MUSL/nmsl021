@@ -87,16 +87,7 @@ $LO8[64] XNAME;
 #include "support.h"
 #include "nmsl011.h"
 #include "nmsl021.h"
-
-typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
-typedef unsigned char      uint8;
-typedef short              int16;
-typedef unsigned short     uint16;
-typedef int                int32;
-typedef unsigned int       uint32;
-typedef long long          t_int64;
-typedef unsigned int       uint32;
-typedef unsigned long long t_uint64;
+#include "nmsl031.h"
 
 #define CHLISTZ 4100
 #define SDLIST 87
@@ -135,43 +126,14 @@ const ITYPE RB = { 0, 0, 0x50 };
 const ITYPE BSLASH = { 0, 0, 0x51 };
 const ITYPE XCOLON = { 0, 0, 0x52 };
 const ITYPE COLON = { 0, 0, 0x4B };
-const ITYPE UMINUS = { 0, 0, 0x55 };
-const ITYPE EOS = { 0, 0, 0x0 };
-const ITYPE LSHIFT = { 0, 0, 0x47 };
-const ITYPE ASTERISK = { 0, 0, 0x36 };
-const ITYPE EOL = { 0, 0, 0x57 };
-const ITYPE DIMPORT = { 0, 0, 0x1B };
-#define TADPROC 0x24
 NLISTENT NLIST[NLISTZ];
 PLISTENT PLIST[PLISTZ];
 unsigned char CHLIST[CHLISTZ];
 unsigned char XNAME[64];
 
 #define MAXKEYWORD 45
-#define TINT0 0x40
-#define TLO8 0x80
-#define TLO0 0x80
-#define TLO1 0x20
-#define STRINGTYPE 0x83
-#define TINT16 0x44
-#define TINT32 0x4C
-#define TINT64 0x5C
-#define TLO32 0x8C
-#define TRE0 0x00
-#define TLAB 0x30
 
 #define KEYWORD 44
-#define TDELIM 0
-#define TNAME 1
-#define TSTRING 2
-#define TCONST 3
-
-#define IEOS 0
-#define IBYTE 29
-#define IMINCOMP 46
-#define ILOAD 51
-#define ISTORE 61
-#define ICOMP 71
 
 // FROM NMSL051
 #define KPSPEC 1
@@ -234,7 +196,6 @@ extern void TLVDECL(char *,uint32,int,int,int,int);
 unsigned short ADDN();
 extern VECTOR *GENN(unsigned short);
 extern void MONITOR(int);
-void ITEMISE(int);
 int TRANSCOMP(int);
 void TRANSENDALT(void);
 void TRANSOD(void);
@@ -245,7 +206,5 @@ uint16 MUTLN(uint16);
 void EXPN(uint16);
 
 // END OF PSPECS FROM OTHER MODULES
-
-extern ITYPE LBUFF[LBUFFZ];
 @END
 

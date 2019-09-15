@@ -228,16 +228,7 @@ $LI/ADDR[$LO8] NIL=;
 #include "support.h"
 #include "nmsl011.h"
 #include "nmsl021.h"
-
-typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
-typedef unsigned char      uint8;
-typedef short              int16;
-typedef unsigned short     uint16;
-typedef int                int32;
-typedef unsigned int       uint32;
-typedef long long          t_int64;
-typedef unsigned int       uint32;
-typedef unsigned long long t_uint64;
+#include "nmsl031.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -275,39 +266,10 @@ extern ITYPE RB;
 extern ITYPE BSLASH;
 extern ITYPE XCOLON;
 extern ITYPE COLON;
-extern ITYPE UMINUS;
-extern ITYPE EOS;
-extern ITYPE LSHIFT;
-extern ITYPE ASTERISK;
-extern ITYPE EOL;
-extern ITYPE DIMPORT;
-#define TADPROC 0x24
 
 #define MAXKEYWORD 45
-#define TINT0 0x40
-#define TLO8 0x80
-#define TLO0 0x80
-#define TLO1 0x20
-#define STRINGTYPE 0x83
-#define TINT16 0x44
-#define TINT32 0x4C
-#define TINT64 0x5C
-#define TLO32 0x8C
-#define TRE0 0x00
-#define TLAB 0x30
 
 #define KEYWORD 44
-#define TDELIM 0
-#define TNAME 1
-#define TSTRING 2
-#define TCONST 3
-
-#define IEOS 0
-#define IBYTE 29
-#define IMINCOMP 46
-#define ILOAD 51
-#define ISTORE 61
-#define ICOMP 71
 
 // FROM NMSL051
 #define KPSPEC 1
@@ -335,13 +297,11 @@ int COMPTYPE(void);
 uint16 ADDN();
 extern VECTOR *GENN(uint16);
 void PRINTSTATS(void);
-extern int IPTR;
 void ENDCHECKS(void);
-extern ITYPE LBUFF[LBUFFZ];
 int32 EVALCONST(void);
 extern void MONITOR(int);
 int FAULTS;
-int TINT,TBYADDR,TVST,TLO,TRE;
+int TBYADDR,TRE;
 @END
 @TITLE MSL04.1(1,11)
 @COL 1S-2R-3T-4T-5T-6T-8R-9R-14F

@@ -158,16 +158,7 @@ XNPTR,LASTN,LASTCH,INIT.S8);
 #include "support.h"
 #include "nmsl011.h"
 #include "nmsl021.h"
-
-typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
-typedef unsigned char      uint8;
-typedef short              int16;
-typedef unsigned short     uint16;
-typedef int                int32;
-typedef unsigned int       uint32;
-typedef long long          t_int64;
-typedef unsigned int       uint32;
-typedef unsigned long long t_uint64;
+#include "nmsl031.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -205,39 +196,10 @@ extern ITYPE RB;
 extern ITYPE BSLASH;
 extern ITYPE XCOLON;
 extern ITYPE COLON;
-extern ITYPE UMINUS;
-extern ITYPE EOS;
-extern ITYPE LSHIFT;
-extern ITYPE ASTERISK;
-extern ITYPE EOL;
-extern ITYPE DIMPORT;
-#define TADPROC 0x24
 
 #define MAXKEYWORD 45
-#define TINT0 0x40
-#define TLO8 0x80
-#define TLO0 0x80
-#define TLO1 0x20
-#define STRINGTYPE 0x83
-#define TINT16 0x44
-#define TINT32 0x4C
-#define TINT64 0x5C
-#define TLO32 0x8C
-#define TRE0 0x00
-#define TLAB 0x30
 
 #define KEYWORD 44
-#define TDELIM 0
-#define TNAME 1
-#define TSTRING 2
-#define TCONST 3
-
-#define IEOS 0
-#define IBYTE 29
-#define IMINCOMP 46
-#define ILOAD 51
-#define ISTORE 61
-#define ICOMP 71
 
 // FROM NMSL051
 #define KPSPEC 1
@@ -363,15 +325,7 @@ uint8 XNAME[64]; //TEMP MOD
 extern void TLLABELSPEC(char *,int);
 extern void MONITOR(int);
 int IX;
-//$IM $LI NLISTZ,PLISTZ,CHLISTZ;
-//$TY NLIST.ENT IS $LO16 MUTLN,MUSLN,HASH; ::TEMP
-NLISTENT NLIST[NLISTZ]; //TEMP
-uint8 CHLIST[CHLISTZ]; //TEMP
-//$TY PLIST.ENT IS $LO16 INTID,PREVN,K,T $IN32 DETAIL;
-PLISTENT PLIST[PLISTZ];
 int CURBLK,LASTMN,PROCLEV;
-//$IM $LI KTYPE,KDUMMY,KGLAB,KLABREF,KIMPLAB,KLAB,KTREF;
-//$IM $LI KPSPEC,KPROC;
 @END
 @TITLE MSL08.1(1,7)
 @COL 1S-2R-3R-4T-5T-6R-7T-8T-9R-10F

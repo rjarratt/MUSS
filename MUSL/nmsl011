@@ -926,17 +926,9 @@ $IN PW0,PW1;
 #include <memory.h>
 #include <setjmp.h>
 #include "support.h"
+#include "nmsl011.h"
 #include "nmsl021.h"
-
-typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
-typedef unsigned char      uint8;
-typedef short              int16;
-typedef unsigned short     uint16;
-typedef int                int32;
-typedef unsigned int       uint32;
-typedef long long          t_int64;
-typedef unsigned int       uint32;
-typedef unsigned long long t_uint64;
+#include "nmsl031.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -974,39 +966,10 @@ extern ITYPE RB;
 extern ITYPE BSLASH;
 extern ITYPE XCOLON;
 extern ITYPE COLON;
-extern ITYPE UMINUS;
-extern ITYPE EOS;
-extern ITYPE LSHIFT;
-extern ITYPE ASTERISK;
-extern ITYPE EOL;
-extern ITYPE DIMPORT;
-#define TADPROC 0x24
 
 #define MAXKEYWORD 45
-#define TINT0 0x40
-#define TLO8 0x80
-#define TLO0 0x80
-#define TLO1 0x20
-#define STRINGTYPE 0x83
-#define TINT16 0x44
-#define TINT32 0x4C
-#define TINT64 0x5C
-#define TLO32 0x8C
-#define TRE0 0x00
-#define TLAB 0x30
 
 #define KEYWORD 44
-#define TDELIM 0
-#define TNAME 1
-#define TSTRING 2
-#define TCONST 3
-
-#define IEOS 0
-#define IBYTE 29
-#define IMINCOMP 46
-#define ILOAD 51
-#define ISTORE 61
-#define ICOMP 71
 
 // FROM NMSL051
 #define KPSPEC 1
@@ -1231,12 +1194,8 @@ $LO16[SDLIST] DLIST;
 $IN IPTR;
 ITYPE[LBUFFZ] LBUFF;
 @BOX2.2
-//ITYPE EOS,ASTERISK; //LITERALS REALLY!
-PLISTENT PLIST[PLISTZ];
 short int DLIST[SDLIST];
 
-extern int IPTR;
-extern ITYPE LBUFF[LBUFFZ];
 @BOX3.1
 $PS INIT.S3();
 $PS INIT.S4();
@@ -1276,13 +1235,11 @@ $PS END.ST();
 $PS MUTLN($LO16)/$LO16;
 
 @BOX3.2
-void INITS3(void);
 void INITS4(void);
 void INITS5(void);
 void INITS6(void);
 void INITS8(void);
 void INITS9(void);
-void ITEMISE(int);
 void DECLSPACE(void);
 void DECLPROC(int);
 void DECLLIT(void);
