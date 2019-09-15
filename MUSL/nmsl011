@@ -930,6 +930,7 @@ $IN PW0,PW1;
 #include "nmsl021.h"
 #include "nmsl031.h"
 #include "nmsl041.h"
+#include "nmsl051.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -971,16 +972,6 @@ extern ITYPE COLON;
 #define MAXKEYWORD 45
 
 #define KEYWORD 44
-
-// FROM NMSL051
-#define KPSPEC 1
-#define KPROC 3
-#define KFIELD 5
-#define KTYPE 6
-#define KLIT 7
-#define KSPACE 8
-#define KEX 10
-#define KDVEC 11
 
 #MSL01/1
 // MSL01/1
@@ -1235,20 +1226,9 @@ $PS END.ST();
 $PS MUTLN($LO16)/$LO16;
 
 @BOX3.2
-void INITS5(void);
 void INITS6(void);
 void INITS8(void);
 void INITS9(void);
-void DECLSPACE(void);
-void DECLPROC(int);
-void DECLLIT(void);
-void DECLDVEC(void);
-void DECLTYPE(unsigned int);
-void DECLFIELD(void);
-void DECLVAR(void);
-void DECLVSTORE(void);
-void DECLIMP(void);
-void DECLLAB(void);
 void TRANSIF(void);
 void TRANSFI(void);
 void TRANSELSE(void);
@@ -1262,11 +1242,6 @@ int TRANSCOMP(int);
 void TRANSGOTO(void);
 void ALTLABEL(void);
 extern void MONITOR(int);
-void BEGINST(void);
-void PROCHEAD(void);
-void MODHEAD(void);
-void ENDST(void);
-//unsigned int MUTLN(unsigned int);
 
 @BOX4.1
 ::END

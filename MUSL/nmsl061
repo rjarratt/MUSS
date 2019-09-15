@@ -461,6 +461,7 @@ $LI BREQD = -1, DIND = %1004, AOPD = %3000;
 #include "nmsl021.h"
 #include "nmsl031.h"
 #include "nmsl041.h"
+#include "nmsl051.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -503,16 +504,6 @@ extern ITYPE COLON;
 
 #define KEYWORD 44
 
-// FROM NMSL051
-#define KPSPEC 1
-#define KPROC 3
-#define KFIELD 5
-#define KTYPE 6
-#define KLIT 7
-#define KSPACE 8
-#define KEX 10
-#define KDVEC 11
-
 extern void TLLABELSPEC(char *,int);
 extern void TLLABEL(int);
 extern void TLSDECL(char *,int,int);
@@ -527,7 +518,6 @@ extern void TLCYCLE(int);
 extern void TLCVCYCLE(int,int,int);
 extern void TLCVLIMIT(int);
 extern void TLREPEAT();
-int LASTMN;
 int AP;
 int PREPROCESSCOMP(int);
 void PRINTAR(void);
@@ -536,16 +526,10 @@ int COMPILECOMP(int,int);
 //ITYPE EOS,DTHEN,COMMA,GOTO,DDO,LTHAN,BSLASH,DFROM,DEND;
 //$IM $LI LBUFFZ;
 extern void MONITOR(int);
-int CURLEV;
-//int GLEV;
 int FPTR;
 int REGSIU;
 int TBYADDR;
-int CURBLK;
 int STPTR;
-int CURPROC;
-int CURRES;
-extern int32 EVALLIT(int, int);
 const int BREQD = -1;
 const int DIND = 0x1004;
 const int AOPD = 0x3000;

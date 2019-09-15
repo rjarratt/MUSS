@@ -159,6 +159,7 @@ XNPTR,LASTN,LASTCH,INIT.S8);
 #include "nmsl011.h"
 #include "nmsl021.h"
 #include "nmsl031.h"
+#include "nmsl051.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -200,16 +201,6 @@ extern ITYPE COLON;
 #define MAXKEYWORD 45
 
 #define KEYWORD 44
-
-// FROM NMSL051
-#define KPSPEC 1
-#define KPROC 3
-#define KFIELD 5
-#define KTYPE 6
-#define KLIT 7
-#define KSPACE 8
-#define KEX 10
-#define KDVEC 11
 
 #MSL08/1
 @BOX 2.1
@@ -324,8 +315,6 @@ uint8 XNAME[64]; //TEMP MOD
 //$LS CAPTION(ADDR[$LO8]);
 extern void TLLABELSPEC(char *,int);
 extern void MONITOR(int);
-int IX;
-int CURBLK,LASTMN,PROCLEV;
 @END
 @TITLE MSL08.1(1,7)
 @COL 1S-2R-3R-4T-5T-6R-7T-8T-9R-10F

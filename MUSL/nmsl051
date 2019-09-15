@@ -325,6 +325,7 @@ LASTMN,CURLEV,CURRES,CURPROC,CURBLK,GLEV,EVAL.CONST,END.CHECKS,PROCLEV,EVAL.LIT)
 #include "nmsl011.h"
 #include "nmsl021.h"
 #include "nmsl031.h"
+#include "nmsl051.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -368,12 +369,8 @@ extern ITYPE COLON;
 #define KEYWORD 44
 
 // FROM NMSL051
-#define KPSPEC 1
-#define KPROC 3
-#define KFIELD 5
 #define KTYPE 6
 #define KLIT 7
-#define KSPACE 8
 #define KEX 10
 #define KDVEC 11
 

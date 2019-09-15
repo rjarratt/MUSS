@@ -643,6 +643,7 @@ $IN MSTR,MUTLSTR
 #include "nmsl021.h"
 #include "nmsl031.h"
 #include "nmsl041.h"
+#include "nmsl051.h"
 
 typedef unsigned char      uint8;
 typedef short              int16;
@@ -694,16 +695,6 @@ extern ITYPE COLON;
 
 #define KEYWORD 44
 #define TDELIM 0
-
-// FROM NMSL051
-#define KPSPEC 1
-#define KPROC 3
-#define KFIELD 5
-#define KTYPE 6
-#define KLIT 7
-#define KSPACE 8
-#define KEX 10
-#define KDVEC 11
 
 int LASTCH;
 int LINENO;

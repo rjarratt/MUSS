@@ -229,6 +229,7 @@ $LI/ADDR[$LO8] NIL=;
 #include "nmsl011.h"
 #include "nmsl021.h"
 #include "nmsl031.h"
+#include "nmsl051.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -271,16 +272,6 @@ extern ITYPE COLON;
 
 #define KEYWORD 44
 
-// FROM NMSL051
-#define KPSPEC 1
-#define KPROC 3
-#define KFIELD 5
-#define KTYPE 6
-#define KLIT 7
-#define KSPACE 8
-#define KEX 10
-#define KDVEC 11
-
 void LIB(FILE *,int);
 void TL(int,FILE *,int);
 void TLMODULE();
@@ -293,12 +284,9 @@ void TLDATAAREA(int);
 void TLENDMODULE(int);
 void TLEND(void);
 void TLINSERT(int);
-int COMPTYPE(void);
 uint16 ADDN();
 extern VECTOR *GENN(uint16);
 void PRINTSTATS(void);
-void ENDCHECKS(void);
-int32 EVALCONST(void);
 extern void MONITOR(int);
 int FAULTS;
 int TBYADDR,TRE;

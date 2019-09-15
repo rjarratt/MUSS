@@ -8,5 +8,6 @@ extern int CONPTR;
 extern FILE *RESFILE;
 extern void RESTART(void);
 extern void CEXIT(void);
-extern int IX, DIRYZ;
+extern int IX;
+extern int DIRYZ;
 extern void MUSL(char *file, char *PROG, int CMPMODE, int DIR);
