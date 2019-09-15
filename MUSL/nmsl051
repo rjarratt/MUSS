@@ -326,9 +326,11 @@ LASTMN,CURLEV,CURRES,CURPROC,CURBLK,GLEV,EVAL.CONST,END.CHECKS,PROCLEV,EVAL.LIT)
 #include "nmsl021.h"
 #include "nmsl031.h"
 #include "nmsl051.h"
+#include "nmsl061.h"
 #include "nmsl071.h"
 #include "nmsl081.h"
 #include "nmsl091.h"
+#include "nmsl101.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -399,8 +401,8 @@ PLISTZ => GLEV;
 //TEMP MOVE TO SEC 2 PLIST.ENT [PLISTZ] PLIST;
 int PARAMS[PARAMSZ];
 int TLIST[TLISTZ];
-int LASTMN,CURLEV,CURRES,CURPROC,CURBLK,GLEV;
-GLEV = PLISTZ;
+int LASTMN,CURLEV,CURRES,CURPROC,CURBLK;
+int GLEV = PLISTZ;
 int PROCLEV;
 @BOX 4.1
 $PS MOD.HEAD();
@@ -462,7 +464,7 @@ void DECLPROC(int);
 uint16 ADDLSPEC(uint16);
 void PROCHEAD(void);
 void BEGINST(void);
-void DECLTYPE(uint);
+void DECLTYPE(int);
 void DECLVAR(void);
 void DECLFIELD(void);
 void DECLSPACE(void);
@@ -477,7 +479,7 @@ int CHECKLIT(int, int);
 int32 EVALLIT(int, int);
 int32 EVALCONST(void);
 int COMPTYPE(void);
-void *COMPDIM(void);
+int COMPDIM(void);
 //PDP *CODE 2;
 #MSL05.1
 #MSL05.2
@@ -1412,7 +1414,7 @@ $IN N,TT,MTT,FIRST.T,ID;
 ADDR D;
 @BOX 2.2
 int N,TT,MTT,FIRSTT,ID;
-void *D;
+int D;
 @BOX 3.1
 $IF TAG OF LBUFF[1+>IPTR]/=1
 @BOX 3.2
@@ -1591,7 +1593,7 @@ $IN VART,VT,MUTLN,N;
 ADDR VDIM;
 @BOX 2.2
 int VART,VT,MUTLN,N;
-void *VDIM;
+int VDIM;
 @BOX 3.1
 1 -> IPTR;
 IF COMP.TYPE()=>VART=>VT & %8000 /=0 $TH
@@ -1790,7 +1792,7 @@ void DECLSPACE(void)
 @BOX 2.1
 ADDR SZ;
 @BOX 2.2
-void *SZ;
+int SZ;
 @BOX 3.1
 $IF TAG OF LBUFF[1+>IPTR]/=1
 @BOX 3.2
@@ -1802,7 +1804,7 @@ if (memcmp(&LBUFF[++IPTR], &LSB, sizeof(ITYPE)) != 0)
 @BOX 5.1
 EVAL.CONST()=>SZ;
 @BOX 5.2
-SZ = (void *)EVALCONST();
+SZ = EVALCONST();
 @BOX 6.1
 $IF LBUFF[1+>IPTR]/=RSB
 @BOX 6.2
@@ -2478,7 +2480,7 @@ ADDR D;
 $AD[$LO8]ADLIT;
 @BOX 2.2
 int CHPTR,C;
-void *D;
+int D;
 //char *ADLIT;
 @BOX15.1
 $IF DVT = TLO8 $TH
@@ -2509,7 +2511,7 @@ $IF COMP.DIM() => D = 0 $TH 1=>D $FI
 D = COMPDIM();
 if (D == 0)
 {
-  D = (void *)1;
+  D = 1;
 }
 @BOX9.1
 TL.ASS.VALUE(N,D);
@@ -3048,7 +3050,7 @@ ADDR DIM;
 0 => PREP => POSTP => VT;
 @BOX2.2
 int VNAME,PREP,POSTP,NAME,VT;
-void *DIM;
+int DIM;
 PREP = 0;
 POSTP = 0;
 VT = 0;
@@ -3336,13 +3338,13 @@ FAULT
 @BOX 1.1
 $PR COMP.DIM;
 @BOX 1.2
-void *COMPDIM(void)
+int COMPDIM(void)
 {
-void *result;
+int result;
 @BOX 2.1
 ADDR CONST;
 @BOX 2.2
-void *CONST;
+int CONST;
 @BOX 3.1
 $IF LBUFF[1+>IPTR]/=LSB
 @BOX 3.2
@@ -3350,7 +3352,7 @@ if (memcmp(&LBUFF[++IPTR], &LSB, sizeof(ITYPE)) != 0)
 @BOX 4.1
 EVAL.CONST()=>CONST;
 @BOX 4.2
-CONST = (void *)EVALCONST();
+CONST = EVALCONST();
 @BOX 5.1
 $IF LBUFF[1+>IPTR]/=RSB
 @BOX 5.2
@@ -3710,7 +3712,7 @@ if (I == 0)
 }
 SELECTOUTPUT(MSTR);
 NEWLINES(1);
-CAPTION(GENN(PLIST[LASTMN].INTID));
+CAPTION((char *)GENN(PLIST[LASTMN].INTID)->buffer);
 @BOX 9.1
 $IF K OF PLIST[LASTMN] /= KDUMMY $TH
 PREVN OF PLIST[LASTMN] => MUTLN

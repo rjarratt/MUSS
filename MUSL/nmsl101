@@ -151,8 +151,8 @@ PSPEC TL.ASS.VALUE($IN,$IN);
 PSPEC TL.ASS.END();
 @BOX 4.2
 void TLSPACE(int);
-void TLSDECL(char *,int,int);
-void TLVDECL(char *,uint32,int,int,int,int);
+void TLSDECL(VECTOR *,int,int);
+void TLVDECL(VECTOR *,uint32,int,int,int,int);
 void TLMAKE(int,int,int);
 void TLSELECTVAR(void);
 void TLSELECTFIELD(int,int,int);
@@ -174,7 +174,7 @@ void TLCLIT64(int,t_uint64);
 void TLCNULL(int);
 void TLCLITS(int,VECTOR *);
 void TLCLIT128(int,double);
-void TLLIT(char *,int);
+void TLLIT(VECTOR *,int);
 @BOX 6.1
 PSPEC TL.PROC.SPEC(ADDR[$LO8],$IN);
 PSPEC TL.PROC.PARAM($IN,ADDR);

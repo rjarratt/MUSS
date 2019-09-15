@@ -463,6 +463,7 @@ $LI BREQD = -1, DIND = %1004, AOPD = %3000;
 #include "nmsl041.h"
 #include "nmsl051.h"
 #include "nmsl071.h"
+#include "nmsl081.h"
 #include "nmsl091.h"
 #include "nmsl101.h"
 
@@ -772,7 +773,7 @@ FAULT
 @BOX 1.1
 $PR TRANS.WHILE;
 @BOX 1.2
-void TRANSWHILE(voisd)
+void TRANSWHILE(void)
 {
 @BOX 2.1
 $IN ST.LAB,END.LAB;

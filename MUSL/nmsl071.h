@@ -9,7 +9,6 @@ int AP;
 int FPTR;
 int STPTR;
 
-
 int PREPROCESSCOMP(int);
 void PREPROCESSCOND(void);
 int COMPILECOMP(int, int);

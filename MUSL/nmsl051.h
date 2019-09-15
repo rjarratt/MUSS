@@ -25,7 +25,7 @@ extern void PROCHEAD(void);
 extern void BEGINST(void);
 extern void ENDST(void);
 extern void INITS5(void);
-extern void DECLTYPE(uint32);
+extern void DECLTYPE(int);
 extern void DECLVAR(void);
 extern void DECLFIELD(void);
 extern void DECLSPACE(void);
