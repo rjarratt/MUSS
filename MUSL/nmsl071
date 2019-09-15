@@ -392,6 +392,7 @@ MODULE(PREPROCESS.COMP,PREPROCESS.COND,COMPILE.COMP,COMPILE.COND,COMPILE.AND,
 #include "nmsl031.h"
 #include "nmsl041.h"
 #include "nmsl051.h"
+#include "nmsl071.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -479,12 +480,9 @@ const int BREG=1;
 const int ABD=7;
 const int BD=5;
 //$LI/ITYPE DAND= 0\0\%2B, DOR= 0\0\%2C;
-extern int BREQD;
-extern int AOPD;
 extern int BOPD;
 const int STKSEL=0x1005;
 const int UNSTK=0x1003;
-extern int DIND;
 const int CLIT=0;
 //PDP *CODE 2
 //*GLOBAL 1;

@@ -326,6 +326,7 @@ LASTMN,CURLEV,CURRES,CURPROC,CURBLK,GLEV,EVAL.CONST,END.CHECKS,PROCLEV,EVAL.LIT)
 #include "nmsl021.h"
 #include "nmsl031.h"
 #include "nmsl051.h"
+#include "nmsl071.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -633,7 +634,6 @@ int MAXMUTLN,MAXN,MAXCH;
 //$IM $LI TLO0;
 extern VECTOR *GENN(uint16);
 
-#define AOPD 0x3000;
 @END
 @TITLE MSL05.1(1,7)
 @COL 10R
