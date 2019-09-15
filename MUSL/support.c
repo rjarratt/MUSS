@@ -121,7 +121,7 @@ unsigned int FINDN(VECTOR *name, int kind)
     printf("FINDN not implemented\n");
     exit(1);
     // see lib022
-    return NULL;
+    return 0;
 }
 
 VECTOR *PART(char *vec, int buffer, int last)

@@ -39,7 +39,7 @@ void TLLINE(int);
 void OUTLINENO(int);
 
 unsigned int FINDN(VECTOR *, int);
-VECTOR *PART(unsigned char *, int, int);
+VECTOR *PART(char *, int, int);
 void TLPRINT(int);
 void CAPTION(char *);
 int FINDP(unsigned int, int, int);
