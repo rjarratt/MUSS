@@ -89,6 +89,7 @@ $LO8[64] XNAME;
 #include "nmsl021.h"
 #include "nmsl031.h"
 #include "nmsl051.h"
+#include "nmsl061.h"
 
 #define CHLISTZ 4100
 #define SDLIST 87
@@ -187,10 +188,6 @@ extern void TLVDECL(char *,uint32,int,int,int,int);
 unsigned short ADDN();
 extern VECTOR *GENN(unsigned short);
 extern void MONITOR(int);
-int TRANSCOMP(int);
-void TRANSENDALT(void);
-void TRANSOD(void);
-void TRANSFI(void);
 uint16 DECLAREN(uint16,uint16,uint16);
 uint16 DUMMY(void);
 uint16 MUTLN(uint16);
