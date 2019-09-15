@@ -1034,7 +1034,7 @@ uint16 ADDLSPEC(uint16 LIBN)
 {
 uint16 result = 0;
 int J,K,M,N;
-char *F;
+unsigned int F;
 VECTOR *LNAME;
 @BOX3.1
 GENN(LIBN) => LNAME;

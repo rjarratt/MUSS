@@ -12,7 +12,7 @@ typedef unsigned long long t_uint64;
 
 typedef struct
 {
-    uint8 *buffer;
+    char *buffer;
     uint16 length;
 } VECTOR;
 
@@ -38,11 +38,11 @@ void INBACKSPACE(int);
 void TLLINE(int);
 void OUTLINENO(int);
 
-char *FINDN(VECTOR *, int);
+unsigned int FINDN(VECTOR *, int);
 VECTOR *PART(unsigned char *, int, int);
 void TLPRINT(int);
 void CAPTION(char *);
-int FINDP(char *, int, int);
+int FINDP(unsigned int, int, int);
 void TLCYCLE(int);
 void TLCVCYCLE(int, int, int);
 void TLCVLIMIT(int);

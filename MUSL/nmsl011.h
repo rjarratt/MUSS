@@ -5,7 +5,7 @@ extern FILE *MSTR;
 extern FILE *MUTLSTR;
 extern int CONSTK[CONSTKZ];
 extern int CONPTR;
-extern FILE *RESFILE;
+extern char *RESFILE;
 extern void RESTART(void);
 extern void CEXIT(void);
 extern int IX;

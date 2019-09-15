@@ -143,19 +143,5 @@ unsigned char XNAME[64];
 @BOX 2.1
 *END
 @BOX 2.2
-// LIBSPECS FROM OTHER MODULES
-extern void CAPTION(char *);
-extern int INCH(void);
-extern void OUTCH(int);
-extern void INBACKSPACE(int);
-extern int NEXTCH(void);
-extern void NEWLINES(int);
-extern void OUTLINENO(int);
-extern void PPCCMD(void);
-extern char *FINDN(VECTOR *,int);
-extern int FINDP(char *,int,int);
-extern void SPACES(int);
-extern void OUTHEX(unsigned int,int);
-// END OF LIBSPECS FROM OTHER MODULES
 @END
 

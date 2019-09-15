@@ -786,8 +786,11 @@ $RE64 FP,POWERS;
 $LI/$IN TEN = 10, ZERO = 0;
 #MSL03.1.1
 @BOX 2.2
-unsigned int STEM,PTR,RPTR,NPTR,ISYM,SYM,
-    PPOS,BCOUNT,CSIZE,CTYPE,I,J,TY,SW;
+int ISYM;
+int I;
+int J;
+unsigned int STEM,PTR,RPTR,NPTR,SYM,
+    PPOS,BCOUNT,CSIZE,CTYPE,TY,SW;
 uint32 INT;
 t_uint64 L64;
 double FP,POWERS;
@@ -1799,7 +1802,7 @@ PTR = 0;
 INT = 0;
 while (++PTR <= MAXKEYWORD)
 {
-  if (STEMS[PTR][0] == (STEM >> 8) && STEMS[PTR][1] == (STEM & 0xFF)) // stems are two bytes and fit into 16 bits
+  if ((unsigned int)STEMS[PTR][0] == (STEM >> 8) && (unsigned int)STEMS[PTR][1] == (STEM & 0xFF)) // stems are two bytes and fit into 16 bits
   {
     RPTR = PTRS[PTR];
     NPTR = LASTCH+2;
@@ -1889,7 +1892,7 @@ B17:
 PTR = 0;
 while (++PTR <= MAXKEYWORD)
 {
-  if (STEMS[PTR][0] == (STEM >> 8) && STEMS[PTR][1] == (STEM & 0xFF)) // stems are two bytes and fit into 16 bits
+  if ((unsigned int)STEMS[PTR][0] == (STEM >> 8) && (unsigned int)STEMS[PTR][1] == (STEM & 0xFF)) // stems are two bytes and fit into 16 bits
   {
     if ((DLIST[PTR] & 0x200) != 0)
 	{
@@ -2406,7 +2409,7 @@ FINDN(PART(^CHLIST,
 LASTCH+2,PTR-1),0)=>INT;
 2 => CTYPE;
 @BOX 22.2
-INT = FINDN(PART(&CHLIST, LASTCH+2,PTR-1),0);
+INT = FINDN(PART(CHLIST, LASTCH+2,PTR-1),0);
 CTYPE = 2;
 @END
 @TITLE MSL03.1.3.1(1,10)
@@ -2506,7 +2509,7 @@ FP => L64;
 @BOX 5.2
 if (memcmp(&LBUFF[IPTR], &UMINUS, sizeof(ITYPE))==0)
 {
-  FP = -FP;
+  FP = ZERO-FP;
   IPTR--;
 }
 L64 = (t_uint64)FP;

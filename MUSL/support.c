@@ -116,7 +116,7 @@ void OUTLINENO(int n)
 {
 }
 
-char *FINDN(VECTOR *name, int kind)
+unsigned int FINDN(VECTOR *name, int kind)
 {
     printf("FINDN not implemented\n");
     exit(1);
@@ -137,7 +137,7 @@ void CAPTION(char *msg)
     printf("%s\n", msg);
 }
 
-int FINDP(char *name, int buffer, int last)
+int FINDP(unsigned int name, int buffer, int last)
 {
     return 0;
 }
