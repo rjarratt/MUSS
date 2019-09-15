@@ -929,6 +929,7 @@ $IN PW0,PW1;
 #include "nmsl011.h"
 #include "nmsl021.h"
 #include "nmsl031.h"
+#include "nmsl041.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -1177,7 +1178,6 @@ extern void ENDINPUT(FILE *, int);
 extern void RELEASESEGMENT(int);
 extern void CREATESEGMENT(int, void *);
 extern void ENDOUTPUT(int, int);
-int CMODE;
 extern void TLPRINT(int);
 extern void TL(int, FILE *,int);
 extern void TLPL(int, int);
@@ -1235,7 +1235,6 @@ $PS END.ST();
 $PS MUTLN($LO16)/$LO16;
 
 @BOX3.2
-void INITS4(void);
 void INITS5(void);
 void INITS6(void);
 void INITS8(void);
@@ -1260,7 +1259,6 @@ void TRANSSWITCH(void);
 void TRANSALT(void);
 void TRANSEXIT(void);
 int TRANSCOMP(int);
-void TRANSDIRECTIVE(void);
 void TRANSGOTO(void);
 void ALTLABEL(void);
 extern void MONITOR(int);

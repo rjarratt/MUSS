@@ -110,6 +110,7 @@ MAXCH,MAXN,MAXMUTLN);
 #include "nmsl011.h"
 #include "nmsl021.h"
 #include "nmsl031.h"
+#include "nmsl041.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -225,7 +226,7 @@ $LS OUTCH($IN);
 $LO8[2000] SBUFF;
 $IN MSTR,MUTLSTR;
 @BOX 1.2
-extern int SPTR,CWORD;
+extern int SPTR;
 uint8 SBUFF[2000];
 @END
 @TITLE MSL09.1(1,6)

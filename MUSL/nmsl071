@@ -390,6 +390,7 @@ MODULE(PREPROCESS.COMP,PREPROCESS.COND,COMPILE.COMP,COMPILE.COND,COMPILE.AND,
 #include "nmsl011.h"
 #include "nmsl021.h"
 #include "nmsl031.h"
+#include "nmsl041.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -644,7 +645,6 @@ extern int CURLEV,GLEV,TRE,TBYADDR,CURPROC,CURRES;
 uint16 DLIST[SDLIST];
 int PARAMS[PARAMSZ];
 int TLIST[TLISTZ];
-int CMODE;
 extern void MONITOR(int);
 //$PS DUMMY()/$LO16;
 //$PS MUTLN($LO16)/$LO16;

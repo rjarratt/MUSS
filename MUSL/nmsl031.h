@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 
 #define TADPROC 0x24
 

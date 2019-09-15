@@ -460,6 +460,7 @@ $LI BREQD = -1, DIND = %1004, AOPD = %3000;
 #include "nmsl011.h"
 #include "nmsl021.h"
 #include "nmsl031.h"
+#include "nmsl041.h"
 
 #define SDLIST 87
 extern ITYPE DIF;
@@ -529,7 +530,6 @@ extern void TLREPEAT();
 int LASTMN;
 int AP;
 int PREPROCESSCOMP(int);
-int CWORD;
 void PRINTAR(void);
 int COMPILECOMP(int,int);
 //$TY ITYPE IS $LO8 TAG,ST $LO16 IND;

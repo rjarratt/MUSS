@@ -642,6 +642,7 @@ $IN MSTR,MUTLSTR
 #include "nmsl011.h"
 #include "nmsl021.h"
 #include "nmsl031.h"
+#include "nmsl041.h"
 
 typedef unsigned char      uint8;
 typedef short              int16;
@@ -704,7 +705,7 @@ extern ITYPE COLON;
 #define KEX 10
 #define KDVEC 11
 
-int CWORD,LASTCH,CMODE;
+int LASTCH;
 int LINENO;
 @END
 @TITLE MSL03.1(1,11)
