@@ -42,7 +42,7 @@ unsigned int FINDN(VECTOR *, int);
 VECTOR *PART(unsigned char *, int, int);
 void TLPRINT(int);
 void CAPTION(char *);
-int FINDP(unsigned int, int, int);
+uint16 FINDP(unsigned int, int, int);
 void TLCYCLE(int);
 void TLCVCYCLE(int, int, int);
 void TLCVLIMIT(int);

@@ -136,7 +136,7 @@ void CAPTION(char *msg)
     printf("%s\n", msg);
 }
 
-int FINDP(unsigned int name, int buffer, int last)
+uint16 FINDP(unsigned int name, int buffer, int last)
 {
     return 0;
 }
