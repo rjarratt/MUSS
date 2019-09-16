@@ -343,7 +343,7 @@ $PS TRANS.COND($IN,$IN);
 #MSL06.14
 ::PDP *CODE 1;
 @BOX 4.2
-int TRANSCOMP(int);
+uint16 TRANSCOMP(uint16);
 void TRANSIF(void);
 void TRANSWHILE(void);
 void TRANSFOR(void);
@@ -509,7 +509,6 @@ extern ITYPE COLON;
 #define KEYWORD 44
 
 int REGSIU;
-int TBYADDR;
 @END
 @TITLE MSL06.1(1,6)
 @COL 1S-2R-3R-4R-5F
@@ -531,9 +530,9 @@ EXIT
 @BOX 1.1
 $PR TRANS.COMP(REQD.TYPE);
 @BOX 1.2
-int TRANSCOMP(int REQDTYPE)
+uint16 TRANSCOMP(uint16 REQDTYPE)
 {
-int result;
+uint16 result;
 @BOX 2.1
 ::DECL & INIT
 @BOX 2.2
@@ -645,7 +644,8 @@ void TRANSIF(void)
 $IN DEST.LAB,COND.PTR,ID,END.PTR,IF.OR.UN;
 @BOX 2.2
 int DESTLAB = 0;
-int CONDPTR,ID,ENDPTR,IFORUN;
+int CONDPTR,ENDPTR,IFORUN;
+uint16 ID;
 @BOX 3.1
 IPTR - 1 => END.PTR;
 @BOX 3.2
@@ -1031,7 +1031,8 @@ void TRANSGOTO(void)
 @BOX 2.1
 $IN DEST.LAB,ID,K;
 @BOX 2.2
-int DESTLAB,ID,K;
+int DESTLAB,K;
+uint16 ID;
 @BOX 3.1
 $IF TAG $OF LBUFF[1+>IPTR] /= 1
 @BOX 3.2
@@ -1140,7 +1141,8 @@ void TRANSSWITCH(void)
 @BOX 2.1
 $IN SWDV,N,ID;
 @BOX 2.2
-int SWDV,N,ID;
+int SWDV,N;
+uint16 ID;
 @BOX3.1
 TRANS.COMP(B.REQD);
 @BOX3.2

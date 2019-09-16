@@ -1,6 +1,6 @@
 #pragma once
 
-extern int TRANSCOMP(int);
+extern uint16 TRANSCOMP(uint16);
 extern void TRANSIF(void);
 extern void TRANSWHILE(void);
 extern void TRANSFOR(void);

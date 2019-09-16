@@ -2,16 +2,16 @@
 
 #define AOPD 0x3000
 #define DIND 0x1004
-#define BREQD -1
+#define BREQD ((uint16)-1)
 
 uint16 AR[256];
 int AP;
 int FPTR;
 int STPTR;
 
-int PREPROCESSCOMP(int);
+uint16 PREPROCESSCOMP(uint16);
 void PREPROCESSCOND(void);
-int COMPILECOMP(int, int);
+uint16 COMPILECOMP(int16, uint16);
 void COMPILECOND(int, int, int);
 void COMPILEAND(int, int, int);
 void COMPILETEST(int, int, int);

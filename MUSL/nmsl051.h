@@ -15,7 +15,7 @@ extern int CURBLK;
 extern int GLEV;
 extern int PROCLEV;
 
-extern int TLIST[TLISTZ];
+extern uint16 TLIST[TLISTZ];
 extern int PARAMS[PARAMSZ];
 
 extern void MODHEAD(void);
@@ -37,4 +37,4 @@ extern void DECLVSTORE(void);
 extern void ENDCHECKS(void);
 extern int32 EVALLIT(int, int);
 extern int32 EVALCONST(void);
-extern int COMPTYPE(void);
+extern uint16 COMPTYPE(void);

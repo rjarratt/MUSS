@@ -29,11 +29,11 @@
 
 typedef struct { unsigned char TAG, ST; unsigned short IND; } ITYPE;
 
-extern int TINT;
-extern int TVST;
-extern int TLO;
-extern int TRE;
-extern int TBYADDR;
+extern uint16 TINT;
+extern uint16 TVST;
+extern uint16 TLO;
+extern uint16 TRE;
+extern uint16 TBYADDR;
 extern ITYPE LBUFF[LBUFFZ];
 extern int IPTR;
 extern int SPTR;
