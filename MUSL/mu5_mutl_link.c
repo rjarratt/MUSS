@@ -346,7 +346,7 @@ static void define_segment(LINKER_MODULE *module, Elf32_Half section_index, void
     segment->elf_input_section_index = section_index;
     elf_get_section_header(module->elf_module_context, &segment->section_header, &segment->data, section_index);
     relocation_section = elf_get_relocation_section(module->elf_module_context, section_index);
-    if (relocation_section >= 0)
+    if (relocation_section != SHN_UNDEF)
     {
         elf_get_section_header(module->elf_module_context, &segment->relocation_section_header, &segment->rela_data, relocation_section);
     }

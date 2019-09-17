@@ -170,7 +170,7 @@ void elf_update_section_size(void *context, Elf32_Half section_index, Elf32_Word
 
 Elf32_Half elf_get_relocation_section(void *context, Elf32_Half section_index)
 {
-    int result = -1;
+    Elf32_Half result = SHN_UNDEF;
     Elf32_Context *ctx = context;
     Elf32_Section *section = &ctx->section_table[section_index];
     if (section->related_section != NULL)
@@ -223,7 +223,7 @@ void *elf_add_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word siz
     sym->st_name = add_string(ctx->string_table_section, name);
     sym->st_value = value;
     sym->st_size = size;
-    sym->st_info = ELF32_ST_INFO(binding, type);
+    sym->st_info = (unsigned char)(ELF32_ST_INFO(binding, type));
     sym->st_other = 0;
     sym->st_shndx = section_index;
     ctx->symbol_table_section->section_header.sh_size += sizeof(Elf32_Sym);
@@ -363,7 +363,7 @@ void *elf_read_file(FILE *f, int check_is_elf)
     char *error = NULL;
     Elf32_Context *ctx = (Elf32_Context *)malloc(sizeof(Elf32_Context));
     memset(ctx, 0, sizeof(Elf32_Context));
-    int i;
+    Elf32_Half i;
 
     if (fread(&ctx->elf_header, sizeof(Elf32_Ehdr), 1, f) != 1)
     {
@@ -687,7 +687,7 @@ static Elf32_Off calculate_section_offset(Elf32_Context *ctx, Elf32_Section *sec
 static int add_string(Elf32_Section *section, char *string)
 {
     int result = section->section_header.sh_size;
-    int len = strlen(string) + 1;
+    size_t len = strlen(string) + 1;
     char *ptr = section->data;
 
     if ((section->section_header.sh_size + len) > MAX_STRING_DATA)
@@ -697,7 +697,7 @@ static int add_string(Elf32_Section *section, char *string)
     }
 
     strcpy(&ptr[result], string);
-    section->section_header.sh_size += len;
+    section->section_header.sh_size += (Elf32_Word)len;
 
     return result;
 }
@@ -716,7 +716,7 @@ static Elf32_Sym *get_linker_symbol(Elf32_Section *section, int symbol_index)
 
 static int get_symbol_index(Elf32_Section *section, Elf32_Sym *sym)
 {
-    int result = sym - (Elf32_Sym *)section->data;
+    int result = (int)(sym - (Elf32_Sym *)section->data);
     return result;
 }
 
@@ -870,7 +870,7 @@ static void decode_rela(Elf32_Rela *rela)
 static Elf32_Half encode_half(Elf32_Half half)
 {
     Elf32_Half result;
-    unsigned char *ptr = (char *)(&result);
+    unsigned char *ptr = (unsigned char *)(&result);
     *ptr++ = (half >> 8) & 0xFF;
     *ptr++ = (half & 0xFF);
     return result;
@@ -879,7 +879,7 @@ static Elf32_Half encode_half(Elf32_Half half)
 static Elf32_Word encode_word(Elf32_Word word)
 {
     Elf32_Word result;
-    unsigned char *ptr = (char *)(&result);
+    unsigned char *ptr = (unsigned char *)(&result);
     *ptr++ = (word >> 24) & 0xFF;
     *ptr++ = (word >> 16) & 0xFF;
     *ptr++ = (word >> 8) & 0xFF;
@@ -890,7 +890,7 @@ static Elf32_Word encode_word(Elf32_Word word)
 static Elf32_Sword encode_sword(Elf32_Sword word)
 {
     Elf32_Sword result;
-    unsigned char *ptr = (char *)(&result);
+    unsigned char *ptr = (unsigned char *)(&result);
     *ptr++ = (word >> 24) & 0xFF;
     *ptr++ = (word >> 16) & 0xFF;
     *ptr++ = (word >> 8) & 0xFF;
@@ -901,7 +901,7 @@ static Elf32_Sword encode_sword(Elf32_Sword word)
 static Elf32_Off encode_off(Elf32_Off off)
 {
     Elf32_Off result;
-    unsigned char *ptr = (char *)(&result);
+    unsigned char *ptr = (unsigned char *)(&result);
     *ptr++ = (off >> 24) & 0xFF;
     *ptr++ = (off >> 16) & 0xFF;
     *ptr++ = (off >> 8) & 0xFF;
@@ -912,7 +912,7 @@ static Elf32_Off encode_off(Elf32_Off off)
 static Elf32_Addr encode_addr(Elf32_Addr addr)
 {
     Elf32_Addr result;
-    unsigned char *ptr = (char *)(&result);
+    unsigned char *ptr = (unsigned char *)(&result);
     *ptr++ = (addr >> 24) & 0xFF;
     *ptr++ = (addr >> 16) & 0xFF;
     *ptr++ = (addr >> 8) & 0xFF;
@@ -923,7 +923,7 @@ static Elf32_Addr encode_addr(Elf32_Addr addr)
 static Elf32_Half decode_half(Elf32_Half half)
 {
     Elf32_Half result = 0;
-    unsigned char *ptr = (char *)(&half);
+    unsigned char *ptr = (unsigned char *)(&half);
     result = result << 8 | (*ptr++);
     result = result << 8 | (*ptr++);
     return result;
@@ -932,7 +932,7 @@ static Elf32_Half decode_half(Elf32_Half half)
 static Elf32_Word decode_word(Elf32_Word word)
 {
     Elf32_Word result = 0;
-    unsigned char *ptr = (char *)(&word);
+    unsigned char *ptr = (unsigned char *)(&word);
     result = result << 8 | (*ptr++);
     result = result << 8 | (*ptr++);
     result = result << 8 | (*ptr++);
@@ -943,7 +943,7 @@ static Elf32_Word decode_word(Elf32_Word word)
 static Elf32_Sword decode_sword(Elf32_Sword word)
 {
     Elf32_Word result = 0;
-    unsigned char *ptr = (char *)(&word);
+    unsigned char *ptr = (unsigned char *)(&word);
     result = result << 8 | (*ptr++);
     result = result << 8 | (*ptr++);
     result = result << 8 | (*ptr++);
@@ -954,7 +954,7 @@ static Elf32_Sword decode_sword(Elf32_Sword word)
 static Elf32_Off decode_off(Elf32_Off off)
 {
     Elf32_Off result = 0;
-    unsigned char *ptr = (char *)(&off);
+    unsigned char *ptr = (unsigned char *)(&off);
     result = result << 8 | (*ptr++);
     result = result << 8 | (*ptr++);
     result = result << 8 | (*ptr++);
@@ -965,7 +965,7 @@ static Elf32_Off decode_off(Elf32_Off off)
 static Elf32_Addr decode_addr(Elf32_Addr addr)
 {
     Elf32_Addr result = 0;
-    unsigned char *ptr = (char *)(&addr);
+    unsigned char *ptr = (unsigned char *)(&addr);
     result = result << 8 | (*ptr++);
     result = result << 8 | (*ptr++);
     result = result << 8 | (*ptr++);
