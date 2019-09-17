@@ -94,8 +94,6 @@ $LO8[64] XNAME;
 #include "nmsl091.h"
 #include "nmsl101.h"
 
-#define CHLISTZ 4100
-#define SDLIST 87
 const ITYPE DIF = { 0, 0, 0x5 };
 const ITYPE DTHEN = { 0, 0, 0x6 };
 const ITYPE DELSE = { 0, 0, 0x7 };

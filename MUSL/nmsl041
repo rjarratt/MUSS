@@ -234,7 +234,6 @@ $LI/ADDR[$LO8] NIL=;
 #include "nmsl091.h"
 #include "nmsl101.h"
 
-#define SDLIST 87
 extern ITYPE DIF;
 extern ITYPE DTHEN;
 extern ITYPE DELSE;

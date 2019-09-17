@@ -113,7 +113,6 @@ MAXCH,MAXN,MAXMUTLN);
 #include "nmsl041.h"
 #include "nmsl051.h"
 
-#define SDLIST 87
 extern ITYPE DIF;
 extern ITYPE DTHEN;
 extern ITYPE DELSE;
