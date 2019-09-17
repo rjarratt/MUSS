@@ -378,7 +378,7 @@ ITYPE SAVEDELIM;
 @BOX 3.2
 ITYPE LBUFF[LBUFFZ];
 unsigned char CLIST[CLISTZ];
-int TINT,TLO,TRE,TBYADDR,TVST;
+uint16 TINT,TLO,TRE,TBYADDR,TVST;
 int IPTR,SPTR;
 /* Manual format of the documentation
 
@@ -785,7 +785,7 @@ $RE64 FP,POWERS;
 $LI/$IN TEN = 10, ZERO = 0;
 #MSL03.1.1
 @BOX 2.2
-int ISYM;
+char ISYM;
 int I;
 int J;
 unsigned int STEM,PTR,RPTR,NPTR,SYM,
@@ -835,7 +835,7 @@ $FI
 INBACKSPACE(1);
 @BOX 4.2
 B4:
-while (((ISYM = INCH()) == ';' && MODE == 0) || ISYM == '\n' || ISYM == ' ' || ISYM == 0x9)
+while (((ISYM = (char)INCH()) == ';' && MODE == 0) || ISYM == '\n' || ISYM == ' ' || ISYM == 0x9)
 {}
 
 if (INCH() == '*' && ISYM == '*')
@@ -879,9 +879,9 @@ IG:
 if ((SBUFF[SPTR] & 0x80) == 0)
 {
   SPTR++;
-  SBUFF[SPTR] = 128 + IPTR;
+  SBUFF[SPTR] = (uint8)(128 + IPTR);
 }
-ISYM = XSYM();
+ISYM = (char)XSYM();
 SYM = VALCODE[ISYM];
 SW = SWCODE[ISYM];
 switch (SW)
@@ -1480,7 +1480,7 @@ t_uint64 XHEX(void)
   t_uint64 ANS;
   unsigned int ISYM;
   ANS = 0;
-  ISYM = NEXTCH();
+  ISYM = (char)NEXTCH();
   while ((ISYM >= '0' && ISYM <= '9') || (ISYM >= 'A' && ISYM <= 'F') || ISYM == '(')
   {
     if (ISYM == '(')
@@ -1508,7 +1508,7 @@ t_uint64 XHEX(void)
         ANS = ANS << 4 | (ISYM-'0');
       }
 	}
-	ISYM = NEXTCH();
+	ISYM = (char)NEXTCH();
   }
   return ANS;
 }
@@ -1769,14 +1769,14 @@ $OD
 @BOX 2.2
 PTR = LASTCH+1;
 CHLIST[PTR] = ISYM;
-ISYM = NEXTCH();
+ISYM = (char)NEXTCH();
 while (VALCODE[ISYM] >= 126 || ISYM == 0x2E)
 {
   if (XSYM() != 0x2E)
   {
     CHLIST[++PTR] = ISYM;
   }
-  ISYM = NEXTCH();
+  ISYM = (char)NEXTCH();
 }
 CHLIST[++PTR] = 0;
 @BOX 3.1
@@ -1840,8 +1840,8 @@ TY => ST OF LBUFF[IPTR];
 0 => TY;
 TDELIM => TAG OF LBUFF[IPTR];
 @BOX 5.2
-LBUFF[++IPTR].IND = PTR;
-LBUFF[IPTR].ST = TY;
+LBUFF[++IPTR].IND = (uint16)PTR;
+LBUFF[IPTR].ST = (uint8)TY;
 TY = 0;
 LBUFF[IPTR].TAG = TDELIM;
 @BOX 6.1
@@ -2261,7 +2261,7 @@ L64 <<- 8 ! (ISYM&127) => L64 $OD
 2 => CTYPE;
 @BOX 4.2
 L64 = 0;
-while ((ISYM = YSYM()) != '"')
+while ((ISYM = (char)YSYM()) != '"')
 {
   if (ISYM == NL)
   {
@@ -2279,8 +2279,8 @@ ISYM&127 => CLIST[1+>CFWDPTR] $OD
 0 => CLIST[1+>CFWDPTR];
 @BOX 18.2
 LBUFF[++IPTR].TAG = 2;
-LBUFF[IPTR].IND = CFWDPTR + 1;
-while ((ISYM = YSYM()) != '"')
+LBUFF[IPTR].IND = (uint16)(CFWDPTR + 1);
+while ((ISYM = (char)YSYM()) != '"')
 {
   if (ISYM == NL)
   {
@@ -2297,7 +2297,7 @@ PCENT:
 $IF NEXTCH()=>ISYM = '"
 $AN XSYM() = ISYM
 @BOX 19.2
-if ((ISYM = NEXTCH()) == '"' && XSYM() == ISYM)
+if ((ISYM = (char)NEXTCH()) == '"' && (char)XSYM() == ISYM)
 @BOX6.1
 XHEX() => L64;
 2 => CTYPE;
@@ -2333,8 +2333,8 @@ if (CSIZE == 0)
   CSIZE = 1;
 }
 LBUFF[++IPTR].TAG = 3;
-LBUFF[IPTR].ST = (((CTYPE << 4) + CSIZE) - 1) << 2;
-LBUFF[IPTR].IND = CBWDPTR;
+LBUFF[IPTR].ST = (uint8)((((CTYPE << 4) + CSIZE) - 1) << 2);
+LBUFF[IPTR].IND = (uint16)CBWDPTR;
 @BOX8.1
 @BOX8.2
 @BOX9.1
@@ -2381,7 +2381,7 @@ else
 $IF NEXTCH() => ISYM = '@ OR
 [ISYM = '. $AN XSYM() = ISYM]
 @BOX 11.2
-ISYM = NEXTCH();
+ISYM = (char)NEXTCH();
 if (ISYM == '@' || (ISYM == '.' && XSYM() == ISYM))
 @BOX12.1
 DOT:
@@ -2440,7 +2440,7 @@ FP = (INT);
 PPOS = 0;
 if (ISYM == '.')
 {
-  while(VALCODE[(ISYM = NEXTCH())] == 126)
+  while(VALCODE[(ISYM = (char)NEXTCH())] == 126)
   {
     FP = FP * (TEN) + (XSYM() - '0');
     --PPOS;
@@ -2455,7 +2455,7 @@ FI
 if (ISYM =='@')
 {
   XSYM();
-  ISYM = XSYM();
+  ISYM = (char)XSYM();
   PPOS += (ISYM == '-') ? 0 -XINT(0) : XINT(ISYM - '0');
 }
 @BOX 4.1

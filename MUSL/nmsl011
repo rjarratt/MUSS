@@ -1186,8 +1186,6 @@ $LO16[SDLIST] DLIST;
 $IN IPTR;
 ITYPE[LBUFFZ] LBUFF;
 @BOX2.2
-short int DLIST[SDLIST];
-
 @BOX3.1
 $PS INIT.S3();
 $PS INIT.S4();
@@ -1793,7 +1791,7 @@ switch (LBUFF[IPTR].IND -1)
     case 36:
 	{
 	    IPTR = 0;
-	    TRANSCOMP(IPTR);
+	    TRANSCOMP((uint16)IPTR);
 	    break;
 	}
     case 37:

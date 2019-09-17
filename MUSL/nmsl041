@@ -276,7 +276,6 @@ extern ITYPE COLON;
 #define KEYWORD 44
 
 void LIB(FILE *,int);
-int TBYADDR,TRE;
 @END
 @TITLE MSL04.1(1,11)
 @COL 1S-2R-3T-4T-5T-6T-8R-9R-14F
