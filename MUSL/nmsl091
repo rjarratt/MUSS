@@ -113,8 +113,6 @@ MAXCH,MAXN,MAXMUTLN);
 #include "nmsl041.h"
 #include "nmsl051.h"
 
-#define MAXKEYWORD 45
-
 #define KEYWORD 44
 
 #MSL09/1

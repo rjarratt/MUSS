@@ -1,5 +1,6 @@
 #pragma once
 
+#define MAXKEYWORD 45
 #define SDLIST 87
 
 #define TADPROC 0x24

@@ -235,8 +235,6 @@ $LI/ADDR[$LO8] NIL=;
 #include "nmsl101.h"
 
 
-#define MAXKEYWORD 45
-
 #define KEYWORD 44
 
 void LIB(FILE *,int);

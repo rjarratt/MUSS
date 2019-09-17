@@ -656,10 +656,6 @@ typedef long long          t_int64;
 typedef unsigned int       uint32;
 typedef unsigned long long t_uint64;
 
-
-
-#define MAXKEYWORD 45
-
 #define KEYWORD 44
 #define TDELIM 0
 

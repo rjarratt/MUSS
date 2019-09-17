@@ -937,8 +937,6 @@ $IN PW0,PW1;
 #include "nmsl101.h"
 
 
-#define MAXKEYWORD 45
-
 #define KEYWORD 44
 
 #MSL01/1

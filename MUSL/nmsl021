@@ -134,8 +134,6 @@ PLISTENT PLIST[PLISTZ];
 unsigned char CHLIST[CHLISTZ];
 unsigned char XNAME[64];
 
-#define MAXKEYWORD 45
-
 #define KEYWORD 44
 
 @BOX 2.1
