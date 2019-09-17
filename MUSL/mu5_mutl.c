@@ -304,7 +304,7 @@ typedef struct /* some fields in common with PROC so must remain in synch */
     int address_defined;
     uint32 address;
     int num_forward_refs;
-    uint32 forward_ref_locations[MAX_FORWARD_LOCATIONS];
+    uint16 forward_ref_locations[MAX_FORWARD_LOCATIONS];
     uint16 segment_number;
     uint16 global_location; /* location where XNB value is to be stored on linking */
 } LABELSYMBOL;
@@ -349,15 +349,15 @@ typedef struct
 {
     uint16 last_mutl_var; /* The number of the last MUTL variable for the previous block in the hierarchy */
     uint16 local_names_space; /* The number of 32-bit words required for local names in the current block, including LINK (if any) and parameters */
-    uint32 stack_offset_address; /* the location to update the SF offset when the size of the block's variables is known */
+    uint16 stack_offset_address; /* the location to update the SF offset when the size of the block's variables is known */
     int has_stack_frame;
     MUTLSYMBOL *proc_def_var;
 } BLOCK;
 
 typedef struct
 {
-    uint32 address_of_condition;
-    uint32 address_of_end_of_loop_jump;
+    uint16 address_of_condition;
+    uint16 address_of_end_of_loop_jump;
     int mode;
     uint16 control_variable;
 } LOOP;
@@ -373,10 +373,10 @@ typedef struct
     unsigned short int elf_section_index;
     uint16 segment_address;
     uint16 words[MAX_SEGMENT_SIZE];
-    uint32 first_word; /* first word in the segment where the current module starts during import/link of modules */
-    uint32 next_word;
+    uint16 first_word; /* first word in the segment where the current module starts during import/link of modules */
+    uint16 next_word;
     uint16 kind;
-    uint32 size;
+    uint16 size;
     uint32 run_time_address;
 } SEGMENT;
 
@@ -668,7 +668,7 @@ static void plant_64_bit_code_word(t_uint64 word)
     plant_16_bit_code_word(word & 0xFFFF);
 }
 
-static void plant_16_bit_code_word_update(unsigned int address, unsigned int word, char *reason)
+static void plant_16_bit_code_word_update(uint16 address, uint16 word, char *reason)
 {
     plant_16_bit_word_update(current_code_area, address, word);
     log(LOG_PLANT, "Fixing code address %08X to contain %04X for %s\n", address, word, reason);
@@ -740,7 +740,7 @@ static uint32 next_instruction_full_byte_address(void)
     return result;
 }
 
-static int next_instruction_segment_address(void)
+static uint16 next_instruction_segment_address(void)
 {
     SEGMENT *segment = get_segment_for_area(current_code_area);
     return segment->next_word;
@@ -1392,7 +1392,7 @@ void fixup_forward_label_refs(uint16 N)
     int i;
     for (i = 0; i < label->num_forward_refs; i++)
     {
-        plant_16_bit_code_word_update(label->forward_ref_locations[i], label->address - label->forward_ref_locations[i] + 1, "forward label reference");
+        plant_16_bit_code_word_update(label->forward_ref_locations[i], (label->address - label->forward_ref_locations[i] + 1) & 0xFFFF, "forward label reference");
     }
 }
 
@@ -1421,7 +1421,7 @@ void check_v_store_read_proc(uint16 N)
                 plant_16_bit_code_word(0); /* placeholder fixed up when we plant the ENTER */
                 log(LOG_PLANT, "%04X ORG JUMP ABS JUMP with relocation\n", next_instruction_segment_address());
                 op_org_abs_jump_generic_symbol(var->v_read_proc_sym, F_ABSJUMP);
-                plant_16_bit_code_word_update(proc_call_stack_link_offset_address, next_instruction_segment_address() - proc_call_stack_link_offset_address + 1, "return address");
+                plant_16_bit_code_word_update(proc_call_stack_link_offset_address & 0xFFFF, (next_instruction_segment_address() - proc_call_stack_link_offset_address + 1) & 0xFFFF, "return address");
             }
         }
     }
@@ -1452,7 +1452,7 @@ void check_v_store_write_proc(uint16 N)
                 plant_16_bit_code_word(0); /* placeholder fixed up when we plant the ENTER */
                 log(LOG_PLANT, "%04X ORG JUMP ABS JUMP with relocation\n", next_instruction_segment_address());
                 op_org_abs_jump_generic_symbol(var->v_write_proc_sym, F_ABSJUMP);
-                plant_16_bit_code_word_update(proc_call_stack_link_offset_address, next_instruction_segment_address() - proc_call_stack_link_offset_address + 1, "return address");
+                plant_16_bit_code_word_update(proc_call_stack_link_offset_address & 0xFFFF, (next_instruction_segment_address() - proc_call_stack_link_offset_address + 1) & 0xFFFF, "return address");
             }
         }
     }
@@ -1668,9 +1668,9 @@ void op_a_or_store(uint16 N)
     op_a_store(N);
 }
 
-uint32 op_org_jump_generic_rel_address(uint8 F, int16 relative)
+uint16 op_org_jump_generic_rel_address(uint8 F, int16 relative)
 {
-    uint32 address_location;
+    uint16 address_location;
     if (relative >= -32 && relative < 32)
     {
         plant_org_order(F, K_LITERAL, (uint8)relative & 0x3F);
@@ -1771,7 +1771,7 @@ void op_org_enter(uint16 N)
     /* update the offset for the STACKLINK */
 
     proc_call_stack_link_offset_address = nested_call[current_nested_call_depth].proc_call_stack_link_offset_address;
-    plant_16_bit_code_word_update(proc_call_stack_link_offset_address, next_instruction_segment_address() - proc_call_stack_link_offset_address + 1, "return address");
+    plant_16_bit_code_word_update(proc_call_stack_link_offset_address & 0xFFFF, (next_instruction_segment_address() - proc_call_stack_link_offset_address + 1) & 0xFFFF, "return address");
 }
 
 void op_org_return(uint16 N)
@@ -1954,7 +1954,7 @@ void TLSEG(int32 N, int32 S, int32 RTA, int32 CTA, uint16 NL)
 
     seg->in_use = 1;
     seg->segment_address = actual_rta;
-    seg->size = S;
+    seg->size = S & 0xFFFF;
     seg->kind = NL;
     seg->run_time_address = RTA;
     if (seg->elf_section_index!= 0)
