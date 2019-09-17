@@ -339,7 +339,7 @@ static void define_segments(void)
 
 static void define_segment(LINKER_MODULE *module, Elf32_Half section_index, void *callback_context)
 {
-    int *segment_index = callback_context;
+    Elf32_Half *segment_index = callback_context;
     Elf32_Half relocation_section;
     LINKER_SEGMENT *segment = &segment_table[(*segment_index)++];
     segment->module = module;
