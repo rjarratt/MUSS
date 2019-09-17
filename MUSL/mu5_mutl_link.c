@@ -453,9 +453,9 @@ static void write_16_bit_resolution(LINKER_SEGMENT *linker_segment, char *name, 
 static void compute_segment_start_addresses(void)
 {
     int i;
-    Elf32_Addr last_addr;
-    LINKER_SEGMENT *current_seg;
-    LINKER_SEGMENT *previous_seg;
+    Elf32_Addr last_addr = (Elf32_Addr)~0;
+    LINKER_SEGMENT *current_seg = NULL;
+    LINKER_SEGMENT *previous_seg = NULL;
     for (i = 0; i < num_segments; i++)
     {
         current_seg = &segment_table[i];
