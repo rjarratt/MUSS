@@ -468,8 +468,6 @@ $LI BREQD = -1, DIND = %1004, AOPD = %3000;
 #include "nmsl101.h"
 
 
-#define KEYWORD 44
-
 int REGSIU;
 @END
 @TITLE MSL06.1(1,6)

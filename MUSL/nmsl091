@@ -113,8 +113,6 @@ MAXCH,MAXN,MAXMUTLN);
 #include "nmsl041.h"
 #include "nmsl051.h"
 
-#define KEYWORD 44
-
 #MSL09/1
 @BOX 3.1
 *GLOBAL 5;

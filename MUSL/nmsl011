@@ -935,10 +935,6 @@ $IN PW0,PW1;
 #include "nmsl081.h"
 #include "nmsl091.h"
 #include "nmsl101.h"
-
-
-#define KEYWORD 44
-
 #MSL01/1
 // MSL01/1
 @BOX 2.1

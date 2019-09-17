@@ -235,8 +235,6 @@ $LI/ADDR[$LO8] NIL=;
 #include "nmsl101.h"
 
 
-#define KEYWORD 44
-
 void LIB(FILE *,int);
 @END
 @TITLE MSL04.1(1,11)

@@ -163,8 +163,6 @@ XNPTR,LASTN,LASTCH,INIT.S8);
 #include "nmsl091.h"
 #include "nmsl101.h"
 
-#define KEYWORD 44
-
 #MSL08/1
 @BOX 2.1
 ::DECLARATIONS
