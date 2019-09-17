@@ -283,9 +283,9 @@ typedef struct
     uint16 position; /* for regular variables this is offset in 32-bit words from NB, including LINK if appropriate, vstore it is the v-line number */
     int is_parameter;
     int is_vstore;
-    int v_read_proc;
+    uint16 v_read_proc;
     void *v_read_proc_sym; /* for imports only */
-    int v_write_proc;
+    uint16 v_write_proc;
     void *v_write_proc_sym; /* for imports only */
 } VARSYMBOL;
 
@@ -389,7 +389,7 @@ typedef struct
 
 typedef struct
 {
-    int proc_n;
+    uint16 proc_n;
     int proc_call_stack_link_offset_address;
 } NESTEDPROCCALL;
 
@@ -428,9 +428,9 @@ static void *elf_module_context;
 static void *elf_literal_placeholder_symbol;
 
 uint8 k_v(void);
-void op_org_abs_jump_generic_symbol(void *sym, int F);
-void op_org_stack_link(int);
-void op_org_enter(int);
+void op_org_abs_jump_generic_symbol(void *sym, uint8 F);
+void op_org_stack_link(uint16);
+void op_org_enter(uint16);
 
 void set_logging(int l)
 {
@@ -1352,21 +1352,21 @@ void end_block_level(void)
     block_level--;
 }
 
-int param_stack_size(int N)
+int param_stack_size(uint16 N)
 {
     int result;
     result = mutl_var[N].data.proc.param_count * 2;
     return result;
 }
 
-int param_instruction_size(int N)
+int param_instruction_size(uint16 N)
 {
     int result;
     result = mutl_var[N].data.proc.param_count * 2;
     return result;
 }
 
-void register_forward_label_ref(int N)
+void register_forward_label_ref(uint16 N)
 {
     MUTLSYMBOL *sym = &mutl_var[N];
     LABELSYMBOL *label = &sym->data.label;
@@ -1386,7 +1386,7 @@ void register_forward_label_ref(int N)
     }
 }
 
-void fixup_forward_label_refs(int N)
+void fixup_forward_label_refs(uint16 N)
 {
     LABELSYMBOL *label = &mutl_var[N].data.label;
     int i;
@@ -1396,7 +1396,7 @@ void fixup_forward_label_refs(int N)
     }
 }
 
-void check_v_store_read_proc(int N)
+void check_v_store_read_proc(uint16 N)
 {
     if (N >= 2 && N < 0x1000)
     {
@@ -1427,7 +1427,7 @@ void check_v_store_read_proc(int N)
     }
 }
 
-void check_v_store_write_proc(int N)
+void check_v_store_write_proc(uint16 N)
 {
     if (N >= 2 && N < 0x1000)
     {
@@ -1458,7 +1458,7 @@ void check_v_store_write_proc(int N)
     }
 }
 
-int is_global_ref(int N)
+int is_global_ref(uint16 N)
 {
     int result = 0;
     MUTLSYMBOL *mutl_sym;
@@ -1470,7 +1470,7 @@ int is_global_ref(int N)
     return result;
 }
 
-void check_global_ref(int N)
+void check_global_ref(uint16 N)
 {
     if (is_global_ref(N))
     {
@@ -1483,19 +1483,19 @@ void check_global_ref(int N)
     }
 }
 
-void op_b_load(int N)
+void op_b_load(uint16 N)
 {
     log(LOG_PLANT, "%04X B load %s\n", next_instruction_segment_address(), format_operand(N));
     plant_order_extended_operand(CR_B, F_LOAD_B, N);
 }
 
-void op_d_load(int N)
+void op_d_load(uint16 N)
 {
     log(LOG_PLANT, "%04X D load %s\n", next_instruction_segment_address(), format_operand(N));
     plant_order_extended_operand(CR_STS2, F_LOAD_D, N); /* can generate a 64-bit signed load on MU5 which is not valid */
 }
 
-void op_d_load_ref(int N)
+void op_d_load_ref(uint16 N)
 {
     log(LOG_PLANT, "%04X D load REF %s\n", next_instruction_segment_address(), format_operand(N));
     if (N <= 0 || N >= MAX_NAMES)
@@ -1506,19 +1506,19 @@ void op_d_load_ref(int N)
     plant_order_extended_operand(CR_STS2, F_LOAD_D, N);
 }
 
-void op_d_select_element(int N)
+void op_d_select_element(uint16 N)
 {
     log(LOG_PLANT, "%04X D select element (NO-OP) %s\n", next_instruction_segment_address(), format_operand(N));
 }
 
-void op_a_store(int N)
+void op_a_store(uint16 N)
 {
     log(LOG_PLANT, "%04X A store to %s\n", next_instruction_segment_address(), mutl_var[N].name);
     plant_order_extended_operand(cr_for_load(), F_STORE, N);
     check_v_store_write_proc(N);
 }
 
-void op_a_load(int N)
+void op_a_load(uint16 N)
 {
     log(LOG_PLANT, "%04X A load %s\n", next_instruction_segment_address(), format_operand(N));
     check_v_store_read_proc(N);
@@ -1532,7 +1532,7 @@ void op_a_load(int N)
     }
 }
 
-void op_a_load_neg_or_ref(int N)
+void op_a_load_neg_or_ref(uint16 N)
 {
     VARSYMBOL *var = &mutl_var[N].data.var;
     if (var->dimension == 0 && N != OPERAND_D_REF)
@@ -1556,124 +1556,124 @@ void op_a_load_neg_or_ref(int N)
     }
 }
 
-void op_a_xor(int N)
+void op_a_xor(uint16 N)
 {
     log(LOG_PLANT, "%04X A XOR 0x%X\n", next_instruction_segment_address(), N);
     check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_XOR_A, N);
 }
 
-void op_a_and(int N)
+void op_a_and(uint16 N)
 {
     log(LOG_PLANT, "%04X A AND %s\n", next_instruction_segment_address(), format_operand(N));
     check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_AND_A, N);
 }
 
-void op_a_or(int N)
+void op_a_or(uint16 N)
 {
     log(LOG_PLANT, "%04X A OR %s\n", next_instruction_segment_address(), format_operand(N));
     check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_OR_A, N);
 }
 
-void op_a_left_shift(int N)
+void op_a_left_shift(uint16 N)
 {
     log(LOG_PLANT, "%04X A LSH %s\n", next_instruction_segment_address(), format_operand(N));
     check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_SHIFT_L_A, N);
 }
 
-void op_a_add(int N)
+void op_a_add(uint16 N)
 {
     log(LOG_PLANT, "%04X A ADD %s\n", next_instruction_segment_address(), format_operand(N));
     check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_ADD_A, N);
 }
 
-void op_a_sub(int N)
+void op_a_sub(uint16 N)
 {
     log(LOG_PLANT, "%04X A SUB %s\n", next_instruction_segment_address(), format_operand(N));
     check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_SUB_A, N);
 }
 
-void op_a_reverse_sub(int N)
+void op_a_reverse_sub(uint16 N)
 {
     log(LOG_PLANT, "%04X A RSUB %s\n", next_instruction_segment_address(), format_operand(N));
     check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_RSUB_A, N);
 }
 
-void op_a_mul(int N)
+void op_a_mul(uint16 N)
 {
     log(LOG_PLANT, "%04X A MUL %s\n", next_instruction_segment_address(), format_operand(N));
     check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_MUL_A, N);
 }
 
-void op_a_div(int N)
+void op_a_div(uint16 N)
 {
     log(LOG_PLANT, "%04X A DIV %s\n", next_instruction_segment_address(), format_operand(N));
     check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_DIV_A, N);
 }
 
-void op_a_compare(int N)
+void op_a_compare(uint16 N)
 {
     log(LOG_PLANT, "%04X A COMP %s\n", next_instruction_segment_address(), format_operand(N));
     check_v_store_read_proc(N);
     plant_order_extended_operand(cr(), F_COMP_A, N);
 }
 
-void op_a_add_store(int N)
+void op_a_add_store(uint16 N)
 {
     log(LOG_PLANT, "%04X A ADD STORE %s\n", next_instruction_segment_address(), format_operand(N));
     op_a_add(N);
     op_a_store(N);
 }
 
-void op_a_sub_store(int N)
+void op_a_sub_store(uint16 N)
 {
     log(LOG_PLANT, "%04X A SUB STORE %s\n", next_instruction_segment_address(), format_operand(N));
     op_a_sub(N);
     op_a_store(N);
 }
 
-void op_a_reverse_sub_store(int N)
+void op_a_reverse_sub_store(uint16 N)
 {
     log(LOG_PLANT, "%04X A RSUB STORE %s\n", next_instruction_segment_address(), format_operand(N));
     op_a_reverse_sub(N);
     op_a_store(N);
 }
 
-void op_a_xor_store(int N)
+void op_a_xor_store(uint16 N)
 {
     log(LOG_PLANT, "%04X A XOR STORE %s\n", next_instruction_segment_address(), format_operand(N));
     op_a_xor(N);
     op_a_store(N);
 }
 
-void op_a_and_store(int N)
+void op_a_and_store(uint16 N)
 {
     log(LOG_PLANT, "%04X A AND STORE %s\n", next_instruction_segment_address(), format_operand(N));
     op_a_and(N);
     op_a_store(N);
 }
 
-void op_a_or_store(int N)
+void op_a_or_store(uint16 N)
 {
     log(LOG_PLANT, "%04X A OR STORE %s\n", next_instruction_segment_address(), format_operand(N));
     op_a_or(N);
     op_a_store(N);
 }
 
-uint32 op_org_jump_generic_rel_address(int F, int16 relative)
+uint32 op_org_jump_generic_rel_address(uint8 F, int16 relative)
 {
     uint32 address_location;
     if (relative >= -32 && relative < 32)
     {
-        plant_org_order(F, K_LITERAL, relative & 0x3F);
+        plant_org_order(F, K_LITERAL, (uint8)relative & 0x3F);
         address_location = UNKNOWN_ADDRESS;
     }
     else
@@ -1686,7 +1686,7 @@ uint32 op_org_jump_generic_rel_address(int F, int16 relative)
     return address_location;
 }
 
-uint32 op_org_jump_generic_abs_address(int F, uint32 address)
+uint32 op_org_jump_generic_abs_address(uint8 F, uint32 address)
 {
     uint32 address_location;
     plant_org_order_extended(F, KP_LITERAL, NP_32_BIT_SIGNED_LITERAL);
@@ -1697,11 +1697,11 @@ uint32 op_org_jump_generic_abs_address(int F, uint32 address)
 }
 
 /* this function relies on labels and procs having the same initial structure. */
-void op_org_rel_jump_generic(int N, int F, char *type)
+void op_org_rel_jump_generic(uint16 N, uint8 F, char *type)
 {
     if (mutl_var[N].data.label.address_defined)
     {
-        int16 relative = mutl_var[N].data.label.address - next_instruction_segment_address();
+        int16 relative = (uint16)(mutl_var[N].data.label.address - next_instruction_segment_address());
         log(LOG_PLANT, "%04X ORG JUMP %s %s relative %d\n", next_instruction_segment_address(), type, mutl_var[N].name, relative);
         op_org_jump_generic_rel_address(F, relative);
     }
@@ -1714,7 +1714,7 @@ void op_org_rel_jump_generic(int N, int F, char *type)
     }
 }
 
-void op_org_abs_jump_generic_symbol(void *sym, int F)
+void op_org_abs_jump_generic_symbol(void *sym, uint8 F)
 {
     SEGMENT *segment = get_segment_for_area(current_code_area);
     plant_org_order_extended(F, KP_LITERAL, NP_32_BIT_SIGNED_LITERAL);
@@ -1723,14 +1723,14 @@ void op_org_abs_jump_generic_symbol(void *sym, int F)
 }
 
 /* this function relies on labels and procs having the same initial structure. */
-void op_org_abs_jump_generic(int N, int F, char *type)
+void op_org_abs_jump_generic(uint16 N, uint8 F, char *type)
 {
     MUTLSYMBOL *sym = &mutl_var[N];
     log(LOG_PLANT, "%04X ORG JUMP %s to %s with relocation\n", next_instruction_segment_address(), type, mutl_var[N].name);
     op_org_abs_jump_generic_symbol(sym->elf_symbol, F);
 }
 
-void op_org_stack_link(int N)
+void op_org_stack_link(uint16 N)
 {
     if (current_nested_call_depth >= MAX_NESTED_CALLS)
     {
@@ -1746,7 +1746,7 @@ void op_org_stack_link(int N)
     current_nested_call_depth++;
 }
 
-void op_org_stack_parameter(int N)
+void op_org_stack_parameter(uint16 N)
 {
     if (N != OPERAND_REG_A)
     {
@@ -1757,7 +1757,7 @@ void op_org_stack_parameter(int N)
     plant_stack_a();
 }
 
-void op_org_enter(int N)
+void op_org_enter(uint16 N)
 {
     int proc_call_stack_link_offset_address;
 
@@ -1774,17 +1774,17 @@ void op_org_enter(int N)
     plant_16_bit_code_word_update(proc_call_stack_link_offset_address, next_instruction_segment_address() - proc_call_stack_link_offset_address + 1, "return address");
 }
 
-void op_org_return(int N)
+void op_org_return(uint16 N)
 {
     log(LOG_STRUCTURE, "RETURN operand %s\n", format_operand(N));
     plant_org_order_extended(F_RETURN, k_v(), NP_STACK);
 }
 
-void op_org_aconv(int N)
+void op_org_aconv(uint16 N)
 {
     int kind = (N >> 14) & 1;
-    int from_amode = amode;
-    int to_amode = N;
+    uint16 from_amode = amode;
+    uint16 to_amode = N;
     log(LOG_PLANT, "Aconv kind=%d from %s", kind, format_basic_type(from_amode));
     log(LOG_PLANT, " to %s\n", format_basic_type(to_amode));
     if (type_is_vector(from_amode) && (BT_MODE(to_amode) == BT_MODE_SIGNED_INTEGER || BT_MODE(to_amode) == BT_MODE_UNSIGNED_INTEGER))
@@ -1821,13 +1821,13 @@ void op_org_aconv(int N)
     amode = to_amode;
 }
 
-void op_org_set_amode(int N)
+void op_org_set_amode(uint16 N)
 {
     amode = N;
     log(LOG_PLANT, "Amode set to %s\n", format_basic_type(N));
 }
 
-void op_org_stack(int N)
+void op_org_stack(uint16 N)
 {
     if (N != OPERAND_REG_A)
     {
@@ -1838,41 +1838,41 @@ void op_org_stack(int N)
     plant_stack_a();
 }
 
-void op_org_jump_equal(int N)
+void op_org_jump_equal(uint16 N)
 {
     op_org_rel_jump_generic(N, F_BRANCH_EQ, "EQ");
 }
 
-void op_org_jump_not_equal(int N)
+void op_org_jump_not_equal(uint16 N)
 {
     op_org_rel_jump_generic(N, F_BRANCH_NE, "NE");
 }
 
-void op_org_jump_greater_than_or_equal(int N)
+void op_org_jump_greater_than_or_equal(uint16 N)
 {
     op_org_rel_jump_generic(N, F_BRANCH_GE, "GE");
 }
 
-void op_org_jump_less_than(int N)
+void op_org_jump_less_than(uint16 N)
 {
     op_org_rel_jump_generic(N, F_BRANCH_LT, "LT");
 }
 
-void op_org_jump_less_than_or_equal(int N)
+void op_org_jump_less_than_or_equal(uint16 N)
 {
     op_org_rel_jump_generic(N, F_BRANCH_LE, "LE");
 }
 
-void op_org_jump_greater_than(int N)
+void op_org_jump_greater_than(uint16 N)
 {
     op_org_rel_jump_generic(N, F_BRANCH_GT, "GT");
 }
 
-void op_org_jump_seg(int N)
+void op_org_jump_seg(uint16 N)
 {
     if (mutl_var[N].data.label.address_defined)
     {
-        int16 relative = mutl_var[N].data.label.address - next_instruction_segment_address();
+        int16 relative = (uint16)(mutl_var[N].data.label.address - next_instruction_segment_address());
         log(LOG_PLANT, "%04X ORG JUMP SEG to %s relative %d\n", next_instruction_segment_address(), mutl_var[N].name, relative);
         if (relative >= -32 && relative < 32)
         {
@@ -1929,7 +1929,7 @@ static MUTLOP mutl_ops[32][4] =
     { { NULL, OP_NULL },         { NULL, OP_NULL },                     { NULL, OP_NULL },                                { NULL, OP_NULL } }
 };
 
-void set_literal_value(t_uint64 val, int size)
+void set_literal_value(t_uint64 val, uint16 size)
 {
     int i;
     for (i = 0; i < size; i++)
@@ -1939,10 +1939,10 @@ void set_literal_value(t_uint64 val, int size)
     current_literal.length = size;
 }
 
-void TLSEG(int32 N, int32 S, int32 RTA, int32 CTA, int32 NL)
+void TLSEG(int32 N, int32 S, int32 RTA, int32 CTA, uint16 NL)
 {
     SEGMENT *seg = &segments[N];
-    uint32 actual_rta = (RTA == -1) ? 0 : get_segment_number_from_full_address(RTA);
+    uint16 actual_rta = (RTA == -1) ? 0 : get_segment_number_from_full_address(RTA);
 
     if (seg == get_segment_by_full_address(start_address))
     {
@@ -1965,7 +1965,7 @@ void TLSEG(int32 N, int32 S, int32 RTA, int32 CTA, int32 NL)
     log(LOG_MEMORY, "TL.SEG MUTL segment %d, segment address %d, size %d run-time address 0x%08X\n", N, seg->segment_address, seg->size, seg->run_time_address);
 }
 
-void TLLOAD(int SN, int AN)
+void TLLOAD(uint16 SN, int AN)
 {
     log(LOG_MEMORY, "TL.LOAD segment %d area %d\n", SN, AN);
     areas[AN].segment_index = SN;/* TODO: the code here is naive, it should not have a 1:1 mapping from area to segment, we should scan segment table for a free entry */
@@ -1976,7 +1976,7 @@ void TLCODEAREA(int AN)
     SEGMENT *segment;
 
     log(LOG_MEMORY, "TL.CODE.AREA area %d\n", AN);
-    current_code_area = AN;
+    current_code_area = (uint8)AN;
     segment = get_segment_for_area(current_code_area);
     if (segment->elf_section_index == 0)
     {
@@ -2122,7 +2122,7 @@ int compute_variable_space(int size_words, int is_parameter)
     return result;
 }
 
-MUTLSYMBOL *get_next_mutl_var(int n)
+MUTLSYMBOL *get_next_mutl_var(uint16 n)
 {
     MUTLSYMBOL *result;
     if (block_level < 0)
@@ -2480,7 +2480,7 @@ void TLASS(int VL, int AN)
     log(LOG_LITERALS, "TL.ASS to variable %d in area %d\n", current_assign_variable, current_assign_variable_area);
 }
 
-void TLASSVALUE(int N, int R)
+void TLASSVALUE(uint16 N, int R)
 {
     int i;
     int size;
@@ -2608,7 +2608,7 @@ void TLENDBLOCK(void)
     fatal("TLENDBLOCK");
     log(LOG_STRUCTURE, "End block\n");
 }
-void TLENTRY(int N)
+void TLENTRY(uint16 N)
 {
     fatal("TLENTRY");
     log(LOG_STRUCTURE, "Enter proc %s\n", mutl_var[N].name);
@@ -2702,7 +2702,7 @@ void TLLIT(VECTOR *SN, int K)
     declare_literal(SN, &current_literal, T, 0, NO_MODULE);
 }
 
-void TLPL(int F, int N)
+void TLPL(int F, uint16 N)
 {
     int data_type = F >> 5;
     int opcode = F & 0x1F;

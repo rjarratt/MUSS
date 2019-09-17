@@ -104,7 +104,7 @@ void elf_set_entry(void *context, Elf32_Addr e_entry)
     ctx->elf_header.e_entry = e_entry;
 }
 
-int elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data)
+Elf32_Half elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data)
 {
     Elf32_Context *ctx = context;
     Elf32_Shdr header;
@@ -121,7 +121,7 @@ int elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr address
     return section->section_index;
 }
 
-int elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data)
+Elf32_Half elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data)
 {
     Elf32_Context *ctx = context;
     Elf32_Shdr header;
@@ -137,7 +137,7 @@ int elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address
     return section->section_index;
 }
 
-int elf_add_bss_section(void *context, Elf32_Word word_size, Elf32_Addr address)
+Elf32_Half elf_add_bss_section(void *context, Elf32_Word word_size, Elf32_Addr address)
 {
     Elf32_Context *ctx = context;
     Elf32_Shdr header;
@@ -168,7 +168,7 @@ void elf_update_section_size(void *context, Elf32_Half section_index, Elf32_Word
     section->section_header.sh_size = size;
 }
 
-int elf_get_relocation_section(void *context, Elf32_Half section_index)
+Elf32_Half elf_get_relocation_section(void *context, Elf32_Half section_index)
 {
     int result = -1;
     Elf32_Context *ctx = context;
@@ -541,7 +541,7 @@ char *elf_get_section_name(void *context, int string_index)
     return result;
 }
 
-void elf_process_defined_symbols(void *elf_context, void *context, void *(*process_symbol)(void *elf_context, void *symbol, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index))
+void elf_process_defined_symbols(void *elf_context, void *context, void (*process_symbol)(void *elf_context, void *symbol, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index))
 {
     int sym_index;
     int num_syms;

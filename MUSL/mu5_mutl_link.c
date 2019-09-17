@@ -16,8 +16,8 @@ typedef struct
 {
     LINKER_MODULE *module;
     Elf32_Shdr section_header;
-    int elf_input_section_index;
-    int elf_output_section_index;
+    Elf32_Half elf_input_section_index;
+    Elf32_Half elf_output_section_index;
     Elf32_Shdr relocation_section_header;
     char *data;
     char *rela_data;
@@ -45,6 +45,8 @@ typedef struct
     Elf32_Sym *found_symbol;
 } SYMBOL_SCAN;
 
+extern void fatal(char *format, ...);
+
 static Elf32_Addr entry_point;
 static int num_modules;
 static LINKER_MODULE elf_modules[MAX_IMPORT_MODULES];
@@ -65,11 +67,11 @@ static void build_global_symbol_table(void);
 static void build_local_symbol_table(void *elf_context);
 static LINKER_SYMBOL *get_linker_symbol(void *elf_module_context, int symbol_index, LINKER_SYMBOL_TABLE *symbol_table);
 static void check_for_symbols_with_multiple_definitions(LINKER_SYMBOL_TABLE *symbol_table);
-static void process_segments(Elf32_Word flag, void *callback_context, void(*process_segment)(LINKER_MODULE *module, int section_index, void *callback_context));
+static void process_segments(Elf32_Word flag, void *callback_context, void(*process_segment)(LINKER_MODULE *module, Elf32_Half section_index, void *callback_context));
 static void count_segments(void);
-static void count_segment(LINKER_MODULE *module, int section_index, void *callback_context);
+static void count_segment(LINKER_MODULE *module, Elf32_Half section_index, void *callback_context);
 static void define_segments(void);
-static void define_segment(LINKER_MODULE *module, int section_index, void *callback_context);
+static void define_segment(LINKER_MODULE *module, Elf32_Half section_index, void *callback_context);
 static void resolve_symbols(void);
 static void resolve_symbol_in_segment(LINKER_SEGMENT *linker_segment);
 static void write_32_bit_resolution(LINKER_SEGMENT *linker_segment, char *name, Elf32_Rela *rela_entry, Elf32_Addr new_addr);
@@ -208,16 +210,16 @@ static void  compute_total_symbols(LINKER_SYMBOL_TABLE *symbol_table)
 
 static int compare_symbol_name(const void *sym1, const void *sym2)
 {
-    LINKER_SYMBOL *ls1 = sym1;
-    LINKER_SYMBOL *ls2 = sym2;
+    LINKER_SYMBOL *ls1 = (LINKER_SYMBOL *)sym1;
+    LINKER_SYMBOL *ls2 = (LINKER_SYMBOL *)sym2;
 
     return strcmp(ls1->name, ls2->name);
 }
 
 static int compare_segment_by_section_address(const void *seg1, const void *seg2)
 {
-    LINKER_SEGMENT *ls1 = seg1;
-    LINKER_SEGMENT *ls2 = seg2;
+    LINKER_SEGMENT *ls1 = (LINKER_SEGMENT *)seg1;
+    LINKER_SEGMENT *ls2 = (LINKER_SEGMENT *)seg2;
 
     return ls1->section_header.sh_addr - ls2->section_header.sh_addr;
 }
@@ -242,8 +244,6 @@ static void build_global_symbol_table(void)
 
 static void build_local_symbol_table(void *elf_context)
 {
-    int i;
-
     if (local_symbol_table.symbols != NULL)
     {
         free(local_symbol_table.symbols);
@@ -264,7 +264,6 @@ static LINKER_SYMBOL *get_linker_symbol(void *elf_module_context, int symbol_ind
     Elf32_Sym symbol;
     LINKER_SYMBOL lookup;
     LINKER_SYMBOL *result;
-    char *name;
 
     elf_get_symbol(elf_module_context, &symbol, symbol_index);
     lookup.name = elf_get_string(elf_module_context, symbol.st_name);
@@ -296,10 +295,10 @@ static void check_for_symbols_with_multiple_definitions(LINKER_SYMBOL_TABLE *sym
     }
 }
 
-static void process_segments(Elf32_Word flag, void *callback_context, void(*process_segment)(LINKER_MODULE *module, int section_index, void *callback_context))
+static void process_segments(Elf32_Word flag, void *callback_context, void(*process_segment)(LINKER_MODULE *module, Elf32_Half section_index, void *callback_context))
 {
     int module_index;
-    int section_index;
+    Elf32_Half section_index;
     for (module_index = 0; module_index < num_modules; module_index++)
     {
         Elf32_Ehdr module_elf_header;
@@ -323,14 +322,14 @@ static void count_segments(void)
     process_segments(SHT_PROGBITS, NULL, count_segment);
 }
 
-static void count_segment(LINKER_MODULE *module, int section_index, void *callback_context)
+static void count_segment(LINKER_MODULE *module, Elf32_Half section_index, void *callback_context)
 {
     num_segments++;
 }
 
 static void define_segments(void)
 {
-    int segment_index = 0;
+    Elf32_Half segment_index = 0;
     count_segments();
     segment_table = calloc(num_segments, sizeof(LINKER_SEGMENT));
     process_segments(SHT_PROGBITS, &segment_index, define_segment);
@@ -338,10 +337,10 @@ static void define_segments(void)
     compute_segment_start_addresses();
 }
 
-static void define_segment(LINKER_MODULE *module, int section_index, void *callback_context)
+static void define_segment(LINKER_MODULE *module, Elf32_Half section_index, void *callback_context)
 {
     int *segment_index = callback_context;
-    int relocation_section;
+    Elf32_Half relocation_section;
     LINKER_SEGMENT *segment = &segment_table[(*segment_index)++];
     segment->module = module;
     segment->elf_input_section_index = section_index;
@@ -496,5 +495,4 @@ static void add_segments_to_output(void *out_elf_context)
 
         elf_update_section_size(out_elf_context, current_seg->elf_output_section_index, current_seg->section_header.sh_size);
     }
-
 }

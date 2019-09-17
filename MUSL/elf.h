@@ -205,12 +205,12 @@ typedef struct elf32_rela {
 
 void *elf_new_file(Elf32_Half e_type, Elf32_Half e_machine, Elf32_Word e_flags);
 void elf_set_entry(void *context, Elf32_Addr e_entry);
-int elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data);
-int elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data);
-int elf_add_bss_section(void *context, Elf32_Word word_size, Elf32_Addr address);
+Elf32_Half elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data);
+Elf32_Half elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data);
+Elf32_Half elf_add_bss_section(void *context, Elf32_Word word_size, Elf32_Addr address);
 void elf_update_section_address(void *context, Elf32_Half section_index, Elf32_Addr address);
 void elf_update_section_size(void *context, Elf32_Half section_index, Elf32_Word size);
-int elf_get_relocation_section(void *context, Elf32_Half section_index);
+Elf32_Half elf_get_relocation_section(void *context, Elf32_Half section_index);
 void elf_add_relocation_entry(void *context, Elf32_Half code_section_index, Elf32_Addr offset, void *symbol, int relocation_type, Elf32_Sword addend);
 void *elf_add_symbol(void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, Elf32_Half section_index);
 void elf_update_symbol_value(void *symbol, Elf32_Addr value);
@@ -225,4 +225,4 @@ void elf_get_section_header(void *context, Elf32_Shdr *header, char **data, int 
 void elf_get_symbol(void *context, Elf32_Sym *symbol, int symbol_index);
 char *elf_get_string(void *context, int string_index);
 char *elf_get_section_name(void *context, int string_index);
-void elf_process_defined_symbols(void *elf_context, void *context, void *(*process_symbol)(void *elf_context, void *symbol, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index));
+void elf_process_defined_symbols(void *elf_context, void *context, void (*process_symbol)(void *elf_context, void *symbol, void *context, char *name, Elf32_Addr value, Elf32_Word size, int binding, int type, unsigned char st_other, Elf32_Half section_index));
