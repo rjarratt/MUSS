@@ -647,17 +647,6 @@ $IN MSTR,MUTLSTR
 #include "nmsl081.h"
 #include "nmsl091.h"
 
-typedef unsigned char      uint8;
-typedef short              int16;
-typedef unsigned short     uint16;
-typedef int                int32;
-typedef unsigned int       uint32;
-typedef long long          t_int64;
-typedef unsigned int       uint32;
-typedef unsigned long long t_uint64;
-
-#define TDELIM 0
-
 @END
 @TITLE MSL03.1(1,11)
 @COL 8C-9R-10C-11R-12C

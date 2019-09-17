@@ -69,15 +69,6 @@ TL.MODULE,TL.END.MODULE,TL.MODE);
 #include "support.h"
 #include "nmsl011.h"
 
-typedef unsigned char      uint8;
-typedef short              int16;
-typedef unsigned short     uint16;
-typedef int                int32;
-typedef unsigned int       uint32;
-typedef long long          t_int64;
-typedef unsigned int       uint32;
-typedef unsigned long long t_uint64;
-
 extern void OUTBINB(int);
 extern FILE *MUTLSTR;
 extern int32 IPOS(void);
