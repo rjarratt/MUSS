@@ -72,7 +72,7 @@ void OUTCH(int ch)
 
 int NEXTCH(void)
 {
-    char result = INCH();
+    int result = INCH();
     INBACKSPACE(1);
     return result;
 }
@@ -127,7 +127,7 @@ VECTOR *PART(unsigned char *vec, int buffer, int last)
 {
     static VECTOR result;
     result.buffer = (char *)&vec[buffer];
-    result.length = last - buffer + 1;
+    result.length = (uint16)(last - buffer + 1);
     return &result;
 }
 
