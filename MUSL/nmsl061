@@ -466,9 +466,6 @@ $LI BREQD = -1, DIND = %1004, AOPD = %3000;
 #include "nmsl081.h"
 #include "nmsl091.h"
 #include "nmsl101.h"
-
-
-int REGSIU;
 @END
 @TITLE MSL06.1(1,6)
 @COL 1S-2R-3R-4R-5F

@@ -332,9 +332,6 @@ LASTMN,CURLEV,CURRES,CURPROC,CURBLK,GLEV,EVAL.CONST,END.CHECKS,PROCLEV,EVAL.LIT)
 #include "nmsl091.h"
 #include "nmsl101.h"
 
-
-// FROM NMSL051
-#define KTYPE 6
 #define KLIT 7
 #define KEX 10
 #define KDVEC 11

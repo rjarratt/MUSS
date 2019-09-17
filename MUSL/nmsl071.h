@@ -5,9 +5,10 @@
 #define BREQD ((uint16)-1)
 
 uint16 AR[256];
-int AP;
-int FPTR;
-int STPTR;
+extern int AP;
+extern int FPTR;
+extern int STPTR;
+extern int REGSIU;
 
 uint16 PREPROCESSCOMP(uint16);
 void PREPROCESSCOND(void);
