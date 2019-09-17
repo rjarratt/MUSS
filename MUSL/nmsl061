@@ -872,7 +872,7 @@ void TRANSFOR(void)
 $IN CV,T;
 #MSL06.4.1
 @BOX 2.2
-int CV,T;
+uint16 CV,T;
 // #MSL06.4.1 moved to before as C does not support nesting
 @BOX 3.1
 $IF LBUFF[IPTR+2] /= LTHAN
@@ -957,9 +957,9 @@ END
 @BOX 1.1
 $PR EVAL.LIMIT(T);
 @BOX 1.2
-int EVALLIMIT(int T)
+uint16 EVALLIMIT(uint16 T)
 {
-int result;
+uint16 result;
 @BOX 3.1
 IF LBUFF[IPTR+2] /= DDO
 OR EVAL.LIT(2,T) => EVAL.LIMIT = -1

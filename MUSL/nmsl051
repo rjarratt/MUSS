@@ -476,7 +476,7 @@ void ENDST(void);
 void DECLVSTORE(void);
 void ENDCHECKS(void);
 int CHECKLIT(int, int);
-int32 EVALLIT(int, int);
+int16 EVALLIT(int, int);
 int32 EVALCONST(void);
 uint16 COMPTYPE(void);
 int COMPDIM(void);
@@ -3507,13 +3507,14 @@ MUTLN OF LITERAL
 @BOX1.1
 $PR EVAL.LIT(MODE,LIT.TYPE);
 @BOX1.2
-int32 EVALLIT(int MODE, int LITTYPE)
+int16 EVALLIT(int MODE, int LITTYPE)
 {
-int32 result;
+int16 result;
 @BOX2.1
 $IN I,ST,N;
 @BOX2.2
-int I,ST,N;
+int ST,N;
+int16 I;
 @BOX3.1
 IF TAG OF LBUFF[1+>IPTR] => I /= TCONST
 @BOX3.2
@@ -3611,7 +3612,7 @@ IPTR--;
 @BOX14.1
 DETAIL OF PLIST[I] => EVAL.LIT;
 @BOX14.2
-result = PLIST[I].DETAIL;
+result = (int16)PLIST[I].DETAIL;
 @BOX17.1
 IF MODE = 0
 @BOX17.2

@@ -318,7 +318,7 @@ typedef struct /* some fields in common with LABEL so must remain in synch */
     uint16 segment_number;
     uint32 global_location; /* location where XNB value is to be stored on linking */
     VARSYMBOL parameters[MAX_PROC_PARAMS];
-    int param_count;
+    uint16 param_count;
     int nature;
 } PROCSYMBOL;
 
@@ -359,7 +359,7 @@ typedef struct
     uint32 address_of_condition;
     uint32 address_of_end_of_loop_jump;
     int mode;
-    int control_variable;
+    uint16 control_variable;
 } LOOP;
 
 typedef struct
@@ -408,7 +408,7 @@ static PROCSYMBOL *current_proc_spec;
 static MUTLSYMBOL *current_proc_def;
 static MUTLSYMBOL *current_type_def;
 static int current_assign_variable;
-static int current_assign_variable_area;
+static uint16 current_assign_variable_area;
 static int current_nested_call_depth = 0;
 static NESTEDPROCCALL nested_call[MAX_NESTED_CALLS];
 static BLOCK block_stack[MAX_BLOCK_DEPTH];
@@ -967,7 +967,7 @@ static void plant_operand(uint16 n)
         MUTLSYMBOL *mutlsym = &mutl_var[n];
         if (mutlsym->symbol_type == SYM_VARIABLE)
         {
-            if (mutlsym->data.var.position == -1)
+            if (mutlsym->data.var.position == (uint16)-1)
             {
                 SEGMENT *code_seg = get_segment_for_area(current_code_area);
                 if (mutlsym->data.var.is_vstore)
@@ -1235,10 +1235,10 @@ BLOCK *get_current_block(void)
     return result;
 }
 
-void start_block_level(int param_stack_size, int has_stack_frame)
+void start_block_level(uint16 param_stack_size, int has_stack_frame)
 {
     BLOCK *block;
-    uint16 nb_adjust;
+    int16 nb_adjust;
 
     block_level++;
     if (block_level >= MAX_BLOCK_DEPTH)
@@ -1293,7 +1293,7 @@ int block_var_is_not_aligned(uint16 T)
     return result;
 }
 
-int add_block_var(uint8 T, int is_parameter)
+uint16 add_block_var(uint16 T, int is_parameter)
 {
     BLOCK *block = get_current_block();
     if (is_parameter || BT_SIZE(T) > 4)
@@ -1308,14 +1308,14 @@ int add_block_var(uint8 T, int is_parameter)
     return block->last_mutl_var;
 }
 
-int add_other_block_item(void)
+uint16 add_other_block_item(void)
 {
     BLOCK *block = get_current_block();
     block->last_mutl_var++;
     return block->last_mutl_var;
 }
 
-uint16 get_block_name_offset_for_last_var(uint8 T, int is_parameter)
+uint16 get_block_name_offset_for_last_var(uint16 T, int is_parameter)
 {
     BLOCK *block = get_current_block();
     uint16 result;
@@ -1352,9 +1352,9 @@ void end_block_level(void)
     block_level--;
 }
 
-int param_stack_size(uint16 N)
+uint16 param_stack_size(uint16 N)
 {
-    int result;
+    uint16 result;
     result = mutl_var[N].data.proc.param_count * 2;
     return result;
 }
@@ -1993,7 +1993,7 @@ void TLDATAAREA(int AN)
     SEGMENT *segment;
 
     log(LOG_MEMORY, "TL.DATA.AREA area %d\n", AN);
-    current_data_area = AN;
+    current_data_area = (uint8)AN;
     segment = get_segment_for_area(current_data_area);
     if (segment->elf_section_index == 0)
     {
@@ -2071,9 +2071,9 @@ void TLENDMODULE(int ST)
     end_block_level();
 }
 
-int compute_variable_size(uint8 T, int D)
+uint16 compute_variable_size(uint16 T, int D)
 {
-    int result;
+    uint16 result;
     if (D == 0)
     {
         if (BT_SIZE(T) > 4)
@@ -2087,7 +2087,7 @@ int compute_variable_size(uint8 T, int D)
     }
     else if (D > 0)
     {
-        result = ((BT_SIZE(T) * D) + 1) / 4;
+        result = ((BT_SIZE(T) * (uint16)D) + 1) / 4;
     }
     else if (D != -1 && D != -2048 && D != 4096)
     {
@@ -2108,9 +2108,9 @@ int compute_variable_size(uint8 T, int D)
     return result;
 }
 
-int compute_variable_space(int size_words, int is_parameter)
+uint16 compute_variable_space(uint16 size_words, int is_parameter)
 {
-    int result;
+    uint16 result;
     if (is_parameter)
     {
         result = 2;
@@ -2162,7 +2162,7 @@ void import_vstore(MUTLSYMBOL *var)
     }
     else if (external_v_sym->st_shndx != SHN_ABS)
     {
-        var->data.var.position = external_v_sym->st_value;
+        var->data.var.position = (uint16)external_v_sym->st_value;
         var->data.var.is_vstore = 0;
     }
 
@@ -2183,12 +2183,12 @@ void import_vstore(MUTLSYMBOL *var)
     /* get variable position to decide if it is a variable or a direct VSTORE address */
 }
 
-void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vstore, int v_position, int v_read_proc, int v_write_proc, int module)
+void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vstore, uint16 v_position, uint16 v_read_proc, uint16 v_write_proc, int module)
 {
     SEGMENT *segment = get_segment_for_area(current_data_area);
     MUTLSYMBOL *var;
-    int var_n;
-    int size_words;
+    uint16 var_n;
+    uint16 size_words;
 
     size_words = compute_variable_size(T, D);
 
@@ -2207,7 +2207,7 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
     var->block_level = block_level;
     var->module_number = module;
     var->data.var.data_type = T;
-    var->data.var.dimension = D;
+    var->data.var.dimension = (uint16)D;
     var->data.var.is_parameter = is_parameter;
 
     if (BT_IS_IMPORT(T))
@@ -2215,7 +2215,7 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
         BLOCK *block;
         block = get_current_block();
         var->data.var.is_vstore = is_vstore;
-        var->data.var.position = -1;
+        var->data.var.position = (uint16)-1;
         if (is_vstore)
         {
             import_vstore(var);
@@ -2242,7 +2242,7 @@ void declare_variable(VECTOR *name, uint16 T, int D, int is_parameter, int is_vs
     else if (v_position == 0)
     {
         var->data.var.is_vstore = 1;
-        var->data.var.position = get_current_literal();
+        var->data.var.position = (uint16)get_current_literal();
         log(LOG_SYMBOLS, "Declare vstore %s %s level=%d, dim=%d, position=0x%X in slot %d\n", var->name, format_basic_type(T), block_level, D, var->data.var.position, var_n);
     }
     else
@@ -2288,7 +2288,7 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
     SEGMENT *segment = get_segment_for_area(current_data_area);
     MUTLSYMBOL *var;
     LITSYMBOL *lit;
-    int var_n;
+    uint16 var_n;
 
     var_n = add_other_block_item();
     var = get_next_mutl_var(var_n);
@@ -2299,8 +2299,8 @@ void declare_literal(VECTOR *name, VECTOR *literal, uint16 T, int D, int module)
     var->block_level = block_level;
     var->module_number = module;
     lit->data_type = T;
-    lit->dimension = (D == -1) ? literal->length : D;
-    lit->address = compute_descriptor_origin(next_data_address());
+    lit->dimension = (D == -1) ? literal->length : (uint16)D;
+    lit->address = compute_descriptor_origin((uint16)next_data_address());
     lit->value.buffer = (char *)&lit->valuebuf;
 
     if (!BT_IS_IMPORT(T))
@@ -2381,7 +2381,7 @@ void declare_proc(VECTOR *name, uint32 address, int NAT, int module)
 
 void TLTYPE(VECTOR *N, int NAT)
 {
-    int sym_n;
+    uint16 sym_n;
     if (MUTL_NATURE_NAME_ALREADY_DEFINED(NAT))
     {
         sym_n = MUTL_NATURE_NAME(NAT);
@@ -2400,7 +2400,7 @@ void TLTYPE(VECTOR *N, int NAT)
     log(LOG_SYMBOLS, "Start aggregate type %0.*s nature=%X level=%d in slot %d\n", N->length, N->buffer, NAT, block_level, sym_n);
 }
 
-void TLTYPECOMP(int T, int D, VECTOR *NM)
+void TLTYPECOMP(uint16 T, int D, VECTOR *NM)
 {
     log(LOG_SYMBOLS, "Adding %0.*s of type %s and dimension %d to %s\n", NM->length, NM->buffer, format_basic_type(T), D, current_type_def->name);
     if (BT_NOTDEF(T))
@@ -2411,7 +2411,7 @@ void TLTYPECOMP(int T, int D, VECTOR *NM)
     TYPESYMBOL *type = &current_type_def->data.type;
     VARSYMBOL *field = &type->fields[type->field_count++];
     field->data_type = T;
-    field->dimension = D;
+    field->dimension = (uint16)D;
 }
 
 void TLENDTYPE(int STAT)
@@ -2424,7 +2424,7 @@ void TLENDTYPE(int STAT)
     }
 }
 
-void TLSDECL(VECTOR *SN, int T, int D)
+void TLSDECL(VECTOR *SN, uint16 T, int D)
 {
     VECTOR name;
     if (SN != NULL)
@@ -2452,12 +2452,12 @@ void TLSDECL(VECTOR *SN, int T, int D)
     }
 }
 
-void TLVDECL(VECTOR *SN, uint32 SA, int RS, int WS, int T, int D)
+void TLVDECL(VECTOR *SN, uint32 SA, uint16 RS, uint16 WS, uint16 T, int D)
 {
-    declare_variable(SN, T, D, 0, 1, SA, RS, WS, NO_MODULE);
+    declare_variable(SN, T, D, 0, 1, (uint16)SA, RS, WS, NO_MODULE);
 }
 
-void TLASS(int VL, int AN)
+void TLASS(int VL, uint16 AN)
 {
     LITSYMBOL *lit;
     current_assign_variable = VL;
@@ -2483,7 +2483,7 @@ void TLASS(int VL, int AN)
 void TLASSVALUE(uint16 N, int R)
 {
     int i;
-    int size;
+    uint16 size;
     LITSYMBOL *lit;
     if (N != 0)
     {
@@ -2541,13 +2541,13 @@ void TLPROCSPEC(VECTOR *NAM, int NAT)
     declare_proc(NAM, 0, NAT, NO_MODULE);
 }
 
-void TLPROCPARAM(int T, int D)
+void TLPROCPARAM(uint16 T, int D)
 {
     log(LOG_SYMBOLS, "Declare proc param %s, dim=%d\n", format_basic_type(T), D);
     if (current_proc_spec->param_count < MAX_PROC_PARAMS)
     {
         current_proc_spec->parameters[current_proc_spec->param_count].data_type = T;
-        current_proc_spec->parameters[current_proc_spec->param_count].dimension = D;
+        current_proc_spec->parameters[current_proc_spec->param_count].dimension = (uint16)D;
         current_proc_spec->param_count++;
     }
     else
@@ -2556,16 +2556,16 @@ void TLPROCPARAM(int T, int D)
     }
 }
 
-void TLPROCRESULT(int R, int D)
+void TLPROCRESULT(uint16 R, int D)
 {
     if (R != 0)
     {
-        log(LOG_SYMBOLS, "Declare proc result %s, dim=%d\n", format_basic_type(R), D);
+        log(LOG_SYMBOLS, "Declare proc result %s, dim=%d\n", format_basic_type(R), (uint16)D);
     }
     /* TODO. Process this. */
 }
 
-void TLPROC(int P)
+void TLPROC(uint16 P)
 {
     int i;
     current_proc_def = &mutl_var[P];
@@ -2616,7 +2616,7 @@ void TLENTRY(uint16 N)
 void TLLABELSPEC(VECTOR *N, int U)
 {
     char temp[80];
-    int sym_n;
+    uint16 sym_n;
 
     sym_n = add_other_block_item();
     MUTLSYMBOL *sym = get_next_mutl_var(sym_n);
@@ -2637,7 +2637,7 @@ void TLLABELSPEC(VECTOR *N, int U)
     sym->data.label.num_forward_refs = 0;
 }
 
-void TLLABEL(int L)
+void TLLABEL(uint16 L)
 {
     log(LOG_SYMBOLS, "Define label %s at 0x%04X\n", mutl_var[L].name, next_instruction_segment_address());
     mutl_var[L].data.label.address_defined = 1;
@@ -2645,21 +2645,21 @@ void TLLABEL(int L)
     fixup_forward_label_refs(L);
 }
 
-void TLCLIT16(int BT, int16 VAL)
+void TLCLIT16(uint16 BT, int16 VAL)
 {
     set_literal_value(VAL, sizeof(int16));
     log(LOG_LITERALS, "Current 16-bit literal 0x%llx\n", get_current_literal());
     current_literal_basic_type = BT;
 }
 
-void TLCLIT32(int BT, int32 VAL)
+void TLCLIT32(uint16 BT, int32 VAL)
 {
     set_literal_value(VAL, sizeof(int32));
     log(LOG_LITERALS, "Current 32-bit literal 0x%llx\n", get_current_literal());
     current_literal_basic_type = BT;
 }
 
-void TLCLIT64(int BT, t_uint64 VAL)
+void TLCLIT64(uint16 BT, t_uint64 VAL)
 {
     set_literal_value(VAL, sizeof(t_uint64));
     log(LOG_LITERALS, "Current 64-bit literal 0x%llx\n", get_current_literal());
@@ -2671,7 +2671,7 @@ void TLCNULL(int PT)
     fatal("TL.C.NULL not supported\n");
 }
 
-void TLCLITS(int BT, VECTOR *VAL)
+void TLCLITS(uint16 BT, VECTOR *VAL)
 {
     int i;
 
@@ -2686,14 +2686,14 @@ void TLCLITS(int BT, VECTOR *VAL)
     log(LOG_LITERALS, "\n");
 }
 
-void TLCLIT128(int BT, double VAL)
+void TLCLIT128(uint16 BT, double VAL)
 {
     fatal("TL.C.LIT128 not supported\n");
 }
 
 void TLLIT(VECTOR *SN, int K)
 {
-    int T = current_literal_basic_type;
+    uint16 T = current_literal_basic_type;
     T |= (K & BT_IMPORT); /* add in import flag if this is an import */
     if ((K & 0x3FFF) == 0)
     {
@@ -2706,7 +2706,7 @@ void TLPL(int F, uint16 N)
 {
     int data_type = F >> 5;
     int opcode = F & 0x1F;
-    void(*op)(int) = NULL;
+    void(*op)(uint16) = NULL;
     op = mutl_ops[opcode][data_type].op;
     if (op != NULL)
     {
@@ -2743,7 +2743,7 @@ void TLPRINT(int M)
     // TODO: Implement as per manual
 }
 
-LOOP *start_loop(int mode, int control_variable)
+LOOP *start_loop(int mode, uint16 control_variable)
 {
     LOOP *loop;
     loop_level++;
@@ -2765,11 +2765,11 @@ void end_loop(void)
     loop_level--;
 }
 
-void TLCYCLE(int limit)
+void TLCYCLE(uint16 limit)
 {
     LOOP *loop;
     log(LOG_PLANT, "TL.CYCLE\n");
-    int saved_amode = amode;
+    uint16 saved_amode = amode;
     amode = TINT32;
     op_a_load(limit);
     op_org_stack(OPERAND_REG_A);
@@ -2780,9 +2780,9 @@ void TLCYCLE(int limit)
     amode = saved_amode;
 }
 
-void TLCVCYCLE(int cv, int init, int mode)
+void TLCVCYCLE(uint16 cv, uint16 init, int mode)
 {
-    int saved_amode = amode;
+    uint16 saved_amode = amode;
     amode = mutl_var[cv].data.var.data_type;
     log(LOG_PLANT, "TL.CV.CYCLE, mode=%d\n", mode);
     op_a_load(init);
@@ -2791,11 +2791,11 @@ void TLCVCYCLE(int cv, int init, int mode)
     amode = saved_amode;
 }
 
-void TLCVLIMIT(int limit)
+void TLCVLIMIT(uint16 limit)
 {
     /* This code assumes the FOR loop is always of the form "FOR N < 10". In other words the operator is always LESS THAN only.
        The compiler does not seem to tell MUTL if the operator is any different. */
-    int saved_amode = amode;
+    uint16 saved_amode = amode;
     amode = TINT32;
     LOOP *loop = &loop_stack[loop_level];
     log(LOG_PLANT, "TL.CV.LIMIT %s\n", format_operand(limit));
@@ -2820,9 +2820,9 @@ void TLCVLIMIT(int limit)
 
 void TLREPEAT(void)
 {
-    int relative;
+    uint16 relative;
     LOOP *loop = &loop_stack[loop_level];
-    int saved_amode = amode;
+    uint16 saved_amode = amode;
     amode = mutl_var[loop->control_variable].data.var.data_type;
     log(LOG_PLANT, "TL.CV.REPEAT\n");
     op_a_load(loop->control_variable);
@@ -2843,10 +2843,10 @@ void TLREPEAT(void)
     {
         op_a_store(loop->control_variable);
     }
-    relative = loop->address_of_condition - next_instruction_segment_address();
+    relative = (uint16)(loop->address_of_condition - next_instruction_segment_address());
     op_org_jump_generic_rel_address(F_RELJUMP, relative);
 
-    relative = next_instruction_segment_address() - loop->address_of_end_of_loop_jump + 1;
+    relative = (uint16)(next_instruction_segment_address() - loop->address_of_end_of_loop_jump + 1);
     plant_16_bit_code_word_update(loop->address_of_end_of_loop_jump, relative, "end of loop address");
     end_loop();
     if (loop->control_variable == OPERAND_POP)

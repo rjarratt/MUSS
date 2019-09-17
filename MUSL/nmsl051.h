@@ -35,6 +35,6 @@ extern void DECLDVEC(void);
 extern void DECLIMP(void);
 extern void DECLVSTORE(void);
 extern void ENDCHECKS(void);
-extern int32 EVALLIT(int, int);
+extern int16 EVALLIT(int, int);
 extern int32 EVALCONST(void);
 extern uint16 COMPTYPE(void);

@@ -43,9 +43,9 @@ VECTOR *PART(unsigned char *, int, int);
 void TLPRINT(int);
 void CAPTION(char *);
 uint16 FINDP(unsigned int, int, int);
-void TLCYCLE(int);
-void TLCVCYCLE(int, int, int);
-void TLCVLIMIT(int);
+void TLCYCLE(uint16);
+void TLCVCYCLE(uint16, uint16, int);
+void TLCVLIMIT(uint16);
 void TLREPEAT(void);
 
 extern int BOPD;
