@@ -272,15 +272,15 @@ that is the name of the V-Store variable with a suffix.
 #define UNKNOWN_ADDRESS 0x7FFF
 
 typedef enum { OP_NULL, OP_REGULAR, OP_MODE } OPERANDTYPE;
-typedef struct { void(*op)(int); OPERANDTYPE op_type; } MUTLOP;
+typedef struct { void(*op)(uint16); OPERANDTYPE op_type; } MUTLOP;
 
 typedef enum { SYM_VARIABLE, SYM_LITERAL, SYM_LABEL, SYM_PROC, SYM_TYPE } SYMBOLTYPE;
 
 typedef struct
 {
-    int data_type;
-    int dimension;
-    int position; /* for regular variables this is offset in 32-bit words from NB, including LINK if appropriate, vstore it is the v-line number */
+    uint16 data_type;
+    uint16 dimension;
+    uint16 position; /* for regular variables this is offset in 32-bit words from NB, including LINK if appropriate, vstore it is the v-line number */
     int is_parameter;
     int is_vstore;
     int v_read_proc;
@@ -291,9 +291,9 @@ typedef struct
 
 typedef struct
 {
-    int data_type;
-    int dimension;
-    int length;
+    uint16 data_type;
+    uint16 dimension;
+    uint16 length;
     uint32 address;
     VECTOR value;
     uint8 valuebuf[MAX_LITERAL_LEN];
@@ -347,8 +347,8 @@ typedef struct
 
 typedef struct
 {
-    int last_mutl_var; /* The number of the last MUTL variable for the previous block in the hierarchy */
-    int local_names_space; /* The number of 32-bit words required for local names in the current block, including LINK (if any) and parameters */
+    uint16 last_mutl_var; /* The number of the last MUTL variable for the previous block in the hierarchy */
+    uint16 local_names_space; /* The number of 32-bit words required for local names in the current block, including LINK (if any) and parameters */
     uint32 stack_offset_address; /* the location to update the SF offset when the size of the block's variables is known */
     int has_stack_frame;
     MUTLSYMBOL *proc_def_var;
@@ -370,7 +370,7 @@ typedef struct
 typedef struct
 {
     int in_use;
-    int elf_section_index;
+    unsigned short int elf_section_index;
     uint16 segment_address;
     uint16 words[MAX_SEGMENT_SIZE];
     uint32 first_word; /* first word in the segment where the current module starts during import/link of modules */
@@ -398,12 +398,12 @@ static char out_file_name[_MAX_PATH + 1];
 static int is_library;
 static uint32 start_address;
 static int current_line;
-static int amode = 0;
+static uint16 amode = 0;
 static MUTLSYMBOL mutl_var[MAX_NAMES + 1];
 static MUTLSYMBOL mutl_import_var[MAX_IMPORTS];
 static uint8 current_literal_buf[MAX_LITERAL_LEN];
 static VECTOR current_literal;
-static int current_literal_basic_type; /* gives length */
+static uint16 current_literal_basic_type; /* gives length */
 static PROCSYMBOL *current_proc_spec;
 static MUTLSYMBOL *current_proc_def;
 static MUTLSYMBOL *current_type_def;
@@ -476,9 +476,9 @@ static void vecstrcpy(char *dst, VECTOR *src, int dst_size)
     dst[len] = '\0';
 }
 
-static void vecmemcpy(VECTOR *dst, VECTOR *src, int dst_size)
+static void vecmemcpy(VECTOR *dst, VECTOR *src, uint16 dst_size)
 {
-    int len = src->length;
+    uint16 len = src->length;
     if (len > dst_size)
     {
         len = dst_size;
@@ -488,7 +488,7 @@ static void vecmemcpy(VECTOR *dst, VECTOR *src, int dst_size)
     dst->length = len;
 }
 
-static int type_is_vector(uint8 T)
+static int type_is_vector(uint16 T)
 {
     int result = BT_PTR_TO(T) == BT_BOUNDED_PTR_TO_VECTOR;
     return result;
@@ -683,9 +683,9 @@ static void plant_vector(uint16 data_type, VECTOR *v)
 {
     uint8 buffer[MAX_LITERAL_LEN];
     int i;
-    int words;
-    int data_type_len = BT_SIZE(data_type);
-    int len = v->length;
+    uint16 words;
+    uint16 data_type_len = BT_SIZE(data_type);
+    uint16 len = v->length;
     uint8 fill = 0;
 
     if (BT_MODE(data_type) == BT_MODE_SIGNED_INTEGER && ((current_literal.buffer[0] & 0x80) == 0x80))
@@ -718,7 +718,7 @@ static void plant_vector(uint16 data_type, VECTOR *v)
 
 static uint16 next_instruction_segment_number(void)
 {
-    uint32 result;
+    uint16 result;
     SEGMENT *segment = get_segment_for_area(current_code_area);
     result = segment->segment_address;
     return result;
@@ -726,7 +726,7 @@ static uint16 next_instruction_segment_number(void)
 
 static uint16 next_code_segment_number(void)
 {
-    uint32 result;
+    uint16 result;
     SEGMENT *segment = get_segment_for_area(current_data_area);
     result = segment->segment_address;
     return result;
@@ -1238,7 +1238,7 @@ BLOCK *get_current_block(void)
 void start_block_level(int param_stack_size, int has_stack_frame)
 {
     BLOCK *block;
-    int nb_adjust;
+    uint16 nb_adjust;
 
     block_level++;
     if (block_level >= MAX_BLOCK_DEPTH)
@@ -2714,7 +2714,7 @@ void TLPL(int F, int N)
         {
             check_global_ref(N);
         }
-        op(N);
+        op((uint16)N);
     }
     else
     {
