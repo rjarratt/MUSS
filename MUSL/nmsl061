@@ -921,7 +921,7 @@ uint16 result;
 IF LBUFF[IPTR+2] /= DDO
 OR EVAL.LIT(2,T) => EVAL.LIMIT = -1
 @BOX 3.2
-if (memcmp(&LBUFF[IPTR+2], &DDO, sizeof(ITYPE)) != 0 || (result = EVALLIT(2,T)) == -1)
+if (memcmp(&LBUFF[IPTR+2], &DDO, sizeof(ITYPE)) != 0 || (result = (uint16)EVALLIT(2,T)) == -1)
 @BOX5.1
 ::ALREADY DONE IN EVAL.LIT
 @BOX5.2

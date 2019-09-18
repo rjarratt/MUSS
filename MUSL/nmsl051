@@ -433,7 +433,7 @@ void ENDST(void);
 void DECLVSTORE(void);
 void ENDCHECKS(void);
 int CHECKLIT(int, int);
-int16 EVALLIT(int, int);
+int32 EVALLIT(int, int);
 int32 EVALCONST(void);
 uint16 COMPTYPE(void);
 int COMPDIM(void);
@@ -3464,9 +3464,9 @@ MUTLN OF LITERAL
 @BOX1.1
 $PR EVAL.LIT(MODE,LIT.TYPE);
 @BOX1.2
-int16 EVALLIT(int MODE, int LITTYPE)
+int32 EVALLIT(int MODE, int LITTYPE)
 {
-int16 result;
+int32 result;
 @BOX2.1
 $IN I,ST,N;
 @BOX2.2
