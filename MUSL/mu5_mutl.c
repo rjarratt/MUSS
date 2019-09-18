@@ -1980,7 +1980,7 @@ void TLCODEAREA(int AN)
     segment = get_segment_for_area(current_code_area);
     if (segment->elf_section_index == 0)
     {
-        segment->elf_section_index = elf_add_code_section(elf_module_context, 2, segment->run_time_address, (char *)segment->words);
+        segment->elf_section_index = elf_add_code_section(elf_module_context, NULL, 2, segment->run_time_address, (char *)segment->words);
     }
     else
     {
@@ -1997,7 +1997,7 @@ void TLDATAAREA(int AN)
     segment = get_segment_for_area(current_data_area);
     if (segment->elf_section_index == 0)
     {
-        segment->elf_section_index = elf_add_data_section(elf_module_context, 4, segment->run_time_address, (char *)segment->words);
+        segment->elf_section_index = elf_add_data_section(elf_module_context, NULL, 4, segment->run_time_address, (char *)segment->words);
     }
     else
     {
@@ -2158,7 +2158,7 @@ void import_vstore(MUTLSYMBOL *var)
     external_v_sym = get_symbol(var->name);
     if (external_v_sym == NULL)
     {
-        fatal("Please import the module that exports the imported VSTORE");
+        fatal("Please import the module that exports the imported VSTORE: %s", var->name);
     }
     else if (external_v_sym->st_shndx != SHN_ABS)
     {

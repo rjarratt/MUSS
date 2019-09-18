@@ -104,13 +104,19 @@ void elf_set_entry(void *context, Elf32_Addr e_entry)
     ctx->elf_header.e_entry = e_entry;
 }
 
-Elf32_Half elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data)
+Elf32_Half elf_add_code_section(void *context, char *name, Elf32_Word word_size, Elf32_Addr address, char *data)
 {
     Elf32_Context *ctx = context;
     Elf32_Shdr header;
     Elf32_Section *section;
+
+    if (name == NULL)
+    {
+        name = ".text";
+    }
+
     memset(&header, 0, sizeof(Elf32_Shdr));
-    header.sh_name = add_string(ctx->section_header_string_table_section, ".text");
+    header.sh_name = add_string(ctx->section_header_string_table_section, name);
     header.sh_type = SHT_PROGBITS;
     header.sh_flags = SHF_ALLOC | SHF_EXECINSTR;
     header.sh_addr = address;
@@ -121,13 +127,19 @@ Elf32_Half elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr 
     return section->section_index;
 }
 
-Elf32_Half elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data)
+Elf32_Half elf_add_data_section(void *context, char *name, Elf32_Word word_size, Elf32_Addr address, char *data)
 {
     Elf32_Context *ctx = context;
     Elf32_Shdr header;
     Elf32_Section *section;
+
+    if (name == NULL)
+    {
+        name = ".data";
+    }
+
     memset(&header, 0, sizeof(Elf32_Shdr));
-    header.sh_name = add_string(ctx->section_header_string_table_section, ".data");
+    header.sh_name = add_string(ctx->section_header_string_table_section, name);
     header.sh_type = SHT_PROGBITS;
     header.sh_flags = SHF_ALLOC | SHF_WRITE;
     header.sh_addr = address;
@@ -137,13 +149,19 @@ Elf32_Half elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr 
     return section->section_index;
 }
 
-Elf32_Half elf_add_bss_section(void *context, Elf32_Word word_size, Elf32_Addr address)
+Elf32_Half elf_add_bss_section(void *context, char *name, Elf32_Word word_size, Elf32_Addr address)
 {
     Elf32_Context *ctx = context;
     Elf32_Shdr header;
     Elf32_Section *section;
+
+    if (name == NULL)
+    {
+        name = ".bss";
+    }
+
     memset(&header, 0, sizeof(Elf32_Shdr));
-    header.sh_name = add_string(ctx->section_header_string_table_section, ".bss");
+    header.sh_name = add_string(ctx->section_header_string_table_section, name);
     header.sh_type = SHT_NOBITS;
     header.sh_flags = SHF_ALLOC | SHF_WRITE;
     header.sh_addr = address;

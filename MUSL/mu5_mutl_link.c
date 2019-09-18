@@ -480,17 +480,20 @@ static void compute_segment_start_addresses(void)
 static void add_segments_to_output(void *out_elf_context)
 {
     int i;
+    char name[_MAX_PATH];
     LINKER_SEGMENT *current_seg;
     for (i = 0; i < num_segments; i++)
     {
         current_seg = &segment_table[i];
         if (current_seg->section_header.sh_flags & SHF_EXECINSTR)
         {
-            current_seg->elf_output_section_index = elf_add_code_section(out_elf_context, current_seg->section_header.sh_entsize, current_seg->segment_relocated_start_address, current_seg->data);
+            sprintf(name, "%s.text", current_seg->module->module_name);
+            current_seg->elf_output_section_index = elf_add_code_section(out_elf_context, name, current_seg->section_header.sh_entsize, current_seg->segment_relocated_start_address, current_seg->data);
         }
         else
         {
-            current_seg->elf_output_section_index = elf_add_data_section(out_elf_context, current_seg->section_header.sh_entsize, current_seg->segment_relocated_start_address, current_seg->data);
+            sprintf(name, "%s.data", current_seg->module->module_name);
+            current_seg->elf_output_section_index = elf_add_data_section(out_elf_context, name, current_seg->section_header.sh_entsize, current_seg->segment_relocated_start_address, current_seg->data);
         }
 
         elf_update_section_size(out_elf_context, current_seg->elf_output_section_index, current_seg->section_header.sh_size);

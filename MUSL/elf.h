@@ -205,9 +205,9 @@ typedef struct elf32_rela {
 
 void *elf_new_file(Elf32_Half e_type, Elf32_Half e_machine, Elf32_Word e_flags);
 void elf_set_entry(void *context, Elf32_Addr e_entry);
-Elf32_Half elf_add_code_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data);
-Elf32_Half elf_add_data_section(void *context, Elf32_Word word_size, Elf32_Addr address, char *data);
-Elf32_Half elf_add_bss_section(void *context, Elf32_Word word_size, Elf32_Addr address);
+Elf32_Half elf_add_code_section(void *context, char *name, Elf32_Word word_size, Elf32_Addr address, char *data);
+Elf32_Half elf_add_data_section(void *context, char *name, Elf32_Word word_size, Elf32_Addr address, char *data);
+Elf32_Half elf_add_bss_section(void *context, char *name, Elf32_Word word_size, Elf32_Addr address);
 void elf_update_section_address(void *context, Elf32_Half section_index, Elf32_Addr address);
 void elf_update_section_size(void *context, Elf32_Half section_index, Elf32_Word size);
 Elf32_Half elf_get_relocation_section(void *context, Elf32_Half section_index);
