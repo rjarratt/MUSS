@@ -3547,7 +3547,7 @@ if (!is_not_name_of_literal)
 {
     is_not_name_of_literal = PLIST[I].K != KLIT;
 }
-if (!is_not_name_of_literal)
+if (is_not_name_of_literal)
 @BOX12.1
 IF CHECK.LIT(T OF PLIST[I],LIT.TYPE) = 0
 @BOX12.2
