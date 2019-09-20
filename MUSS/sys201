@@ -1,0 +1,275 @@
+@X @~
+~L3 COUK1247
+80
+~V7 56 2 -5
+~D10
+~H                    MUSS
+~
+~
+~D10
+~H            SYS201
+~D10
+~MMANCHESTER UNIVERSITY  -  CONFIDENTIAL~
+~
+~
+                                                            ISSUE 11~
+~V9 -1
+~P
+~V9 1
+~YSYS201
+~M~OSYS IMPLEMENTATION DESCRIPTION
+~
+~M~OSection 20 Version 1
+~S1~OSection 20.1 Process Zero
+~S1~O1. General Introduction
+~BProcess Zero is a privileged user process, built in to the system,
+to provide a user process environment for execution of tasks on behalf
+of other system modules. The task level components of all system modules
+are in fact executed by Process Zero.
+~BA system module initiates the execution of a task by calling the SET.TASK
+interface procedure. As a result of this, Process Zero will execute a parameterl
+ess
+procedure corresponding to the specific task which was requested. Any parameters
+required by the task procedure must be communicated informally through the data
+structures of the module responsible for the task. Multiple occurrences of task
+requests are not queued automatically by the task mechanism, and must therefore
+be
+dealt with by the module concerned.
+~S1~OInterfaces
+~
+Other modules used~
+   None~
+Interrupt level interface procedures~
+   SET.TASK (TASK, DUMMY)~
+Task identifiers~
+   IO.TASK~
+   TERM.PROC.TASK
+~S1~O2.1 Hardware Interface
+~BNone
+~S1~O2.2 Software Interface
+~S11) SET.TASK (TASK, DUMMY)
+~BThis procedure may be called by any system module to request
+execution of a task procedure by Process Zero on its behalf.
+The TASK parameter identifies the particular task procedure
+to be triggered, and should be one of the task identifiers
+described below. Setting a task request merely guarantees that at
+some time later Process Zero will execute the specified
+procedure. It should not be assumed that the procedure will
+be executed once for each call of SET.TASK, since a request
+for a task which is already outstanding has no effect.
+~S12) Task identifiers
+~BEach task is represented by a literal value, which must be used
+as the TASK parameter when calling SET.TASK. The currently defined
+task identifiers are:
+~3
+~
+~
+   DRUM.TASK               Drum Management Task         (Section 3)~
+   MT.TASK                 Magnetic Tape Task           (Section 5)~
+   IO.TASK                 I/O Management Task          (Section 7)~
+   INIT.SUP.TASK           Supervisor Initiation Task   (Section 13)~
+   TERM.PROC.TASK          Process Termination Task     (Section 13)~
+   INIT.FILE.TASK          File Initiation Task         (Section 16)~
+   FILE.TASK               File Task                    (Section 16)~
+~0
+~
+~BThe procedure for inserting a new task is as follows:~
+~T% 8
+~
+ (i)~IExport from the responsible module the name of the task procedure.
+This should be a parameterless procedure.~
+ (ii)~IInsert a call to the procedure in the ALTERNATIVE statement of the main
+task loop (SYSTSK20.1). Entries in this list are made in increasing order
+of priority.~
+ (iii)~IDeclare a task identifier to represent the task. The value of the task
+identifier should be an integer giving the position of the
+task call in the ALTERNATIVE
+statement.~
+~S1~O3. Implementation
+~S1~O3.1 Outline of Operation
+~BProcess Zero simply consists of a permanent loop, selecting a task to
+execute, and executing it. When no task is available, the process is halted.
+The halting and task selection operations are performed at interrupt level,
+to obtain the necessary synchronisation.
+~S1~O3.2 Data Structures
+~T% 18
+~
+TASKS.OUTSTANDING~IA bit significant indicator of the task requests currently ou
+tstanding.~
+CURRENT.TASK~IIndex number for the task currently being serviced.~
+~S1~O3.3 Special Notes
+~BNone.
+~Y
+~V9 -1
+~P
+~D15
+~HFLOWCHARTS
+~
+~
+~H                SYS201
+~V9 -1
+~F
+@TITLE SYS20(1,11)
+@COL 1S-2R-3R-4R-5R-6F
+@FLOW 1-2-3-4-5-6
+@BOX 1.0
+PROCESS ZERO
+@BOX 4.0
+INT1 SET TASK
+INT2 NEXT TASK
+TSK1 TASK LOOP
+@BOX 5.0
+ENTER TASK LOOP
+@BOX 5.0
+COMPLETE SYSTEM INITIALISATION
+@BOX 6.0
+END
+@BOX 1.1
+#SYS20/1
+MODULE SYS20 (TASK.LOOP, SET.TASK, STATS.TYPE);
+@BOX 2.1
+TYPE STATS.TYPE IS
+   INTEGER32 TASKS.CALLED;
+@BOX 3.1
+*GLOBAL 5;
+LOGICAL TASKS.OUTSTANDING;
+INTEGER CURRENT.TASK;
+ADDR STATS.TYPE STATS;
+@BOX 4.1
+::*INIT %6000;
+*CODE 2;
+PSPEC SET.TASK (INTEGER, INTEGER);
+PSPEC NEXT.TASK (INTEGER, INTEGER);
+   #SYSINT20.1
+   #SYSINT20.2
+::*INIT %7000;
+*CODE 4;
+PSPEC TASK.LOOP ();
+   #SYSTSK20.1
+@BOX 5.1
+::*INIT %6000;
+*CODE 7;
+PSPEC INIT.SYS20 ();
+INIT.SYS20 ();
+PROC INIT.SYS20;
+SYS01.SET.INTERRUPT (SYS01.PZ.ACTIVITY, 0);
+MAKE (STATS.TYPE, 0, SYS21.GET.STATS (20)) => STATS;
+END
+@BOX 6.1
+*END
+@END
+@TITLE SYS20/1(1,7)
+@COL 1S-2R-3R-4R
+@FLOW 1-2-3-4
+@BOX 1.0
+OTHER SECTIONS REFERENCED
+@BOX 4.0
+SYS01 COORDINATOR
+SYS13 PROCESS MANAGER
+@BOX 1.1
+::EXTERNAL ENVIRONMENT
+@BOX 2.1
+IMPORT LITERAL NO.OF.TASKS;
+PSPEC TASK.PROC ();
+ADDR TASK.PROC [NO.OF.TASKS] TASK.PROCS;
+@BOX 3.1
+PSPEC BIT (INTEGER) / LOGICAL;
+PSPEC MS.BIT (LOGICAL) / INTEGER;
+@BOX 4.1
+IMPORT LITERAL SYS01.TASK.HALT, SYS01.PZ.ACTIVITY;
+LOGICAL SYS01.CURRENT.ACTIVITY.BIT;
+PSPEC SYS01.FREE (LOGICAL, INTEGER);
+PSPEC SYS01.HALT (LOGICAL, INTEGER);
+PSPEC SYS01.SET.INTERRUPT (LOGICAL, LOGICAL);
+PSPEC SYS13.INT.PROC (LOGICAL, LOGICAL);
+PSPEC SYS13.ENTER.INT.LEVEL (ADDR SYS13.INT.PROC, LOGICAL, LOGICAL);
+PSPEC SYS21.GET.STATS (INTEGER) / ADDR;
+::PSPEC INIT.IO ();
+@END
+@TITLE SYSINT20.1(1,6)
+@COL 1S-2R-3R-4F
+@FLOW 1-2-3-4
+@BOX 1.0
+SET TASK (TASK, DUMMY)
+@BOX 2.0
+ADD TASK TO LIST OF
+OUTSTANDING TASKS
+@BOX 3.0
+FREE ALL PROCESSES
+HALTED FOR TASKS
+@BOX 4.0
+END
+@BOX 1.1
+PROC SET.TASK (TASK, DUMMY);
+@BOX 2.1
+TASK !> TASKS.OUTSTANDING;
+@BOX 3.1
+SYS01.FREE (-1, SYS01.TASK.HALT);
+@BOX 4.1
+END
+@END
+@TITLE SYSINT20.2(1,6)
+@COL 1S-2T-3R-4R-5F
+@FLOW 1-2NO-3-4-5
+@FLOW 2YES-4
+@BOX 1.0
+NEXT TASK (DUMMY, DUMMY)
+@BOX 2.0
+ARE THERE TASKS OUTSTANDING?
+@BOX 3.0
+WAIT FOR NEXT TASK
+@BOX 4.0
+SELECT A TASK TO SERVICE
+AND CLEAR ITS TASK REQUEST
+@BOX 5.0
+END
+@BOX 1.1
+PROC NEXT.TASK (DUMMY, DUMMY2);
+@BOX 2.1
+IF TASKS.OUTSTANDING /= 0
+@BOX 3.1
+SYS01.HALT (SYS01.CURRENT.ACTIVITY.BIT, SYS01.TASK.HALT);
+@BOX 4.1
+MS.BIT (TASKS.OUTSTANDING) => CURRENT.TASK;
+BIT (CURRENT.TASK) -=> TASKS.OUTSTANDING;
+1 +> TASKS.CALLED OF STATS^;
+@BOX 5.1
+END
+@END
+@TITLE SYSTSK20.1(1,6)
+@COL 1S-2R-3R-4R-5F
+@FLOW 1-2-3-4-3
+@BOX 1.0
+PROCESS ZERO TASK LOOP
+@BOX 2.0
+INITIALISE I/O STREAMS
+@BOX 3.0
+ENTER INTERRUPT LEVEL TO
+SELECT A TASK TO SERVICE
+[SYSINT20.2]
+@BOX 4.0
+ENTER APPROPRIATE TASK
+SERVICING PROCEDURE
+   DRUM.TASK       [SYS03]
+   INIT.FILE.TASK  [SYS16]
+   FILE.TASK       [SYS16]
+   IO.TASK         [SYS07]
+   TERM.PROC.TASK  [SYS13]
+   INIT.SUP.TASK   [SYS13]
+   MT.TASK         [SYS05]
+@BOX 5.0
+END
+@BOX 1.1
+PROC TASK.LOOP;
+ADDR TASK.PROC PROC.CALL;
+@BOX 2.1
+:: INIT.IO ();
+@BOX 3.1
+SYS13.ENTER.INT.LEVEL (^NEXT.TASK, 0, 0);
+@BOX 4.1
+TASK.PROCS [CURRENT.TASK] => PROC.CALL;
+PROC.CALL^ ();
+@BOX 5.1
+END
+@END
+

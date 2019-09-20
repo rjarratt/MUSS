@@ -1,0 +1,1343 @@
+@X @~
+~L3 COUK1247
+80
+~V7 56 2 -5
+~D10
+~H                    MUSS
+~
+~
+~D10
+~H             SYS131
+~D10
+~MMANCHESTER UNIVERSITY  -  CONFIDENTIAL
+~
+~
+                                                           ISSUE 11~
+~V9 -1
+~P
+~V9 1
+~YSYS131
+~M~OSYS IMPLEMENTATION DESCRIPTION
+~
+~M~OSection 13 Version 1
+~S1~OSection 13.1 Process Management
+~S1~O1. General Description
+~BThe process manager is responsible for maintaining
+the virtual machines in which processes execute; the interrupt
+level activities which correspond to user processes are therefore
+all under the control of the process manager.
+~BThe main function of the process manager is to ensure
+that the virtual machine for a process is correctly set up whenever
+the process is executing. This involves interfacing with the modules
+which support individual aspects of the virtual machine; the
+virtual store manager, message system, etc. For the most part, the
+interface simply consists of holding data on behalf of these modules,
+and ensuring that all the data for a particular process is available
+while the process is running.
+~BSince it is responsible for setting up the virtual machine,
+the process manager also has to organise the transitions between
+interrupt level and process (user / command) level. All hardware
+interrupts result in entry to the process manager, which then calls
+an appropriate interface procedure to service the interrupt. The mechanism
+for voluntarily switching from command to interrupt level is also
+implemented by the process manager.
+~BThe user's interface with the process manager is via a set of
+organisational commands to create and control processes.
+~P~O2. Interfaces
+~
+Other modules used~
+   Section 6 (Process Scheduler)~
+   Section 10 (Virtual Machine Interrupts)~
+   Section 11 (Virtual Machine Timer)~
+   Section 12 (Program Faults)~
+   Section 14 (Virtual Store Management)~
+   Section 15 (Message Management)~
+   Section 16 (File Management)~
+   Section 17 (User Management)~
+   Section 20 (Process zero)~
+Hardware registers used~
+   V.INT.MC.CONTROL~
+   V.PROCESS.NUMBER~
+   V.PRB.RA~
+Interrupt level interface procedures~
+   ENTER.INT.LEVEL (PROCEDURE, P1, P2)~
+   SCHEDULE (ACTIVITY, PROCESS, TIME)~
+   REMOVE ()~
+Organisational command procedures~
+   CREATE.PROCESS (NAME, USERNAME, PASSWORD, STORE.LIMIT,~
+   START.ADDRESS, PRIORITY, TERMINATE.CHANNEL)~
+   TERMINATE.PROCESS (REASON)~
+   LOOK.UP.PROCESS (NAME, MACHINE)~
+   CATALOGUE.PROCESSES ()~
+   READ.PROCESS.STATUS (SPN)~
+   KILL (NAME)~
+   NAMES ()~
+Configuration parameters~
+   NO.OF.PROCS~
+Process level "globals"~
+   PROC.RESULT~
+   CPRB~
+   PRB~
+   CURRENT.SPN~
+~S1~O2.1 Hardware Interface
+~BThe process manager is responsible for all transitions between
+process level and interrupt level, and this involves interfacing
+with the interrupt hardware.
+~BWhenever control switches from user or executive mode
+(process level) into interrupt mode, the machine state, registers, etc.,
+are dumped into a register dump associated with the current process.
+On leaving interrupt level, the machine state is
+automatically restored from the register dump. Thus, before
+re-entering process level, the process manager has to set the
+address of the register dump into the hardware register V.PRB.RA.
+The register V.PROCESS.NUMBER also has to be set.
+~BIn addition to the computational and organisational registers accessible
+to the user, the following are also dumped: V.EXEC.MC.CONTROL;
+V.VM.INTS (section 10); V.VM.TIMER (section 11).
+~BAfter saving the process state in the register dump, the hardware
+interrupt sequence then sets the stack registers to the interrupt
+level stack and V.EXEC.MC.CONTROL to 1. It then enters
+one of six possible interrupt entry points within the process manager.
+The six entry points are:~
+~3
+~
+   SYSTEM.BASED.INTERRUPT                  (see section 1)~
+   VIRTUAL.STORE.INTERRUPT                 (see section 14)~
+   VALIDATE.FAIL.INTERRUPT                 (see section 14)~
+   PROGRAM.FAULT.INTERRUPT                 (see section 12)~
+   VIRTUAL.MACHINE.TIMER.INTERRUPT         (see section 11)~
+   SOFTWARE.FORCED.INTERRUPT               (see below)~
+~0
+
+~
+Note that the Virtual Machine Interrupt is not entered via the
+process manager, as it does not enter interrupt level.
+~BVoluntary transitions between process and interrupt level are
+effected by writing to the hardware register V.INT.MC.CONTROL.
+Writing '1' to this register causes entry to interrupt level via the
+SOFTWARE.FORCED.INTERRUPT entry; writing '0' restores the process state from
+the register dump, thus returning to user level.
+~S1~O2.2 Software Interface
+~S11) ENTER.INT.LEVEL (PROCEDURE, P1, P2)
+~BThis procedure may be called from command level, to call a
+procedure at interrupt level. PROCEDURE gives the name of the
+interrupt level procedure to be called, which must have two
+parameters. P1 and P2 are supplied to the procedure as actual
+parameters.
+~BIf necessary, the called procedure may return a single length
+integer result by writing it to PROC.RESULT [System Process Number].
+This vector is available to all modules, and so the result can then
+be retrieved on return to command level.
+~S12) SCHEDULE (ACTIVITY NO, PROCESS, TIME)
+~BThis procedure is called by the process scheduler, to
+inform the process manager that a particular process (identified
+by its System Process Number) has been assigned to a specified
+interrupt level activity. The process manager requires this
+information in order to locate the process' PRB and enter the process.
+It also calls the Virtual Machine Timer to allocate the
+corresponding time slice.
+~S13) REMOVE ()
+~BThis procedure is called by the process scheduler, to inform
+the process manager that the process previously assigned to the
+currently executing interrupt level activity has now been de-activated.
+~S14)NO.OF.PROCS
+~BThis configuration parameter gives the maximum number
+of processes which can be supported by the installation.
+~S15) PROC.RESULT
+~BThis is a vector of integers, indexed by System Process Number,
+and used to pass results from an interrupt level procedure to
+the command level procedure which called it - see ENTER.INT.LEVEL
+above.
+~S16) CPRB
+~BThis contains the address of the currently executing process'
+register block. Modules should only use it to access their own
+data within the PRB.
+~BA module requiring to hold data within the PRB should define
+a TYPE which describes the structure of the data, and export this
+TYPE to the process manager, where it can be used in the declaration
+of the PRB. A procedure should also be provided to initialise the data
+at process creation time (it may be assumed that the whole area has
+already been cleared to zeros), and if necessary one to release any
+resources held by the process at termination time.
+~S17) PRB
+~BThis is a vector of process register blocks, indexed by System
+Process Number. See the notes above (under CPRB) regarding the use
+of PRBs by modules other than the process manager.
+~S18) CURRENT.SPN
+~BThis integer variable gives the System Process Number of the
+currently executing process.
+~S1~O3. Implementation
+~S1~O3.1 Outline of Operation
+~BThe majority of this module is taken up by the organisational
+commands for process management, whose implementation is straightforward.
+~BThe interface with the interrupt system is also superficially simple,
+and merely involves providing an entry point for each possible type of
+interrupt, calling an appropriate interface procedure to service the
+interrupt, and then re-entering process level.
+~BIn fact, the "interrupt entry" flowchart describes the complete operation
+of user processes. At any given time, all of the interrupt level activities
+which correspond to user processes have values of control somewhere
+on this chart! It is important to realise that many activities are
+executing this "process" in parallel. Thus, if one of them happens to be
+halted within one of the interrupt handling procedures, a different
+activity may be the next one to reach the "re-enter user level" stage.
+~BN.B.: In the case of some virtual machine timer and software
+forced interrupts, a re-scheduling operation within these interrupt procedures m
+ay mean that the activity
+next re-enters user level in a different process!!!!!!
+~S1~O3.2 Data Structures
+~T% 25
+~
+PROC.STATUS~IA vector indexed by System Process Number, giving the status
+of each process. Each entry is bit significant, with the following
+bits:~
+   :IN.USE~IIndicates that the SPN is currently allocated to a process.~
+   :TERMINATING~IIndicates that the process is terminating.~
+PROC.PID~IA vector indexed by System Process Number, giving the
+process identifier. PROC.PID is also used
+to link together unused System Process Numbers.~
+PROC.NAME~IA vector indexed by System Process Number, giving the
+process name.~
+PROC.RESULT~IA vector indexed by System Process Number, used to pass
+results from interrupt to command level.~
+PRB~IA vector indexed by System Process Number, giving the process
+register block for each process. The PRB is a data structure
+holding all information relevant to the process' execution,
+namely:~
+   :REGISTER.DUMP~IThe area in which the hardware dumps the process state on
+an interrupt entry.~
+   :SUP.SPN~IThe System Process Number of this process' supervisor.~
+   :SUP.PID~IThe process identifier of this process' supervisor.~
+   :TERM.CH~IThe channel on which the supervisor wishes to be
+informed of the process' termination.~
+   :UID~IThe user identifier of the user for whom the
+process was created.~
+   :CREATE.TIME~IThe time at which the process was created.~
+   :VM.INTS.VARS~ISee section 10 (virtual machine interrupts).~
+   :TIMER.VARS~ISee section 11 (virtual machine timer).~
+   :INT.ENTRY.VARS~IUsed by the ENTER.INT.LEVEL procedure, and comprising:~
+      :INT.PROC.NAME~IName of the procedure to be entered.~
+      :INT.PARAM1~IFirst parameter.~
+      :INT.PARAM2~ISecond parameter.~
+   :SEG.VARS~ISee section 14 (virtual store management).~
+   :MESSAGE.VARS~ISee section 15 (message management).~
+   :FILE.VARS~ISee section 16 (file management).~
+ACTIVITY.LIST~IThis is a vector of sixteen entries, one for
+each interrupt level activity controlled by
+the process manager, containing the System Process Number
+(if any) currently assigned to this activity. (This information
+is obtained from the Process scheduler).~
+CURRENT.SPN~IThe system process number of the currently executing process.~
+NEXT.PID~IUsed in the allocation of Process identifiers.~
+SPN.FREE~IHeader for the list of free SPNs, giving the first
+SPN on the list. The list is linked thereafter through
+PROC.PID, and is terminated by a zero link.~
+~
+~S1~O3.3 Special Notes
+~BNone
+~Y
+~V9 -1
+~P
+~D15
+~HFLOWCHARTS
+~
+~
+~H                SYS131
+~V9 -1
+~F
+@TITLE SYS13(1,11)
+@COL 1S-2R-3R-4R-5R-6F
+@FLOW 1-2-3-4-5-6
+@BOX 1.0
+PROCESS MANAGEMENT
+@BOX 4.0
+PROCEDURES IN MODULE
+   INT1 ENTER INT LEVEL
+   INT2 SCHEDULE
+   INT3 REMOVE
+   INT4 PROCESS ACTIVITY
+   INT5 INT GET PRB
+   INT6 GET ACTIVITY PRB
+   CMD1 CREATE PROCESS
+   CMD2 TERMINATE PROCESS
+   CMD3 LOOK UP PROCESS
+   CMD4 CATALOGUE PROCESSES
+   CMD5 READ PROCESS STATUS
+   CMD6 KILL
+   CMD7 CHECK SPN & PID
+   CMD8 CHECK REQUEST
+   CMD9 GET PRB
+   CMD10 NAMES
+   CMD11 CHECK PRIV
+   CMD12 TINI PROC
+   TSK1 TERMINATE PROCESS TASK
+   TSK2 INIT SUP TASK
+@BOX 6.0
+END
+@BOX 1.1
+#SYS13/1
+MODULE SYS13 (ENTER.INT.LEVEL, SCHEDULE, REMOVE, CHECK.REQUEST, CHECK.PRIV, INT.
+GET.PRB, GET.PRB, GET.ACTIVITY.PRB,
+   TERM.PROC.TASK, INIT.SUP.TASK, PROC.RESULT, CURRENT.SPN, CREATE.PROCESS, TERM
+INATE.PROCESS, SUSPEND.PROCESS,
+   LOOK.UP.PROCESS, NAMES, CATALOGUE.PROCESSES, READ.PROCESS.STATUS, KILL, INT.P
+ROC, PROCESS.ACTIVITY, STATS.TYPE);
+@BOX 2.1
+PSPEC INT.PROC (LOGICAL, LOGICAL);
+TYPE INT.ENTRY.VARS.TYPE IS
+   INTEGER INT.PARAM1, INT.PARAM2
+   ADDR INT.PROC INT.PROC.NAME;
+TYPE PRB.TYPE IS
+   INTEGER [REG.DUMP.SIZE] REGISTER.DUMP
+SYS14.SEG.VARS SYS14.VARS
+   INTEGER SUP.SPN, SUP.PID, TERM.CH, UID, PRB.PRI
+   INTEGER32 CREATE.TIME
+   LOGICAL TERM.REASON
+   LOGICAL64 USER.NAME
+   SYS10.TRAP.VARS SYS10.VARS
+   SYS11.TIMER.VARS SYS11.VARS
+   SYS15.MESSAGE.VARS SYS15.VARS
+   SYS16.FILE.VARS SYS16.VARS
+   SYS17.ACCNTS.VARS SYS17.VARS;
+TYPE STATS.TYPE IS
+   INTEGER32 PROCS.CREATED;
+@BOX 3.1
+*GLOBAL 5;
+INTEGER CURRENT.SPN, NEXT.PID, SPN.FREE, PRB.DISP, PZ.ACTIVITY.NO;
+LITERAL  INIT.STATUS = 1, TERMINATING = 2, ABORT = 4;
+INTEGER [SYS01.NO.OF.ACTIVITIES] ACTIVITY.LIST;
+INT.ENTRY.VARS.TYPE [NO.OF.PROCS] INT.ENTRY.VARS;
+LOGICAL32 [SYS01.NO.OF.ACTIVITIES] PROC.RA;
+ADDR STATS.TYPE STATS;
+INTEGER MAX.VS.INT.COUNT;
+INTEGER [NO.OF.PROCS] VS.INT.COUNT;
+*GLOBAL 6;
+LOGICAL8 [NO.OF.PROCS] PROC.STATUS;
+LOGICAL [NO.OF.PROCS] PROC.PID, PROC.RESULT;
+LOGICAL64 [NO.OF.PROCS] PROC.NAME;
+@BOX 4.1
+   #SYS13/2
+@BOX 5.1
+::*INIT %6000;
+*CODE 7;
+PSPEC INIT.SYS13 ();
+INIT.SYS13 ();
+PROC INIT.SYS13;
+NO.OF.PROCS - 1 => SPN.FREE;
+WHILE SPN.FREE /= 1 DO SPN.FREE => PROC.PID [1 -> SPN.FREE] OD
+MS.BIT (SYS01.PZ.ACTIVITY) => PZ.ACTIVITY.NO;
+(PZ.PRB.RA) => PROC.RA [PZ.ACTIVITY.NO];
+SYS20.SET.TASK (SYS20.INIT.SUP.TASK, 0);
+MAKE (STATS.TYPE, 0, SYS21.GET.STATS (13)) => STATS;
+END
+0 => MAX.VS.INT.COUNT;
+SYS23.NOTE.OP.PARAM (%1301, ^MAX.VS.INT.COUNT);
+@BOX 6.1
+*END
+@END
+@TITLE SYS13/1(1,11)
+@COL 1S-2R-3R-4R
+@FLOW 1-2-3-4
+@BOX 1.0
+OTHER MODULES REFERENCED
+@BOX 4.0
+SECTION 1 (CO-ORDINATOR)
+SECTION 5 (EXCHANGABLE STORAGE MEDIA MANAGEMENT)
+SECTION 6 (PROCESS SCHEDULER)
+SECTION 7 (IO MANAGEMENT)
+SECTION 10 (VIRTUAL MACHINE INTERRUPTS)
+SECTION 11 (VIRTUAL MACHINE TIMER)
+SECTION 12 (FAULT CONDITIONS)
+SECTION 14 (VIRTUAL STORE MANAGEMENT)
+SECTION 15 (MESSAGE MANAGEMENT)
+SECTION 16 (FILE MANAGEMENT)
+SECTION 17 (USER MANAGEMENT)
+SECTION 18 (NETWORK MANAGEMENT)
+SECTION 19 (CONFIGURATION MANAGEMENT)
+SECTION 20 (PROCESS ZERO)
+SECTION 21 (PERFORMANCE MONITORING)
+@BOX 1.1
+:: EXTERNAL ENVIRONMENT
+@BOX 2.1
+IMPORT VSTORE V.INT.MC.CONTROL, V.PROCESS.NUMBER, V.INIT.REGS, V.MC.NO, V.INTERR
+UPT.TYPE;
+IMPORT VSTORE ADDR V.DUMPED.CONTROL;
+IMPORT VSTORE LOGICAL32 V.PRB.RA;
+IMPORT LITERAL NO.OF.PROCS, REG.DUMP.SIZE, PRIVI.UID,
+   PRBS.PER.SEG, PRB.SIZE, PRB.SEG, CPRB.MAPPED.SEG,
+   NO.OF.SUPS, PRB.MAPPED.SEG, CATALOGUE.MAPPED.SEG;
+IMPORT LITERAL LOGICAL32 PZ.PRB.RA;
+PSPEC START.PROC ();
+ADDR START.PROC [NO.OF.SUPS] SUP.START;
+LOGICAL64 [NO.OF.SUPS] SUP.NAME;
+@BOX 3.1
+PSPEC BIT (INTEGER) / LOGICAL;
+PSPEC MS.BIT (LOGICAL) / INTEGER;
+@BOX 4.1
+IMPORT LITERAL SYS01.PZ.ACTIVITY, SYS01.INT.ACTIVITIES, SYS01.NO.OF.ACTIVITIES;
+INTEGER SYS01.CURRENT.ACTIVITY;
+LOGICAL SYS01.CURRENT.ACTIVITY.BIT;
+PSPEC SYS01.CHECK.IN (INTEGER, INTEGER);
+PSPEC SYS01.CHECK.OUT (INTEGER, INTEGER);
+PSPEC SYS01.NEXT.ACTIVITY ();
+PSPEC SYS01.SET.INTERRUPT (LOGICAL, LOGICAL);
+PSPEC SYS01.CLEAR.INTERRUPT ();
+PSPEC SYS05.TINI.ESM (INTEGER);
+IMPORT LITERAL SYS06.TERM.SUS, SYS06.KILL.SUS;
+PSPEC SYS06.ACTIVATION (INTEGER, LOGICAL);
+PSPEC SYS06.DEACTIVATION (LOGICAL, LOGICAL);
+PSPEC SYS06.TIMESLICE.END ();
+PSPEC SYS06.INIT.PROCESS (INTEGER, INTEGER, INTEGER);
+PSPEC SYS06.READ.SUSP.REASON (INTEGER) / LOGICAL;
+PSPEC FREE.PROCESS (INTEGER, INTEGER);
+PSPEC SYS07.TINI.IO (INTEGER);
+PSPEC TIME.AND.DATE ();
+PSPEC SYS09.TINI.GRS (INTEGER);
+IMPORT TYPE SYS10.TRAP.VARS;
+PSPEC SYS10.CMD.SET.VM.INT (INTEGER, INTEGER, INTEGER);
+IMPORT TYPE SYS11.TIMER.VARS;
+PSPEC SYS11.ALLOCATE.TIMESLICE (INTEGER, INTEGER);
+PSPEC SYS11.VM.TIMER.INTERRUPT ();
+PSPEC SYS11.INIT.TIMER (ADDR SYS11.TIMER.VARS, INTEGER);
+PSPEC SYS11.READ.PROC.TIMER (INTEGER) / INTEGER;
+PSPEC SYS12.PROGRAM.FAULT.INTERRUPT ();
+IMPORT TYPE SYS14.SEG.VARS;
+IMPORT LITERAL SYS14.SEG.SHIFT, SYS14.PAGE.SHIFT;
+PSPEC SYS14.GET.BLOCK (INTEGER, INTEGER) / INTEGER32;
+PSPEC SYS14.UPDATE.BLOCK (INTEGER32);
+PSPEC SYS14.REL.BLOCK (INTEGER32);
+PSPEC SYS14.MAP.ADDRESS (INTEGER32, INTEGER) / ADDR [LOGICAL8];
+PSPEC SYS14.VIRTUAL.STORE.INTERRUPT ();
+PSPEC SYS14.VALIDATE.FAIL.INTERRUPT ();
+PSPEC SYS14.CMD.MAP (INTEGER, INTEGER);
+PSPEC SYS14.INIT.SEGS (ADDR SYS14.SEG.VARS, INTEGER, INTEGER);
+PSPEC SYS14.TINI.SEGS (ADDR SYS14.SEG.VARS);
+PSPEC CREATE.SEGMENT (INTEGER, ADDR);
+IMPORT TYPE SYS15.MESSAGE.VARS;
+PSPEC SYS15.INIT.MESSAGES (ADDR SYS15.MESSAGE.VARS, INTEGER, INTEGER, INTEGER, I
+NTEGER);
+PSPEC SYS15.TINI.MESSAGES (ADDR SYS15.MESSAGE.VARS);
+PSPEC SEND.MESSAGE (ADDR [LOGICAL8], ADDR [INTEGER],
+   INTEGER, INTEGER, INTEGER, LOGICAL);
+IMPORT TYPE SYS16.FILE.VARS;
+PSPEC SYS16.INIT.FILES (ADDR SYS16.FILE.VARS, INTEGER);
+PSPEC SYS16.TINI.FILES (INTEGER);
+IMPORT TYPE SYS17.ACCNTS.VARS;
+IMPORT LITERAL SYS17.CPU.TIME;
+PSPEC SYS17.INIT.ACCS (ADDR SYS17.ACCNTS.VARS, INTEGER);
+PSPEC SYS17.TINI.ACCS (INTEGER);
+PSPEC SYS17.FIND.NAMES (INTEGER);
+PSPEC SYS17.GET.USER.PARAM (INTEGER, INTEGER) / INTEGER;
+PSPEC FIND.U (LOGICAL64, LOGICAL64);
+PSPEC SYS18.LOOK.UP (LOGICAL64, LOGICAL64);
+PSPEC SYS19.LOOK.UP.PERI (LOGICAL64);
+IMPORT LITERAL SYS20.TERM.PROC.TASK, SYS20.INIT.SUP.TASK;
+PSPEC SYS20.SET.TASK (INTEGER, INTEGER);
+PSPEC SYS21.GET.STATS (INTEGER) / ADDR;
+PSPEC SYS23.NOTE.OP.PARAM (INTEGER, ADDR INTEGER);
+ADDR PW0, PW1, PW2, PW3, PW4, PW5, PW6;
+LOGICAL64 PWW1, PWW2, PWW3;
+::PSPEC OUT.NAME (LOGICAL64);
+::PSPEC NEWLINES (INTEGER);
+::PSPEC BREAK.OUTPUT (INTEGER);
+@END
+
+@TITLE SYS13/2(1,11)
+
+@COL 1S
+
+@BOX 1.1
+::*INIT %6000;
+*CODE 2;
+PSPEC SCHEDULE (INTEGER, INTEGER, INTEGER);
+PSPEC REMOVE ();
+PSPEC PROCESS.ACTIVITY ();
+PSPEC INT.GET.PRB (INTEGER) / ADDR;
+PSPEC GET.ACTIVITY.PRB (INTEGER, INTEGER) / ADDR;
+   #SYSINT13.2
+   #SYSINT13.3
+   #SYSINT13.4
+   #SYSINT13.5
+   #SYSINT13.6
+::*INIT %7000;
+*CODE 15;
+PSPEC ENTER.INT.LEVEL (ADDR INT.PROC, LOGICAL, LOGICAL);
+   #SYSINT13.1
+LSPEC LOOK.UP.PROCESS (LOGICAL64, LOGICAL64);
+PSPEC CHECK.SPN.PID (LOGICAL, LOGICAL) / INTEGER;
+PSPEC CHECK.REQUEST (LOGICAL, LOGICAL);
+PSPEC GET.PRB (INTEGER, INTEGER) / ADDR;
+LSPEC NAMES ();
+PSPEC CHECK.PRIV ();
+   #SYSCMD13.3
+   #SYSCMD13.7
+   #SYSCMD13.8
+   #SYSCMD13.9
+   #SYSCMD13.10
+   #SYSCMD13.11
+*CODE 19;
+LSPEC CREATE.PROCESS (LOGICAL64, LOGICAL64, LOGICAL64, INTEGER,
+   INTEGER, ADDR START.PROC, INTEGER, INTEGER);
+LSPEC TERMINATE.PROCESS (INTEGER);
+LSPEC CATALOGUE.PROCESSES ();
+LSPEC READ.PROCESS.STATUS (INTEGER);
+LSPEC KILL (LOGICAL64, INTEGER);
+PSPEC TINI.PROC (INTEGER);
+   #SYSCMD13.1
+   #SYSCMD13.2
+   #SYSCMD13.4
+   #SYSCMD13.5
+   #SYSCMD13.6
+   #SYSCMD13.12
+*CODE 4;
+PSPEC TERM.PROC.TASK ();
+PSPEC INIT.SUP.TASK ();
+   #SYSTSK13.1
+   #SYSTSK13.2
+@END
+@TITLE SYSINT13.1(1,7)
+
+
+@COL 1S-2R-3R-6F
+
+@FLOW 1-2-3-6
+
+@BOX 1.0
+ENTER INT LEVEL (PROC, PARAM 1, PARAM 2)
+@BOX 2.0
+SAVE PARAMETERS IN AREA
+ACCESSIBLE AT INTERRUPT LEVEL
+@BOX 3.0
+GENERATE INTERRUPT
+(SOFTWARE FORCED INTERRUPT)
+@BOX 6.0
+END
+@BOX 1.1
+PROC ENTER.INT.LEVEL (PROC.NAME, PARAM1, PARAM2);
+@BOX 2.1
+SELECT INT.ENTRY.VARS [CURRENT.SPN];
+PARAM1 => INT.PARAM1;
+PARAM2 => INT.PARAM2;
+PROC.NAME => INT.PROC.NAME;
+@BOX 3.1
+1 => V.INT.MC.CONTROL;
+@BOX 6.1
+END
+@END
+
+
+@TITLE SYSINT13.2(1,11)
+@COL 1S-2R-3R-6R-4R-5F
+@FLOW 1-2-3-6-4-5
+@BOX 1.0
+SCHEDULE (ACTIVITY NO, PROCESS, TIME)
+@BOX 2.0
+RECORD PROCESS NUMBER
+IN ACTIVITY LIST
+@BOX 3.0
+FETCH THE PROCESS
+REGISTER BLOCK TO CORE
+[SYS14]
+@BOX 4.0
+SET INTERRUPT FOR
+THE ACTIVITY
+[SYS01]
+@BOX 5.0
+END
+@BOX 6.0
+ALLOCATE TIME SLICE
+@BOX 1.1
+PROC SCHEDULE (ACTIVITY.NO, PROCESS, TIME);
+INTEGER PRB.DISP, PRB.BLK;
+ADDR PRB.TYPE PROC.PRB;
+@BOX 2.1
+PROCESS => ACTIVITY.LIST [ACTIVITY.NO];
+0 => VS.INT.COUNT [PROCESS];
+@BOX 3.1
+PROCESS / PRBS.PER.SEG * PRBS.PER.SEG -: PROCESS * PRB.SIZE => PRB.DISP;
+PRB.DISP ->> SYS14.PAGE.SHIFT => PRB.BLK;
+PRB.BLK <<- SYS14.PAGE.SHIFT -> PRB.DISP;
+SYS14.GET.BLOCK (PROCESS / PRBS.PER.SEG + PRB.SEG, PRB.BLK)
+   + PRB.DISP => PROC.RA [ACTIVITY.NO];
+@BOX 4.1
+SYS01.SET.INTERRUPT (BIT (ACTIVITY.NO), 0);
+@BOX 5.1
+END
+@BOX 6.1
+SYS11.ALLOCATE.TIMESLICE (ACTIVITY.NO, TIME);
+@END
+@TITLE SYSINT13.3(1,6)
+@COL 1S-2R-3R-4R-5F
+@FLOW 1-2-3-4-5
+@BOX 1.0
+REMOVE ()
+@BOX 2.0
+REMOVE PROCESS FROM
+THE ACTIVITY LIST
+@BOX 3.0
+RELEASE ITS REGISTER BLOCK
+[SYS14]
+@BOX 4.0
+CLEAR INTERRUPT
+FOR THE PROCESS
+[SYS01]
+@BOX 5.0
+END
+@BOX 1.1
+PROC REMOVE;
+@BOX 2.1
+0 => ACTIVITY.LIST [SYS01.CURRENT.ACTIVITY];
+@BOX 3.1
+SYS14.UPDATE.BLOCK (PROC.RA [SYS01.CURRENT.ACTIVITY]);
+SYS14.REL.BLOCK (PROC.RA [SYS01.CURRENT.ACTIVITY]);
+@BOX 4.1
+SYS01.CLEAR.INTERRUPT ();
+@BOX 5.1
+END
+@END
+@TITLE SYSINT13.4(1,11)
+@COL 1S-20R-21R-3R-2F
+@FLOW 1-20-21-3-20
+
+@BOX 1.0
+PROCESS ACTIVITY
+@BOX 2.0
+END
+@BOX 3.0
+SWITCH ON INTERRUPT TYPE
+@BOX 20.0
+SET HARDWARE REGISTERS
+FOR CURRENT PROCESS
+@BOX 21.0
+EXIT INTERRUPT LEVEL
+@BOX 1.1
+PROC PROCESS.ACTIVITY;
+@BOX 2.1
+END
+@BOX 3.1
+ALTERNATIVE V.INTERRUPT.TYPE FROM
+   SYS01.NEXT.ACTIVITY ();
+   SYS12.PROGRAM.FAULT.INTERRUPT ();
+   BEGIN
+      SELECT INT.ENTRY.VARS [CURRENT.SPN];
+      INT.PROC.NAME^ (INT.PARAM1, INT.PARAM2);
+   END
+   BEGIN
+      SYS14.VIRTUAL.STORE.INTERRUPT ();
+      IF MAX.VS.INT.COUNT /= 0 AND
+         CURRENT.SPN /= 0 AND
+         1 +> VS.INT.COUNT [CURRENT.SPN] >= MAX.VS.INT.COUNT THEN
+         0 => VS.INT.COUNT [CURRENT.SPN];
+         SYS06.TIMESLICE.END ();
+      FI
+   END
+   BEGIN
+      0 => VS.INT.COUNT [CURRENT.SPN];
+      SYS11.VM.TIMER.INTERRUPT ();
+   END
+   SYS14.VALIDATE.FAIL.INTERRUPT ();
+END
+@BOX 20.1
+ACTIVITY.LIST [SYS01.CURRENT.ACTIVITY] => CURRENT.SPN
+   => V.PROCESS.NUMBER;
+PROC.RA [SYS01.CURRENT.ACTIVITY] => V.PRB.RA;
+@BOX 21.1
+0 => V.INT.MC.CONTROL;
+@END
+
+
+@TITLE SYSINT13.5(1,11)
+@COL 1S-2R-3F
+@FLOW 1-2-3
+@BOX 1.0
+INT GET PRB (SECTION)
+@BOX 2.0
+RETURN ADDRESS OF
+APPROPRIATE DATA STRUCTURE
+@BOX 3.0
+END
+@BOX 1.1
+PROC INT.GET.PRB (SECTION);
+INTEGER ACTIVITY;
+@BOX 2.1
+IF SYS01.CURRENT.ACTIVITY.BIT & SYS01.INT.ACTIVITIES /= 0 THEN
+   PZ.ACTIVITY.NO => ACTIVITY;
+ELSE
+   SYS01.CURRENT.ACTIVITY => ACTIVITY;
+FI
+GET.ACTIVITY.PRB (ACTIVITY, SECTION) => INT.GET.PRB;
+@BOX 3.1
+END
+@END
+@TITLE SYSINT13.6(1,11)
+@COL 1S-2R-3F
+@FLOW 1-2-3
+
+@BOX 1.0
+GET ACTIVITY PRB (ACTIVITY, SECTION)
+@BOX 2.0
+RETURN ADDRESS OF
+APPROPRIATE DATA STRUCTURE
+@BOX 3.0
+END
+
+@BOX 1.1
+PROC GET.ACTIVITY.PRB (ACTIVITY, SECTION);
+ADDR PRB.TYPE CPRB;
+@BOX 2.1
+MAKE (PRB.TYPE, 0, BYTE (SYS14.MAP.ADDRESS (PROC.RA [ACTIVITY], CPRB.MAPPED.SEG)
+)) => CPRB;
+ALTERNATIVE SECTION - 10 FROM
+   BYTE (^SYS10.VARS OF CPRB^) => GET.ACTIVITY.PRB;
+   BYTE (^SYS11.VARS OF CPRB^) => GET.ACTIVITY.PRB;
+   12;
+   BYTE (CPRB) => GET.ACTIVITY.PRB;
+   BYTE (^SYS14.VARS OF CPRB^) => GET.ACTIVITY.PRB;
+   BYTE (^SYS15.VARS OF CPRB^) => GET.ACTIVITY.PRB;
+   BYTE (^SYS16.VARS OF CPRB^) => GET.ACTIVITY.PRB;
+   BYTE (^SYS17.VARS OF CPRB^) => GET.ACTIVITY.PRB;
+END
+@BOX 3.1
+END
+@END
+@TITLE SYSCMD13.1(1,9)
+@COL 1S-2R-3T-4T-5T-6R-7R-8R-16R-9R-10N-11R-12F
+@COL 13R-14R-15N
+@ROW 5-13
+@FLOW 1-2-3NO-4-5-6-7-8-16-9-10-11-12
+@FLOW 3YES-10
+@FLOW 4EXISTS-13-15-10
+@FLOW 5NONE-14-15
+@BOX 1.0
+CREATE PROCESS (PROCESS NAME, USER NAME, PASSWORD, STORE LIMIT,
+   START ADDRESS, PRIORITY, TERMINATE CHANNEL)
+@BOX 2.0
+CHECK IN
+[SYS01]
+@BOX 3.0
+USERNAME AND PASSWORD INVALID?
+@BOX 4.0
+LOOK UP PROCESS
+@BOX 5.0
+ALLOCATE A PROCESS NUMBER
+@BOX 6.0
+INITIALISE PROCESS
+MANAGEMENT TABLES
+@BOX 7.0
+CLEAR THE PROCESS
+REGISTER BLOCK
+@BOX 8.0
+SET INITIAL VALUES IN
+PROCESS REGISTER BLOCK
+@BOX 9.0
+RETURN SPN AND PID
+@BOC 11.0
+CHECK OUT
+[SYS01]
+@BOX 12.0
+END
+@BOX 13.0
+SET FAULT REASON -32
+(PROCESS NAME ALREADY EXISTS)
+@BOX 14.0
+SET FAULT REASON -23
+(NO SYSTEM RESOURCES)
+@BOX 16.0
+INFORM PROCESS SCHEDULER
+OF THE NEW PROCESS
+[SYS06]
+@BOX 1.1
+PROC CREATE.PROCESS (P.NAME, U.NAME, P.WORD, STORE, TIME, START, PRI, TC);
+INTEGER SPN, CREATE.UID, I;
+ADDR PRB.VA;
+ADDR PRB.TYPE PRB;
+ADDR [LOGICAL8] PRB.PTR;
+0 => PW0;
+@BOX 2.1
+ENTER.INT.LEVEL (^SYS01.CHECK.IN, 0, 0);
+@BOX 3.1
+FIND.U (U.NAME, P.WORD);
+PW1 => CREATE.UID;
+IF PW0 < 0
+@BOX 4.1
+LOOK.UP.PROCESS (P.NAME, 0);
+IF PW0 = 0
+@BOX 5.1
+IF SPN.FREE = 0
+@BOX 6.1
+1 +> PROCS.CREATED OF STATS^;
+PROC.PID [SPN.FREE => SPN] => SPN.FREE;
+P.NAME => PROC.NAME [SPN];
+1 +> NEXT.PID => PROC.PID [SPN];
+INIT.STATUS => PROC.STATUS [SPN];
+@BOX 7.1
+MAKE (PRB.TYPE, 0, GET.PRB (SPN, 13) => PRB.VA) => PRB;
+MAKE (LOGICAL8, PRB.SIZE, PRB.VA) => PRB.PTR;
+FOR I < PRB.SIZE DO
+   0 => PRB.PTR^ [I];
+OD
+SELECT PRB^;
+@BOX 8.1
+BYTE (START) => V.DUMPED.CONTROL;
+TC => TERM.CH;
+IF CURRENT.SPN => SUP.SPN /= 0 THEN
+   PRI & 7 ! 8 => PRI;
+FI
+PROC.PID [CURRENT.SPN] => SUP.PID;
+CREATE.UID => UID;
+U.NAME => USER.NAME;
+TIME.AND.DATE ();
+PWW1 => CREATE.TIME;
+IF SYS17.GET.USER.PARAM (UID, SYS17.CPU.TIME) > 0 THEN
+   PRI => PRB.PRI;
+ELSE
+   15 => PRB.PRI => PRI;
+FI
+SYS11.INIT.TIMER (^SYS11.VARS, TIME);
+SYS14.INIT.SEGS (^SYS14.VARS, SPN, STORE);
+SYS15.INIT.MESSAGES (^SYS15.VARS, SPN, NEXT.PID, UID, SUP.PID);
+SYS16.INIT.FILES (^SYS16.VARS, UID);
+SYS17.INIT.ACCS (^SYS17.VARS, UID);
+@BOX 9.1
+0 => PW0;
+SPN <<- 9 ! V.MC.NO => PW1;
+NEXT.PID => PW2;
+@BOX 11.1
+ENTER.INT.LEVEL (^SYS01.CHECK.OUT, 0, 0);
+@BOX 12.1
+END
+@BOX 13.1
+-32 => PW0;
+@BOX 14.1
+-23 => PW0;
+@BOX 16.1
+SYS06.INIT.PROCESS (SPN, NEXT.PID, PRI);
+SPN => V.INIT.REGS;
+@END
+@TITLE SYSCMD13.2(1,6)
+@COL 1S-2R-3R-4R-5R-6F
+@FLOW 1-2-3-4-5-6
+@BOX 1.0
+TERMINATE PROCESS (REASON)
+@BOX 2.0
+CHECK IN
+[SYS01]
+@BOX 3.0
+SAVE TERMINATION REASON
+IN PROCESS REGISTER BLOCK
+@BOX 4.0
+SET TERMINATION TASK
+FOR PROCESS ZERO
+@BOX 5.0
+ENTER INTERRUPT LEVEL TO
+DEACTIVATE THE PROCESS
+[SYS06]
+@BOX 6.0
+END
+@BOX 1.1
+PROC TERMINATE.PROCESS (REASON);
+ADDR PRB.TYPE CPRB;
+0 => PW0;
+@BOX 2.1
+ENTER.INT.LEVEL (^SYS01.CHECK.IN, 0, 0);
+@BOX 3.1
+MAKE (PRB.TYPE, 0, GET.PRB (-1, 13)) => CPRB;
+REASON => TERM.REASON OF CPRB^;
+@BOX 4.1
+TERMINATING !> PROC.STATUS [CURRENT.SPN];
+ENTER.INT.LEVEL (^SYS20.SET.TASK, SYS20.TERM.PROC.TASK, 0);
+@BOX 5.1
+ENTER.INT.LEVEL (^SYS06.DEACTIVATION, SYS06.TERM.SUS, 0);
+@BOX 6.1
+END
+@END
+@TITLE SYSCMD13.3(1,11)
+@COL 3R-11N
+@COL 1S-4T-5T-7R-8N-9F
+@COL 10R
+@ROW 3-7
+@ROW 5-10
+@FLOW 1-4NO-5NO-7-8-9
+@FLOW 4YES-10-8
+@FLOW 5YES-3-11-8
+@BOX 1.0
+LOOK UP PROCESS (NAME, MACHINE)
+@BOX 3.0
+RETURN IDENTIFICATION
+OF PROCESS
+@BOX 4.0
+IS PROCESS IN ANOTHER MACHINE?
+@BOX 5.0
+IS NAME IN THE PROCESS
+NAME TABLE?
+@BOX 7.0
+CALL CONFIGURATION MANAGER
+TO LOOK UP PERIPHERAL PROC
+[SYS19]
+@BOX 9.0
+END
+@BOX 10.0
+LOOK UP FOREIGN PROCESS
+[SYS18]
+@BOX 1.1
+PROC LOOK.UP.PROCESS (NAME, MACHINE);
+INTEGER SPN;
+0 => PW0;
+@BOX 3.1
+SPN <<- 9 ! V.MC.NO => PW1;
+PROC.PID [SPN] => PW2;
+8 => PW3;
+@BOX 4.1
+IF MACHINE /= 0
+@BOX 5.1
+IF NAME = 0 THEN
+   CURRENT.SPN => SPN;
+ELSE
+   -1 => SPN;
+   WHILE 1 +> SPN /= NO.OF.PROCS
+       AND PROC.NAME [SPN] /= NAME DO OD
+FI
+IF SPN /= NO.OF.PROCS
+@BOX 7.1
+SYS19.LOOK.UP.PERI (NAME);
+@BOX 9.1
+END
+@BOX 10.1
+SYS18.LOOK.UP (NAME, MACHINE);
+@END
+@TITLE SYSCMD13.4(1,7)
+@COL 1S-5T-2R-3R-4F
+@FLOW 1-5OK-2-3-4
+@FLOW 5FAIL-4
+@BOX 1.0
+CATALOGUE PROCESSES
+@BOX 2.0
+INITIALIZE POINTER
+@BOX 3.0
+FILL SEGMENT WITH
+INFORMATION ABOUT ALL PROCESSES
+@BOX 4.0
+END
+SEGMENT FOR STATUS INFORMATION
+CREATED OK?
+@BOX 1.1
+PROC CATALOGUE.PROCESSES;
+TYPE JOB.LIST IS  LOGICAL64 WH.P.NAME, WH.U.NAME
+   LOGICAL8 FILLER1, WH.SUSP.REASON, WH.STATUS, WH.PRIORITY
+   LOGICAL32 WH.CPU.USED, WH.PID, WH.START.TIME;
+ADDR PRB.TYPE PRB;
+ADDR [JOBLIST] JOBS;
+INTEGER PROC.NO, SEG.NO;
+0 => PW0;
+@BOX 2.1
+PW1 => SEG.NO;
+SYS14.CMD.MAP (PW1, CATALOGUE.MAPPED.SEG);
+MAKE (JOB.LIST, NO.OF.PROCS, PW6 <<- SYS14.SEG.SHIFT) => JOBS;
+@BOX 3.1
+FOR PROC.NO < NO.OF.PROCS DO
+   IF PROC.STATUS [PROC.NO] /= 0 THEN
+      MAKE (PRB.TYPE, 0, GET.PRB (PROC.NO, 13)) => PRB;
+      SELECT PRB^;
+      SELECT JOBS^ [PROC.NO];
+      PROC.NAME [PROC.NO] => WH.P.NAME;
+      USER.NAME => WH.U.NAME;
+      PROC.STATUS [PROC.NO] => WH.STATUS;
+      PRB.PRI => WH.PRIORITY;
+      SYS06.READ.SUSP.REASON (PROC.NO) => WH.SUSP.REASON;
+      PROC.PID [PROC.NO] => WH.PID;
+      CREATE.TIME => WH.START.TIME;
+      SYS11.READ.PROC.TIMER (PROC.NO) => WH.CPU.USED;
+   FI
+OD
+NO.OF.PROCS => PW1;
+SEG.NO => PW2;
+@BOX 4.1
+END
+@BOX 5.1
+CREATE.SEGMENT (-1, NO.OF.PROCS * 32);
+IF PW0 /= 0
+@END
+
+@TITLE SYSCMD13.5(1,6)
+
+@COL 1S-2R-3R-4F
+
+@FLOW 1-2-3-4
+
+@BOX 1.0
+READ PROCESS STATUS (SPN)
+@BOX 2.0
+NOTE SPN IF REQUEST
+IS FOR CURRENT PROCESS
+@BOX 3.0
+RETURN STATUS INFORMATION
+ABOUT THE PROCESS
+@BOX 4.0
+END
+@BOX 1.1
+PROC READ.PROCESS.STATUS (SPN);
+ADDR PRB.TYPE PRB;
+0 => PW0;
+@BOX 2.1
+SPN ->> 9 => SPN;
+IF SPN < 0 OR SPN >= NO.OF.PROCS THEN
+   CURRENT.SPN => SPN;
+FI
+@BOX 3.1
+MAKE (PRB.TYPE, 0, GET.PRB (SPN, 13)) => PRB;
+PROC.NAME [SPN] => PWW1;
+USER.NAME OF PRB^ => PWW2;
+SPN <<- 9 ! V.MC.NO => PW1;
+PROC.STATUS [SPN] => PW2;
+PRB.PRI OF PRB^ => PW3;
+PROC.PID [SPN] => PW4;
+SYS06.READ.SUSP.REASON (SPN) => PW5;
+CREATE.TIME OF PRB^ => PW6;
+@BOX 4.1
+END
+@END
+
+
+@TITLE SYSCMD13.6(1,6)
+@COL 2R
+@COL 1S-3R-4T-5T-6R-8R-9N-10R-11F
+@ROW 2-6
+@FLOW 1-3-4-5-6-8-9-10-11
+@FLOW 4NON EXISTENT-9
+@FLOW 5YES-2-9
+@BOX 1.0
+KILL (NAME)
+@BOX 2.0
+SET FAULT STATUS -25
+(NOT PRIVILEGED)
+@BOX 3.0
+CHECK IN
+[SYS01]
+@BOX 4.0
+LOOK UP PROCESS
+@BOX 5.0
+IS COMMAND INVALID?
+@BOX 6.0
+SET ABORT VIRTUAL MACHINE
+INTERRUPT FOR THE PROCESS
+@BOX 8.0
+ENTER INTERRUPT LEVEL
+TO ACTIVATE THE PROCESS
+@BOX 10.0
+CHECK OUT
+[SYS01]
+@BOX 11.0
+END
+@BOX 1.1
+PROC KILL (NAME, REASON);
+INTEGER SPN;
+ADDR PRB.TYPE PRB, CPRB;
+0 => PW0;
+@BOX 2.1
+-25 => PW0;
+@BOX 3.1
+ENTER.INT.LEVEL (^SYS01.CHECK.IN, 0, 0);
+@BOX 4.1
+LOOK.UP.PROCESS (NAME, 0);
+PW1 ->> 9 => SPN;
+IF PW0 < 0
+@BOX 5.1
+MAKE (PRB.TYPE, 0, GET.PRB (SPN, 13)) => PRB;
+MAKE (PRB.TYPE, 0, GET.PRB (-1, 13)) => CPRB;
+IF UID OF CPRB^ > PRIVI.UID
+   AND UID OF CPRB^ /= UID OF PRB^
+@BOX 6.1
+SYS10.CMD.SET.VM.INT (SPN, -1, REASON);
+@BOX 8.1
+ENTER.INT.LEVEL (^SYS06.ACTIVATION, SPN, SYS06.KILL.SUS);
+@BOX 10.1
+ENTER.INT.LEVEL (^SYS01.CHECK.OUT, 0, 0);
+@BOX 11.1
+END
+@END
+@TITLE SYSCMD13.7(1,6)
+@COL 1S-2T-3R-4F
+@COL 5R
+@ROW 3-5
+@FLOW 1-2NO-3-4
+@FLOW 2YES-5-4
+@BOX 1.0
+CHECK SPN & PID (SPN, PID) STATUS
+@BOX 2.0
+IS SPN FOR A NON-EXISTENT
+PROCESS OR PID INCORRECT
+@BOX 3.0
+SET STATUS = 0
+@BOX 4.0
+END
+@BOX 5.0
+SET STATUS = -20
+@BOX 1.1
+PROC CHECK.SPN.PID (SPN, PID);
+@BOX 2.1
+IF SPN < 0
+   OR SPN >= NO.OF.PROCS
+   OR PROC.STATUS [SPN] = 0
+   OR PROC.PID [SPN] /= PID
+@BOX 3.1
+0 => CHECK.SPN.PID;
+@BOX 4.1
+END
+@BOX 5.1
+-20 => CHECK.SPN.PID;
+@END
+@TITLE SYSCMD13.8(1,6)
+@COL 2R
+@COL 1S-3T-4T-5R-6N-7F
+@ROW 2-4
+@FLOW 1-3NO-4NO-5-6-7
+@FLOW 3YES-2-6
+@FLOW 4YES-6
+@BOX 1.0
+CHECK REQUEST (SPN, PID)
+@BOX 2.0
+SET FAULT REASON -20
+(INVALID SPN OR PID)
+@BOX 3.0
+IS SPN OR PID INVALID?
+@BOX 4.0
+IS CURRENT PROCESS PRIVILEGED
+OR THE SUPERVISOR
+@BOX 5.0
+SET FAULT REASON -21
+(NOT SUPERVISOR)
+@BOX 7.0
+END
+@BOX 1.1
+PROC CHECK.REQUEST (SPN, PID);
+ADDR PRB.TYPE PRB, CPRB;
+@BOX 2.1
+-20 => PW0;
+@BOX 3.1
+SPN ->> 9 => SPN;
+IF CHECK.SPN.PID (SPN, PID) < 0
+@BOX 4.1
+MAKE (PRB.TYPE, 0, GET.PRB (SPN, 13)) => PRB;
+MAKE (PRB.TYPE, 0, GET.PRB (-1, 13)) => CPRB;
+IF UID OF CPRB^ =< PRIVI.UID
+   OR CURRENT.SPN = SUP.SPN OF PRB^
+@BOX 5.1
+-21 => PW0;
+@BOX 7.1
+END
+@END
+@TITLE SYSCMD13.9(1,6)
+@COL 1S-2R-3F
+@FLOW 1-2-3
+@BOX 1.0
+GET PRB
+@BOX 2.0
+MAP REQUIRED PRB SEGMENT
+AND RETURN POINTER TO
+SPECIFIED DATA AREA
+@BOX 3.0
+END
+@BOX 1.1
+PROC GET.PRB (PROCESS, SECTION);
+ADDR PRB.TYPE REQ.PRB;
+INTEGER NO;
+@BOX 2.1
+IF PROCESS < 0 THEN
+   SYS14.CMD.MAP (CURRENT.SPN / PRBS.PER.SEG => NO + PRB.SEG, CPRB.MAPPED.SEG);
+   NO * PRBS.PER.SEG -: CURRENT.SPN * PRB.SIZE => NO;
+   MAKE (PRB.TYPE, 0, PW6 <<- SYS14.SEG.SHIFT + NO) => REQ.PRB;
+ELSE
+   SYS14.CMD.MAP (PROCESS / PRBS.PER.SEG => NO + PRB.SEG, PRB.MAPPED.SEG);
+   NO * PRBS.PER.SEG -: PROCESS * PRB.SIZE => NO;
+   MAKE (PRB.TYPE, 0, PW6 <<- SYS14.SEG.SHIFT + NO) => REQ.PRB;
+FI
+ALTERNATIVE SECTION - 10 FROM
+   BYTE (^SYS10.VARS OF REQ.PRB^) => GET.PRB;
+   BYTE (^SYS11.VARS OF REQ.PRB^) => GET.PRB;
+   12;
+   BYTE (^REQ.PRB^) => GET.PRB;
+   BYTE (^SYS14.VARS OF REQ.PRB^) => GET.PRB;
+   BYTE (^SYS15.VARS OF REQ.PRB^) => GET.PRB;
+   BYTE (^SYS16.VARS OF REQ.PRB^) => GET.PRB;
+   BYTE (^SYS17.VARS OF REQ.PRB^) => GET.PRB;
+END
+@BOX 3.1
+END
+@END
+
+
+@TITLE SYSCMD13.10(1,6)
+
+@COL 1S-2R-3R-4F
+
+@FLOW 1-2-3-4
+
+@BOX 1.0
+NAMES
+@BOX 2.0
+OBTAIN USER NAME AND PASSWORD
+@BOX 3.0
+RETURN PROCESS NAME
+@BOX 4.0
+END
+@BOX 1.1
+PROC NAMES;
+ADDR PRB.TYPE CPRB;
+0 => PW0;
+@BOX 2.1
+MAKE (PRB.TYPE, 0, GET.PRB (-1, 13)) => CPRB;
+SELECT CPRB^;
+SYS17.FIND.NAMES (UID);
+@BOX 3.1
+PROC.NAME [CURRENT.SPN] => PWW3;
+@BOX 4.1
+END
+@END
+@TITLE SYSCMD13.11(1,8)
+
+@COL 1S-2T-3R-4F
+
+@FLOW 1-2FAIL-3-4
+@FLOW 2OK-4
+
+
+@BOX 1.0
+CHECK PRIV ()
+@BOX 2.0
+CHECK PROCESS IS PRIVILEGED
+@BOX 3.0
+SET FAULT STATUS -25
+(NOT PRIVILEGED)
+@BOX 4.0
+END
+@BOX 1.1
+PROC CHECK.PRIV;
+ADDR PRB.TYPE PRB;
+MAKE (PRB.TYPE, 0, GET.PRB (-1, 13)) => PRB;
+@BOX 2.1
+SELECT PRB^;
+IF UID =< PRIVI.UID
+@BOX 3.1
+-25 => PW0;
+@BOX 4.1
+END
+@END
+@TITLE SYSCMD13.12(1,8)
+
+@COL 1S-4R-6R-7R-8R-10R-9F
+
+@FLOW 1-4-6-7-8-10-9
+
+@BOX 1.0
+TINI PROC (SPN)
+@BOX 4.0
+SEND TERMINATION MESSAGE
+TO SUPERVISOR IF REQUIRED
+@BOX 6.0
+CHECK IN
+[SYS01]
+@BOX 7.0
+CALL PROCEDURES TO
+RELEASE ALL SEGMENTS
+REMOVE ALL MESSAGES
+AND PERFORM ACCOUNTING ETC.
+@BOX 8.0
+CLEAR PROCESS MANAGEMENT
+TABLES FOR THE PROCESS
+@BOX 9.0
+END
+@BOX 10.0
+CHECK OUT
+[SYS01]
+@BOX 1.1
+PROC TINI.PROC (SPN);
+TYPE TERM.MESS.TYPE IS
+   INTEGER PROC.NO, PROC.ID
+   LOGICAL REASON
+   OR LOGICAL8 [12] MSG;
+TERM.MESS.TYPE TERM.MESS;
+ADDR PRB.TYPE PRB;
+INTEGER [4] TERM.DEST;
+@BOX 4.1
+MAKE (PRB.TYPE, 0, GET.PRB (SPN, 13)) => PRB;
+SELECT PRB^;
+::IF TERM.CH /= -1 THEN
+::   SUP.SPN => TERM.DEST [0];
+::   SUP.PID => TERM.DEST [1];
+::   TERM.CH => TERM.DEST [2];
+::   SPN => PROC.NO OF TERM.MESS;
+::   PROC.PID [SPN] => PROC.ID OF TERM.MESS;
+::   TERM.REASON => REASON OF TERM.MESS;
+::   SEND.MESSAGE (^MSG OF TERM.MESS, ^TERM.DEST, 0, 0, -1, -1);
+::FI
+::GET.PRB (SPN, 13);
+@BOX 6.1
+ENTER.INT.LEVEL (^SYS01.CHECK.IN, 0, 0);
+@BOX 7.1
+SYS05.TINI.ESM (SPN);
+SYS07.TINI.IO (PROC.PID [SPN]);
+SYS09.TINI.GRS (SPN);
+SYS14.TINI.SEGS (^SYS14.VARS);
+SYS15.TINI.MESSAGES (^SYS15.VARS);
+SYS16.TINI.FILES (SPN);
+SYS17.TINI.ACCS (SPN);
+@BOX 8.1
+0 => PROC.NAME [SPN] => PROC.STATUS [SPN];
+SPN.FREE => PROC.PID [SPN => SPN.FREE];
+@BOX 9.1
+END
+@BOX 10.1
+ENTER.INT.LEVEL (^SYS01.CHECK.OUT, 0, 0);
+@END
+@TITLE SYSTSK13.1(1,6)
+@COL 1S-2N-3T-4R
+@COL 9F
+@ROW 4-9
+@FLOW 1-2-3-4-2
+@FLOW 3FINISHED-9
+@BOX 1.0
+TERMINATE PROCESS TASK
+@BOX 3.0
+ANY PROCESSES TO BE
+TERMINATED?
+@BOX 4.0
+TINI PROC
+@BOX 9.0
+END
+@BOX 1.1
+PROC TERM.PROC.TASK;
+INTEGER SPN;
+@BOX 3.1
+-1 => SPN;
+WHILE 1 +> SPN < NO.OF.PROCS
+   AND PROC.STATUS [SPN] & TERMINATING = 0 DO OD
+IF SPN = NO.OF.PROCS
+@BOX 4.1
+TINI.PROC (SPN);
+@BOX 9.1
+END
+@END
+
+
+@TITLE SYSTSK13.2(1,6)
+@COL 1S-2R-3F
+@FLOW 1-2-3
+@BOX 1.0
+INITIALISE SUPERVISORS
+@BOX 2.0
+CREATE SYSTEM SUPERVISORS
+@BOX 3.0
+END
+@BOX 1.1
+PROC INIT.SUP.TASK;
+INTEGER I;
+@BOX 2.1
+FOR I < NO.OF.SUPS DO
+   CREATE.PROCESS (SUP.NAME [I], "SYSTEM", 0, -1, 32767, SUP.START [I], 1, -1);
+   IF PW0 = 0 THEN
+      FREE.PROCESS (PW1, PW2);
+   FI
+OD
+@BOX 3.1
+END
+@END
