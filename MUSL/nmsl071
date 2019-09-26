@@ -5427,7 +5427,7 @@ TL.PL(%02,AOPD) FI
 @BOX5.2
 if (REG == BREG)
 {
-  TLPL(0x46,CMPTYPE); /**/ /* this was coded as 0x56, but that does not exist and it looks like it might have been intended to be 0x46 */
+  TLPL(0x56,CMPTYPE);
   TLPL(0x02,AOPD);
 }
 @BOX6.1
@@ -5834,7 +5834,7 @@ UNSTACKREGS(BREG);
 TL.PL(%56,CMP.TYPE => B.TYPE);
 @BOX26.2
 BTYPE = CMPTYPE;
-TLPL(0x46,BTYPE); /**/ /* this was coded as 0x56, but that does not exist and it looks like it might have been intended to be 0x46 */
+TLPL(0x56,BTYPE);
 @B22.1
 MONITOR(3);
 @B22.2
