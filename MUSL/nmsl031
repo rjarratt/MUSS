@@ -2046,7 +2046,7 @@ RIGHT.SHIFT=>SYM ELSE
 FI FI
 @BOX 7.2
 GT0:
-if ((int)I >= EQ && EQ <=NEQ)
+if ((int)I >= EQ && (int)I <= NEQ)
 {
   SYM = I+10;
 }
