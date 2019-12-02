@@ -915,7 +915,8 @@ TL.PROC.PARAM(PARAMS[1+>N1],0)OD
 @BOX 18.2
 N1 = PLIST[DUPLN].DETAIL;
 PLIST[N].DETAIL = N1;
-for (int i = 0; i < PARAMS[N1]; i++)
+int limit = PARAMS[N1];
+for (int i = 0; i < limit; i++)
 {
   TLPROCPARAM(PARAMS[++N1],0);
 }
